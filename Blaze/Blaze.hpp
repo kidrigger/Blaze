@@ -1,4 +1,4 @@
-﻿// Blaze.h : Include file for standard system include files,
+﻿// Blaze.hpp : Include file for standard system include files,
 // or project specific include files.
 
 #pragma once

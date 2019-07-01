@@ -7,3 +7,5 @@ project ("Blaze")
 
 # Include sub-projects.
 add_subdirectory ("Blaze")
+add_subdirectory ("glfw")
+add_subdirectory ("glm")
