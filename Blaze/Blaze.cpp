@@ -3,9 +3,10 @@
 
 #include "Blaze.hpp"
 
+#include <optional>
+
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-
 #include <vulkan/vulkan.hpp>
 
 #define VALIDATION_LAYERS_ENABLED
@@ -129,7 +130,6 @@ VkInstance createInstance(
 	return instance;
 }
 
-// Extensions required
 std::vector<const char*> getRequiredExtensions()
 {
 	using namespace std;
@@ -174,6 +174,77 @@ bool checkValidationLayerSupport(const std::vector<const char*>& validationLayer
 	return true;
 }
 
+struct QueueFamilyIndices
+{
+	std::optional<uint32_t> graphicsIndex;
+
+	bool complete()
+	{
+		return graphicsIndex.has_value();
+	}
+};
+
+QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies)
+	{
+		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		{
+			indices.graphicsIndex = i;
+			break;
+		}
+		i++;
+	}
+
+	return indices;
+}
+
+bool isDeviceSuitable(VkPhysicalDevice device)
+{
+	VkPhysicalDeviceProperties properties;
+	vkGetPhysicalDeviceProperties(device, &properties);
+	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+	{
+		return false;
+	}
+
+	QueueFamilyIndices queueFamilyIndices = getQueueFamilies(device);
+	
+	return queueFamilyIndices.complete();
+}
+
+VkPhysicalDevice getPhysicalDevice(VkInstance instance)
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+	
+	if (deviceCount <= 0)
+	{
+		return VK_NULL_HANDLE;
+	}
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+	for (const auto& device : devices)
+	{
+		if (isDeviceSuitable(device))
+		{
+			return device;
+		}
+	}
+
+	return VK_NULL_HANDLE;
+}
+
 int main()
 {
 	// Usings
@@ -186,8 +257,8 @@ int main()
 
 	// Variables
 	GLFWwindow* window = nullptr;
-	VkInstance instance;
-	VkDebugUtilsMessengerEXT debugMessenger;
+	VkInstance instance = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 
 	// GLFW Setup
 	assert(glfwInit());
@@ -207,9 +278,9 @@ int main()
 	vector<VkExtensionProperties> extensions(extensionCount);
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
-	auto createInfo = createDebugMessengerCreateInfo();
 	if (enableValidationLayers) 
 	{
+		auto createInfo = createDebugMessengerCreateInfo();
 		if (createDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
 		{
 			throw runtime_error("Failed to setup Debug messenger");
@@ -221,6 +292,9 @@ int main()
 	{
 		cout << '\t' << extension.extensionName << '\n';
 	}
+
+	VkPhysicalDevice physicalDevice = getPhysicalDevice(instance);
+	assert(physicalDevice != VK_NULL_HANDLE);
 
 	// Run
 	while (!glfwWindowShouldClose(window))
