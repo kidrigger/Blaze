@@ -4,10 +4,17 @@
 #include "Blaze.hpp"
 
 #include <optional>
+#include <vector>
+#include <iostream>
+#include <set>
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <vulkan/vulkan.hpp>
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
 
 #define VALIDATION_LAYERS_ENABLED
 
@@ -177,14 +184,15 @@ bool checkValidationLayerSupport(const std::vector<const char*>& validationLayer
 struct QueueFamilyIndices
 {
 	std::optional<uint32_t> graphicsIndex;
+	std::optional<uint32_t> presentIndex;
 
 	bool complete()
 	{
-		return graphicsIndex.has_value();
+		return graphicsIndex.has_value() && presentIndex.has_value();
 	}
 };
 
-QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
 	QueueFamilyIndices indices;
 
@@ -199,15 +207,22 @@ QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device)
 		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 		{
 			indices.graphicsIndex = i;
-			break;
 		}
+
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+		if (queueFamily.queueCount > 0 && presentSupport)
+		{
+			indices.presentIndex = i;
+		}
+
 		i++;
 	}
 
 	return indices;
 }
 
-bool isDeviceSuitable(VkPhysicalDevice device)
+bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
 	VkPhysicalDeviceProperties properties;
 	vkGetPhysicalDeviceProperties(device, &properties);
@@ -216,12 +231,12 @@ bool isDeviceSuitable(VkPhysicalDevice device)
 		return false;
 	}
 
-	QueueFamilyIndices queueFamilyIndices = getQueueFamilies(device);
+	QueueFamilyIndices queueFamilyIndices = getQueueFamilies(device, surface);
 	
 	return queueFamilyIndices.complete();
 }
 
-VkPhysicalDevice getPhysicalDevice(VkInstance instance)
+VkPhysicalDevice getPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
 {
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -236,13 +251,59 @@ VkPhysicalDevice getPhysicalDevice(VkInstance instance)
 
 	for (const auto& device : devices)
 	{
-		if (isDeviceSuitable(device))
+		if (isDeviceSuitable(device, surface))
 		{
 			return device;
 		}
 	}
 
 	return VK_NULL_HANDLE;
+}
+
+VkDevice getLogicalDevice(VkPhysicalDevice physicalDevice, const QueueFamilyIndices& queueIndices, const std::vector<const char*>& validationLayers)
+{
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { queueIndices.graphicsIndex.value(), queueIndices.presentIndex.value() };
+
+	float queuePriority = 1.0f;
+
+	for (uint32_t queueFamily : uniqueQueueFamilies)
+	{
+		VkDeviceQueueCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		createInfo.queueFamilyIndex = queueFamily;
+		createInfo.queueCount = 1;
+		createInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(createInfo);
+	}
+
+	VkPhysicalDeviceFeatures deviceFeatures = {};
+
+	VkDeviceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.enabledExtensionCount = 0;
+	if (enableValidationLayers)
+	{
+		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+		createInfo.ppEnabledLayerNames = validationLayers.data();
+	}
+	else
+	{
+		createInfo.enabledLayerCount = 0;
+	}
+
+	VkDevice device;
+	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) == VK_SUCCESS)
+	{
+		return device;
+	}
+	else
+	{
+		return VK_NULL_HANDLE;
+	}
 }
 
 int main()
@@ -253,6 +314,10 @@ int main()
 
 	const vector<const char*> validationLayers = {
 		"VK_LAYER_KHRONOS_validation"
+	};
+
+	const vector<const char*> deviceExtensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
 	// Variables
@@ -293,8 +358,22 @@ int main()
 		cout << '\t' << extension.extensionName << '\n';
 	}
 
-	VkPhysicalDevice physicalDevice = getPhysicalDevice(instance);
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	assert(glfwCreateWindowSurface(instance, window, nullptr, &surface) == VK_SUCCESS);
+
+	VkPhysicalDevice physicalDevice = getPhysicalDevice(instance, surface);
 	assert(physicalDevice != VK_NULL_HANDLE);
+
+	QueueFamilyIndices queueIndices = getQueueFamilies(physicalDevice, surface);
+
+	VkDevice device = getLogicalDevice(physicalDevice, queueIndices, validationLayers);
+	assert(device != VK_NULL_HANDLE);
+
+	VkQueue graphicsQueue;
+	vkGetDeviceQueue(device, queueIndices.graphicsIndex.value(), 0, &graphicsQueue);	// Will always succeed.
+
+	VkQueue presentQueue;
+	vkGetDeviceQueue(device, queueIndices.presentIndex.value(), 0, &presentQueue);
 
 	// Run
 	while (!glfwWindowShouldClose(window))
@@ -303,7 +382,9 @@ int main()
 	}
 	
 	// Cleanup
+	vkDestroyDevice(device, nullptr);
 	destroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyInstance(instance, nullptr);
 	glfwDestroyWindow(window);
 	glfwTerminate();
