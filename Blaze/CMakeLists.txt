@@ -5,8 +5,18 @@ cmake_minimum_required (VERSION 3.8)
 
 find_package(Vulkan REQUIRED)
 
+file(GLOB_RECURSE SOURCE_FILES
+	"*.cpp"
+	"util/*.cpp"
+	)
+
+file(GLOB_RECURSE HEADER_FILES
+	"*.hpp"
+	"util/*.hpp"
+	)
+
 # Add source to this project's executable.
-add_executable (Blaze "Blaze.cpp" "Blaze.hpp")
+add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
 
 target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR)
 
