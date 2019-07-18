@@ -1,5 +1,5 @@
 
-#include "debug.hpp"
+#include "debugMessenger.hpp"
 
 namespace blaze::util
 {

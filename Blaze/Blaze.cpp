@@ -5,6 +5,7 @@
 #include "util/Managed.hpp"
 #include "util/DeviceSelection.hpp"
 #include "Context.hpp"
+#include "Renderer.hpp"
 
 #include <optional>
 #include <vector>
@@ -43,92 +44,6 @@ namespace blaze
 #else
 	const bool enableValidationLayers = false;
 #endif
-
-	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> createSwapchain(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
-	{
-		util::SwapchainSupportDetails swapchainSupport = util::getSwapchainSupport(physicalDevice, surface);
-
-		VkSurfaceFormatKHR surfaceFormat = swapchainSupport.formats[0];
-		for (const auto& availableFormat : swapchainSupport.formats)
-		{
-			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
-				availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-			{
-				surfaceFormat = availableFormat;
-				break;
-			}
-		}
-
-		VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-		for (const auto& availablePresentMode : swapchainSupport.presentModes)
-		{
-			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-			{
-				presentMode = availablePresentMode;
-				break;
-			}
-			else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
-			{
-				presentMode = availablePresentMode;
-			}
-		}
-
-		VkExtent2D swapExtent;
-		auto capabilities = swapchainSupport.capabilities;
-		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-		{
-			swapExtent = capabilities.currentExtent;
-		}
-		else
-		{
-			swapExtent.width = std::clamp(swapExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-			swapExtent.height = std::clamp(swapExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-		}
-
-		uint32_t imageCount = capabilities.minImageCount + 1;
-		if (capabilities.maxImageCount > 0)
-		{
-			imageCount = std::min(imageCount, capabilities.maxImageCount);
-		}
-
-		VkSwapchainCreateInfoKHR createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = surface;
-		createInfo.minImageCount = imageCount;
-		createInfo.imageFormat = surfaceFormat.format;
-		createInfo.imageColorSpace = surfaceFormat.colorSpace;
-		createInfo.imageExtent = swapExtent;
-		createInfo.imageArrayLayers = 1;
-		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		createInfo.preTransform = swapchainSupport.capabilities.currentTransform;
-		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		createInfo.presentMode = presentMode;
-		createInfo.clipped = VK_TRUE;
-		createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-		auto queueIndices = util::getQueueFamilies(physicalDevice, surface);
-		uint32_t queueFamilyIndices[] = { queueIndices.graphicsIndex.value(), queueIndices.presentIndex.value() };
-		if (queueIndices.graphicsIndex != queueIndices.presentIndex)
-		{
-			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			createInfo.queueFamilyIndexCount = 2;
-			createInfo.pQueueFamilyIndices = queueFamilyIndices;
-		}
-		else
-		{
-			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			createInfo.queueFamilyIndexCount = 0;
-			createInfo.pQueueFamilyIndices = nullptr;
-		}
-
-		VkSwapchainKHR swapchain;
-		auto result = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
-		if (result == VK_SUCCESS)
-		{
-			return std::make_tuple(swapchain, surfaceFormat.format, swapExtent);
-		}
-		throw std::runtime_error("Swapchain creation failed with " + std::to_string(result));
-	}
 
 	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& shaderCode)
 	{
@@ -354,9 +269,7 @@ namespace blaze
 		// Variables
 		GLFWwindow* window = nullptr;
 		Context ctx;
-		VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-		VkFormat swapchainFormat;
-		VkExtent2D swapchainExtent;
+		Renderer renderer;
 		vector<VkImage> swapchainImages;
 		vector<VkImageView> swapchainImageViews;
 		VkRenderPass renderpass = VK_NULL_HANDLE;
@@ -382,17 +295,14 @@ namespace blaze
 			throw std::runtime_error("Context could not be created");
 		}
 
-		util::QueueFamilyIndices queueIndices = util::getQueueFamilies(ctx.get_physicalDevice(), ctx.get_surface());
-
-		// Swapchain
-		tie(swapchain, swapchainFormat, swapchainExtent) = createSwapchain(ctx.get_device(), ctx.get_physicalDevice(), ctx.get_surface());
+		renderer = Renderer(window, ctx);
 
 		// SwapchainImages
 		{
 			uint32_t swapchainImageCount = 0;
-			vkGetSwapchainImagesKHR(ctx.get_device(), swapchain, &swapchainImageCount, nullptr);
+			vkGetSwapchainImagesKHR(ctx.get_device(), renderer.get_swapchain(), &swapchainImageCount, nullptr);
 			swapchainImages.resize(swapchainImageCount);
-			vkGetSwapchainImagesKHR(ctx.get_device(), swapchain, &swapchainImageCount, swapchainImages.data());
+			vkGetSwapchainImagesKHR(ctx.get_device(), renderer.get_swapchain(), &swapchainImageCount, swapchainImages.data());
 		}
 
 		swapchainImageViews.resize(swapchainImages.size());
@@ -402,7 +312,7 @@ namespace blaze
 			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			createInfo.image = swapchainImages[i];
 			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = swapchainFormat;
+			createInfo.format = renderer.get_swapchainFormat();
 			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -415,9 +325,9 @@ namespace blaze
 			assert(vkCreateImageView(ctx.get_device(), &createInfo, nullptr, &swapchainImageViews[i]) == VK_SUCCESS);
 		}
 
-		renderpass = createRenderpass(ctx.get_device(), swapchainFormat);
+		renderpass = createRenderpass(ctx.get_device(), renderer.get_swapchainFormat());
 
-		tie(graphicsPipelineLayout, graphicsPipeline) = createGraphicsPipeline(ctx.get_device(), renderpass, swapchainExtent);
+		tie(graphicsPipelineLayout, graphicsPipeline) = createGraphicsPipeline(ctx.get_device(), renderpass, renderer.get_swapchainExtent());
 
 		// Framebuffers
 		swapchainFramebuffers.resize(swapchainImageViews.size());
@@ -432,8 +342,8 @@ namespace blaze
 			createInfo.renderPass = renderpass;
 			createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 			createInfo.pAttachments = attachments.data();
-			createInfo.width = swapchainExtent.width;
-			createInfo.height = swapchainExtent.height;
+			createInfo.width = renderer.get_swapchainExtent().width;
+			createInfo.height = renderer.get_swapchainExtent().height;
 			createInfo.layers = 1;
 
 			assert(vkCreateFramebuffer(ctx.get_device(), &createInfo, nullptr, &swapchainFramebuffers[i]) == VK_SUCCESS);
@@ -463,7 +373,7 @@ namespace blaze
 			renderpassBeginInfo.renderPass = renderpass;
 			renderpassBeginInfo.framebuffer = swapchainFramebuffers[i];
 			renderpassBeginInfo.renderArea.offset = { 0, 0 };
-			renderpassBeginInfo.renderArea.extent = swapchainExtent;
+			renderpassBeginInfo.renderArea.extent = renderer.get_swapchainExtent();
 
 			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 			renderpassBeginInfo.clearValueCount = 1;
@@ -532,7 +442,7 @@ namespace blaze
 			vkResetFences(ctx.get_device(), 1, &inFlightFences[currentFrame]);
 
 			uint32_t imageIndex;
-			vkAcquireNextImageKHR(ctx.get_device(), swapchain, numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
+			vkAcquireNextImageKHR(ctx.get_device(), renderer.get_swapchain(), numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -556,7 +466,7 @@ namespace blaze
 			presentInfo.waitSemaphoreCount = 1;
 			presentInfo.pWaitSemaphores = signalSemaphores;
 
-			VkSwapchainKHR swapchains[] = { swapchain };
+			VkSwapchainKHR swapchains[] = { renderer.get_swapchain() };
 			presentInfo.swapchainCount = 1;
 			presentInfo.pSwapchains = swapchains;
 			presentInfo.pImageIndices = &imageIndex;
@@ -598,7 +508,6 @@ namespace blaze
 		vkDestroyPipelineLayout(ctx.get_device(), graphicsPipelineLayout, nullptr);
 		vkDestroyRenderPass(ctx.get_device(), renderpass, nullptr);
 
-		vkDestroySwapchainKHR(ctx.get_device(), swapchain, nullptr);
 		glfwDestroyWindow(window);
 		glfwTerminate();
 	}

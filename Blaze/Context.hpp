@@ -2,7 +2,7 @@
 #pragma once
 
 #include "util/Managed.hpp"
-#include "util/debug.hpp"
+#include "util/debugMessenger.hpp"
 #include "util/DeviceSelection.hpp"
 
 #define GLFW_INCLUDE_VULKAN
@@ -16,8 +16,6 @@ namespace blaze
 	{
 	private:
 		bool enableValidationLayers{ true };
-		int WIDTH{ 800 };
-		int HEIGHT{ 600 };
 		bool isComplete{ false };
 
 		const std::vector<const char*> validationLayers = {
@@ -46,7 +44,6 @@ namespace blaze
 			: enableValidationLayers(enableValidationLayers)
 		{
 			auto requiredExtensions = getRequiredInstanceExtensions();
-			glfwGetWindowSize(window, &WIDTH, &HEIGHT);
 			try
 			{
 				if (!util::checkValidationLayerSupport(validationLayers))
@@ -76,8 +73,6 @@ namespace blaze
 
 		Context(Context&& other) noexcept
 			: enableValidationLayers(other.enableValidationLayers),
-			WIDTH(other.WIDTH),
-			HEIGHT(other.HEIGHT),
 			isComplete(other.isComplete),
 			instance(std::move(other.instance)),
 			debugMessenger(std::move(other.debugMessenger)),
@@ -95,8 +90,6 @@ namespace blaze
 		{
 			if (this == &other) return *this;
 			enableValidationLayers = other.enableValidationLayers;
-			WIDTH = other.WIDTH;
-			HEIGHT = other.HEIGHT;
 			isComplete = other.isComplete;
 			instance = std::move(other.instance);
 			debugMessenger = std::move(other.debugMessenger);
@@ -113,13 +106,14 @@ namespace blaze
 		Context(const Context& other) = delete;
 		Context& operator=(const Context& other) = delete;
 
-		VkInstance get_instance() { return instance.get(); }
-		VkSurfaceKHR get_surface() { return surface.get(); }
-		VkPhysicalDevice get_physicalDevice() { return physicalDevice.get(); }
-		VkDevice get_device() { return device.get(); }
-		VkQueue get_graphicsQueue() { return graphicsQueue.get(); }
-		VkQueue get_presentQueue() { return presentQueue.get(); }
-		VkCommandPool get_commandPool() { return commandPool.get(); }
+		VkInstance get_instance() const { return instance.get(); }
+		VkSurfaceKHR get_surface() const { return surface.get(); }
+		VkPhysicalDevice get_physicalDevice() const { return physicalDevice.get(); }
+		VkDevice get_device() const { return device.get(); }
+		VkQueue get_graphicsQueue() const { return graphicsQueue.get(); }
+		VkQueue get_presentQueue() const { return presentQueue.get(); }
+		VkCommandPool get_commandPool() const { return commandPool.get(); }
+		const util::QueueFamilyIndices& get_queueFamilyIndices() const { return queueFamilyIndices; }
 
 		bool complete() const { return isComplete; }
 
