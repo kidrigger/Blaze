@@ -88,7 +88,10 @@ namespace blaze
 
 		Context& operator=(Context&& other) noexcept
 		{
-			if (this == &other) return *this;
+			if (this == &other)
+			{
+				return *this;
+			}
 			enableValidationLayers = other.enableValidationLayers;
 			isComplete = other.isComplete;
 			instance = std::move(other.instance);

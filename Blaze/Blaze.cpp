@@ -270,8 +270,6 @@ namespace blaze
 		GLFWwindow* window = nullptr;
 		Context ctx;
 		Renderer renderer;
-		vector<VkImage> swapchainImages;
-		vector<VkImageView> swapchainImageViews;
 		VkRenderPass renderpass = VK_NULL_HANDLE;
 		VkPipelineLayout graphicsPipelineLayout = VK_NULL_HANDLE;
 		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
@@ -296,33 +294,9 @@ namespace blaze
 		}
 
 		renderer = Renderer(window, ctx);
-
-		// SwapchainImages
+		if (!renderer.complete())
 		{
-			uint32_t swapchainImageCount = 0;
-			vkGetSwapchainImagesKHR(ctx.get_device(), renderer.get_swapchain(), &swapchainImageCount, nullptr);
-			swapchainImages.resize(swapchainImageCount);
-			vkGetSwapchainImagesKHR(ctx.get_device(), renderer.get_swapchain(), &swapchainImageCount, swapchainImages.data());
-		}
-
-		swapchainImageViews.resize(swapchainImages.size());
-		for (size_t i = 0; i < swapchainImages.size(); i++)
-		{
-			VkImageViewCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = swapchainImages[i];
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = renderer.get_swapchainFormat();
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-			assert(vkCreateImageView(ctx.get_device(), &createInfo, nullptr, &swapchainImageViews[i]) == VK_SUCCESS);
+			throw std::runtime_error("Renderer could not be created");
 		}
 
 		renderpass = createRenderpass(ctx.get_device(), renderer.get_swapchainFormat());
@@ -330,11 +304,11 @@ namespace blaze
 		tie(graphicsPipelineLayout, graphicsPipeline) = createGraphicsPipeline(ctx.get_device(), renderpass, renderer.get_swapchainExtent());
 
 		// Framebuffers
-		swapchainFramebuffers.resize(swapchainImageViews.size());
-		for (size_t i = 0; i < swapchainImageViews.size(); i++)
+		swapchainFramebuffers.resize(renderer.get_swapchainImageViewsCount());
+		for (size_t i = 0; i < renderer.get_swapchainImageViewsCount(); i++)
 		{
 			vector<VkImageView> attachments = {
-				swapchainImageViews[i]
+				renderer.get_swapchainImageView(i)
 			};
 
 			VkFramebufferCreateInfo createInfo = {};
@@ -497,11 +471,6 @@ namespace blaze
 		for (auto framebuffer : swapchainFramebuffers)
 		{
 			vkDestroyFramebuffer(ctx.get_device(), framebuffer, nullptr);
-		}
-
-		for (auto imageview : swapchainImageViews)
-		{
-			vkDestroyImageView(ctx.get_device(), imageview, nullptr);
 		}
 
 		vkDestroyPipeline(ctx.get_device(), graphicsPipeline, nullptr);

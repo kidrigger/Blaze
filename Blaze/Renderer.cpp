@@ -96,4 +96,44 @@ namespace blaze
 		}
 		throw std::runtime_error("Swapchain creation failed with " + std::to_string(result));
 	}
+
+	std::vector<VkImage> Renderer::getSwapchainImages(const Context& context) const
+	{
+		uint32_t swapchainImageCount = 0;
+		std::vector<VkImage> swapchainImages;
+		vkGetSwapchainImagesKHR(context.get_device(), swapchain.get(), &swapchainImageCount, nullptr);
+		swapchainImages.resize(swapchainImageCount);
+		vkGetSwapchainImagesKHR(context.get_device(), swapchain.get(), &swapchainImageCount, swapchainImages.data());
+		return swapchainImages;
+	}
+
+	std::vector<VkImageView> Renderer::createSwapchainImageViews(const Context& context) const
+	{
+		std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
+		for (size_t i = 0; i < swapchainImages.size(); i++)
+		{
+			VkImageViewCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			createInfo.image = swapchainImages[i];
+			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			createInfo.format = swapchainFormat.get();
+			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			createInfo.subresourceRange.baseMipLevel = 0;
+			createInfo.subresourceRange.levelCount = 1;
+			createInfo.subresourceRange.baseArrayLayer = 0;
+			createInfo.subresourceRange.layerCount = 1;
+			auto result = vkCreateImageView(context.get_device(), &createInfo, nullptr, &swapchainImageViews[i]);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Failed to create image view with " + std::to_string(result));
+			}
+		}
+		return swapchainImageViews;
+	}
+
+	VkRenderPass Renderer::createRenderPass() const { return VK_NULL_HANDLE; }
 }
