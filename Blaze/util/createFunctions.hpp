@@ -9,4 +9,8 @@
 namespace blaze::util
 {
 	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& shaderCode);
+
+	VkSemaphore createSemaphore(VkDevice device);
+
+	VkFence createFence(VkDevice device);
 }

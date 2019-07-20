@@ -2,7 +2,7 @@
 #include "Renderer.hpp"
 #include "util/DeviceSelection.hpp"
 #include "util/files.hpp"
-#include "util/shader.hpp"
+#include "util/createFunctions.hpp"
 
 #include <algorithm>
 #include <string>
@@ -13,7 +13,69 @@
 
 namespace blaze
 {
-	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Renderer::createSwapchain(const Context& context) const
+	void Renderer::renderFrame()
+	{
+		using namespace std;
+
+		vkWaitForFences(context.get_device(), 1, &inFlightFences[currentFrame], VK_TRUE, numeric_limits<uint64_t>::max());
+
+		uint32_t imageIndex;
+		auto result = vkAcquireNextImageKHR(context.get_device(), swapchain.get(), numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
+		if (result != VK_SUCCESS)
+		{
+			throw runtime_error("Image acquire failed with " + to_string(result));
+		}
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { imageAvailableSem[currentFrame] };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+
+		VkSemaphore signalSemaphores[] = { renderFinishedSem[currentFrame] };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		vkResetFences(context.get_device(), 1, &inFlightFences[currentFrame]);
+
+		result = vkQueueSubmit(context.get_graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]);
+		if (result != VK_SUCCESS)
+		{
+			throw runtime_error("Queue Submit failed with " + to_string(result));
+		}
+
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+
+		VkSwapchainKHR swapchains[] = { swapchain.get() };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapchains;
+		presentInfo.pImageIndices = &imageIndex;
+
+		result = vkQueuePresentKHR(context.get_presentQueue(), &presentInfo);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || windowResized)
+		{
+			windowResized = false;
+			recreateSwapchain();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+		{
+			throw runtime_error("Image acquiring failed with " + to_string(result));
+		}
+
+		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	}
+
+	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Renderer::createSwapchain() const
 	{
 		util::SwapchainSupportDetails swapchainSupport = util::getSwapchainSupport(context.get_physicalDevice(), context.get_surface());
 
@@ -50,8 +112,9 @@ namespace blaze
 		}
 		else
 		{
-			swapExtent.width = std::clamp(swapExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-			swapExtent.height = std::clamp(swapExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+			auto [width, height] = getWindowSize();
+			swapExtent.width = std::clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+			swapExtent.height = std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 		}
 
 		uint32_t imageCount = capabilities.minImageCount + 1;
@@ -73,7 +136,7 @@ namespace blaze
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		createInfo.presentMode = presentMode;
 		createInfo.clipped = VK_TRUE;
-		createInfo.oldSwapchain = VK_NULL_HANDLE;
+		createInfo.oldSwapchain = swapchain.get();
 
 		auto queueIndices = context.get_queueFamilyIndices();
 		uint32_t queueFamilyIndices[] = { queueIndices.graphicsIndex.value(), queueIndices.presentIndex.value() };
@@ -99,7 +162,7 @@ namespace blaze
 		throw std::runtime_error("Swapchain creation failed with " + std::to_string(result));
 	}
 
-	std::vector<VkImage> Renderer::getSwapchainImages(const Context& context) const
+	std::vector<VkImage> Renderer::getSwapchainImages() const
 	{
 		uint32_t swapchainImageCount = 0;
 		std::vector<VkImage> swapchainImages;
@@ -109,7 +172,7 @@ namespace blaze
 		return swapchainImages;
 	}
 
-	std::vector<VkImageView> Renderer::createSwapchainImageViews(const Context& context) const
+	std::vector<VkImageView> Renderer::createSwapchainImageViews() const
 	{
 		std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
 		for (size_t i = 0; i < swapchainImages.size(); i++)
@@ -137,7 +200,7 @@ namespace blaze
 		return swapchainImageViews;
 	}
 
-	VkRenderPass Renderer::createRenderPass(const Context& context) const
+	VkRenderPass Renderer::createRenderPass() const
 	{
 		VkAttachmentDescription colorAttachment = {};
 		colorAttachment.format = swapchainFormat.get();
@@ -184,7 +247,7 @@ namespace blaze
 		throw std::runtime_error("RenderPass creation failed with " + std::to_string(result));
 	}
 
-	std::tuple<VkPipelineLayout, VkPipeline> Renderer::createGraphicsPipeline(const Context& context) const
+	std::tuple<VkPipelineLayout, VkPipeline> Renderer::createGraphicsPipeline() const
 	{
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
@@ -312,5 +375,121 @@ namespace blaze
 		}
 
 		return std::make_tuple(pipelineLayout, graphicsPipeline);
+	}
+
+	std::vector<VkFramebuffer> Renderer::createFramebuffers() const
+	{
+		using std::vector;
+
+		vector<VkFramebuffer> swapchainFramebuffers(swapchainImageViews.size());
+		for (size_t i = 0; i < swapchainImageViews.size(); i++)
+		{
+			VkImageView attachments[] = {
+				swapchainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			createInfo.renderPass = renderPass.get();
+			createInfo.attachmentCount = 1;
+			createInfo.pAttachments = attachments;
+			createInfo.width = swapchainExtent.get().width;
+			createInfo.height = swapchainExtent.get().height;
+			createInfo.layers = 1;
+
+			auto result = vkCreateFramebuffer(context.get_device(), &createInfo, nullptr, &swapchainFramebuffers[i]);
+			if (result != VK_SUCCESS)
+			{
+				for (size_t j = 0; j < i; j++)
+				{
+					vkDestroyFramebuffer(context.get_device(), swapchainFramebuffers[i], nullptr);
+				}
+				throw std::runtime_error("Framebuffer creation failed with " + std::to_string(result));
+			}
+		}
+		return swapchainFramebuffers;
+	}
+
+	std::vector<VkCommandBuffer> Renderer::allocateCommandBuffers() const
+	{
+		std::vector<VkCommandBuffer> commandBuffers(swapchainImages.size());
+
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = context.get_commandPool();
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
+		auto result = vkAllocateCommandBuffers(context.get_device(), &allocInfo, commandBuffers.data());
+		if (result == VK_SUCCESS)
+		{
+			return commandBuffers;
+		}
+		throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
+	}
+
+	void Renderer::recordCommandBuffers()
+	{
+		for (size_t i = 0; i < commandBuffers.size(); i++)
+		{
+			VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+			commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+			auto result = vkBeginCommandBuffer(commandBuffers[i], &commandBufferBeginInfo);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(i));
+			}
+
+			VkRenderPassBeginInfo renderpassBeginInfo = {};
+			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderpassBeginInfo.renderPass = renderPass.get();
+			renderpassBeginInfo.framebuffer = framebuffers[i];
+			renderpassBeginInfo.renderArea.offset = { 0, 0 };
+			renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
+
+			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+			renderpassBeginInfo.clearValueCount = 1;
+			renderpassBeginInfo.pClearValues = &clearColor;
+			vkCmdBeginRenderPass(commandBuffers[i], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
+
+			vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+			vkCmdEndRenderPass(commandBuffers[i]);
+
+			result = vkEndCommandBuffer(commandBuffers[i]);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("End Command Buffer failed with " + std::to_string(i));
+			}
+		}
+	}
+
+	std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const
+	{
+		using namespace std;
+
+		vector<VkSemaphore> startSems(swapchainImages.size());
+		vector<VkSemaphore> endSems(swapchainImages.size());
+		vector<VkFence> blockeFences(swapchainImages.size());
+
+		for (auto& sem : startSems)
+		{
+			sem = util::createSemaphore(context.get_device());
+		}
+
+		for (auto& sem : endSems)
+		{
+			sem = util::createSemaphore(context.get_device());
+		}
+
+		for (auto& fence : blockeFences)
+		{
+			fence = util::createFence(context.get_device());
+		}
+
+		return make_tuple(startSems, endSems, blockeFences);
 	}
 }
