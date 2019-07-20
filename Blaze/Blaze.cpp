@@ -12,7 +12,6 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
-#include <fstream>
 #include <string>
 
 #define GLFW_INCLUDE_VULKAN
@@ -45,221 +44,6 @@ namespace blaze
 	const bool enableValidationLayers = false;
 #endif
 
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& shaderCode)
-	{
-		VkShaderModuleCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.codeSize = shaderCode.size();
-		createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
-		VkShaderModule shaderModule = VK_NULL_HANDLE;
-		auto result = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
-		if (result == VK_SUCCESS)
-		{
-			return shaderModule;
-		}
-		throw std::runtime_error("Shader Module creation failed with " + std::to_string(result));
-	}
-
-	std::vector<char> loadBinaryFile(const std::string& filename)
-	{
-		using namespace std;
-		ifstream file(filename, ios::ate | ios::binary);
-		if (file.is_open())
-		{
-			size_t filesize = file.tellg();
-			vector<char> filedata(filesize);
-			file.seekg(0);
-			file.read(filedata.data(), filesize);
-			file.close();
-			return filedata;
-		}
-		throw std::runtime_error("File (" + filename + ") could not be opened.");
-	}
-
-	VkRenderPass createRenderpass(VkDevice device, VkFormat swapchainFormat)
-	{
-		VkAttachmentDescription colorAttachment = {};
-		colorAttachment.format = swapchainFormat;
-		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		VkAttachmentReference colorAttachmentRef = {};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpassDesc = {};
-		subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpassDesc.colorAttachmentCount = 1;
-		subpassDesc.pColorAttachments = &colorAttachmentRef;
-
-		VkSubpassDependency dependency = {};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPassCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		createInfo.attachmentCount = 1;
-		createInfo.pAttachments = &colorAttachment;
-		createInfo.subpassCount = 1;
-		createInfo.pSubpasses = &subpassDesc;
-		createInfo.dependencyCount = 1;
-		createInfo.pDependencies = &dependency;
-
-		VkRenderPass renderpass = VK_NULL_HANDLE;
-		auto result = vkCreateRenderPass(device, &createInfo, nullptr, &renderpass);
-		if (result == VK_SUCCESS)
-		{
-			return renderpass;
-		}
-		throw std::runtime_error("RenderPass creation failed with " + std::to_string(result));
-	};
-
-	std::tuple<VkPipelineLayout, VkPipeline> createGraphicsPipeline(VkDevice device, VkRenderPass renderpass, VkExtent2D swapchainExtent)
-	{
-		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
-
-		auto vertexShaderCode = loadBinaryFile("shaders/vShader.vert.spv");
-		auto fragmentShaderCode = loadBinaryFile("shaders/fShader.frag.spv");
-
-		VkShaderModule vertexShaderModule = createShaderModule(device, vertexShaderCode);
-		VkShaderModule fragmentShaderModule = createShaderModule(device, fragmentShaderCode);
-
-		VkPipelineShaderStageCreateInfo vertexShaderStageCreateInfo = {};
-		vertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertexShaderStageCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertexShaderStageCreateInfo.module = vertexShaderModule;
-		vertexShaderStageCreateInfo.pName = "main";
-
-		VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo = {};
-		fragmentShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		fragmentShaderStageCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragmentShaderStageCreateInfo.module = fragmentShaderModule;
-		fragmentShaderStageCreateInfo.pName = "main";
-
-		VkPipelineShaderStageCreateInfo shaderStagesCreateInfo[] = {
-			vertexShaderStageCreateInfo,
-			fragmentShaderStageCreateInfo
-		};
-
-		VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
-		vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-		vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
-
-		VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
-		inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
-
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)swapchainExtent.width;
-		viewport.height = (float)swapchainExtent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent = swapchainExtent;
-
-		VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
-		viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportStateCreateInfo.viewportCount = 1;
-		viewportStateCreateInfo.pViewports = &viewport;
-		viewportStateCreateInfo.scissorCount = 1;
-		viewportStateCreateInfo.pScissors = &scissor;
-
-		VkPipelineRasterizationStateCreateInfo rasterizerCreateInfo = {};
-		rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizerCreateInfo.depthClampEnable = VK_FALSE;
-		rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-		rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-		rasterizerCreateInfo.lineWidth = 1.0f;
-		rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizerCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-		rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
-
-		VkPipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
-		multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
-		multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorblendAttachment = {};
-		colorblendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorblendAttachment.blendEnable = VK_FALSE;
-
-		VkPipelineColorBlendStateCreateInfo colorblendCreateInfo = {};
-		colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorblendCreateInfo.logicOpEnable = VK_FALSE;
-		colorblendCreateInfo.attachmentCount = 1;
-		colorblendCreateInfo.pAttachments = &colorblendAttachment;
-
-		VkDynamicState dynamicStates[] = {
-			VK_DYNAMIC_STATE_VIEWPORT,
-			VK_DYNAMIC_STATE_LINE_WIDTH
-		};
-
-		VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
-		dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicStateCreateInfo.dynamicStateCount = 2;
-		dynamicStateCreateInfo.pDynamicStates = dynamicStates;
-
-		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-		auto result = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
-		if (result != VK_SUCCESS)
-		{
-			vkDestroyShaderModule(device, vertexShaderModule, nullptr);
-			vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
-
-			throw std::runtime_error("Pipeline Layout Creation Failed with " + result);
-		}
-
-		VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineCreateInfo.stageCount = 2;
-		pipelineCreateInfo.pStages = shaderStagesCreateInfo;
-		pipelineCreateInfo.pVertexInputState = &vertexInputCreateInfo;
-		pipelineCreateInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
-		pipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
-		pipelineCreateInfo.pRasterizationState = &rasterizerCreateInfo;
-		pipelineCreateInfo.pMultisampleState = &multisampleCreateInfo;
-		pipelineCreateInfo.pDepthStencilState = nullptr;
-		pipelineCreateInfo.pColorBlendState = &colorblendCreateInfo;
-		pipelineCreateInfo.pDynamicState = nullptr;
-		pipelineCreateInfo.layout = pipelineLayout;
-		pipelineCreateInfo.renderPass = renderpass;
-		pipelineCreateInfo.subpass = 0;
-		pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineCreateInfo.basePipelineIndex = -1;
-
-		result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &graphicsPipeline);
-		if (result != VK_SUCCESS)
-		{
-			vkDestroyShaderModule(device, vertexShaderModule, nullptr);
-			vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
-			throw std::runtime_error("Graphics Pipeline creation failed with " + std::to_string(result));
-		}
-
-		vkDestroyShaderModule(device, vertexShaderModule, nullptr);
-		vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
-		return std::make_tuple(pipelineLayout, graphicsPipeline);
-	};
-
 	void run()
 	{
 		// Usings
@@ -270,9 +54,9 @@ namespace blaze
 		GLFWwindow* window = nullptr;
 		Context ctx;
 		Renderer renderer;
-		VkRenderPass renderpass = VK_NULL_HANDLE;
-		VkPipelineLayout graphicsPipelineLayout = VK_NULL_HANDLE;
-		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+		// Moved to renderer // VkRenderPass renderpass = VK_NULL_HANDLE;
+		// Moved to renderer // VkPipelineLayout graphicsPipelineLayout = VK_NULL_HANDLE;
+		// Moved to renderer // VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 		vector<VkFramebuffer> swapchainFramebuffers;
 		vector<VkCommandBuffer> commandBuffers;
 		vector<VkSemaphore> imageAvailableSem(MAX_FRAMES_IN_FLIGHT, VK_NULL_HANDLE);
@@ -299,10 +83,6 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		renderpass = createRenderpass(ctx.get_device(), renderer.get_swapchainFormat());
-
-		tie(graphicsPipelineLayout, graphicsPipeline) = createGraphicsPipeline(ctx.get_device(), renderpass, renderer.get_swapchainExtent());
-
 		// Framebuffers
 		swapchainFramebuffers.resize(renderer.get_swapchainImageViewsCount());
 		for (size_t i = 0; i < renderer.get_swapchainImageViewsCount(); i++)
@@ -313,7 +93,7 @@ namespace blaze
 
 			VkFramebufferCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			createInfo.renderPass = renderpass;
+			createInfo.renderPass = renderer.get_renderPass();
 			createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 			createInfo.pAttachments = attachments.data();
 			createInfo.width = renderer.get_swapchainExtent().width;
@@ -344,7 +124,7 @@ namespace blaze
 
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderpass;
+			renderpassBeginInfo.renderPass = renderer.get_renderPass();
 			renderpassBeginInfo.framebuffer = swapchainFramebuffers[i];
 			renderpassBeginInfo.renderArea.offset = { 0, 0 };
 			renderpassBeginInfo.renderArea.extent = renderer.get_swapchainExtent();
@@ -354,7 +134,7 @@ namespace blaze
 			renderpassBeginInfo.pClearValues = &clearColor;
 			vkCmdBeginRenderPass(commandBuffers[i], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.get_graphicsPipeline());
 
 			vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
 
@@ -472,10 +252,6 @@ namespace blaze
 		{
 			vkDestroyFramebuffer(ctx.get_device(), framebuffer, nullptr);
 		}
-
-		vkDestroyPipeline(ctx.get_device(), graphicsPipeline, nullptr);
-		vkDestroyPipelineLayout(ctx.get_device(), graphicsPipelineLayout, nullptr);
-		vkDestroyRenderPass(ctx.get_device(), renderpass, nullptr);
 
 		glfwDestroyWindow(window);
 		glfwTerminate();

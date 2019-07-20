@@ -24,6 +24,9 @@ namespace blaze
 		util::Unmanaged<VkExtent2D> swapchainExtent;
 		util::UnmanagedVector<VkImage> swapchainImages;
 		util::ManagedVector<VkImageView> swapchainImageViews;
+		util::Managed<VkRenderPass> renderPass;
+		util::Managed<VkPipelineLayout> graphicsPipelineLayout;
+		util::Managed<VkPipeline> graphicsPipeline;
 
 	public:
 		Renderer() noexcept
@@ -46,7 +49,12 @@ namespace blaze
 			{
 				swapchainImages = getSwapchainImages(context);
 				swapchainImageViews = ManagedVector(createSwapchainImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
-			
+				renderPass = Managed(createRenderPass(context), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
+				{
+					auto [gPipelineLayout, gPipeline] = createGraphicsPipeline(context);
+					graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+					graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+				}
 				isComplete = true;
 			}
 			catch (std::exception& e)
@@ -63,7 +71,10 @@ namespace blaze
 			swapchainFormat(std::move(other.swapchainFormat)),
 			swapchainExtent(std::move(other.swapchainExtent)),
 			swapchainImages(std::move(other.swapchainImages)),
-			swapchainImageViews(std::move(other.swapchainImageViews))
+			swapchainImageViews(std::move(other.swapchainImageViews)),
+			renderPass(std::move(other.renderPass)),
+			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
+			graphicsPipeline(std::move(other.graphicsPipeline))
 		{
 		}
 
@@ -80,6 +91,9 @@ namespace blaze
 			swapchainExtent = std::move(other.swapchainExtent);
 			swapchainImages = std::move(other.swapchainImages);
 			swapchainImageViews = std::move(other.swapchainImageViews);
+			renderPass = std::move(other.renderPass);
+			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
+			graphicsPipeline = std::move(other.graphicsPipeline);
 			return *this;
 		}
 
@@ -92,12 +106,15 @@ namespace blaze
 		VkExtent2D get_swapchainExtent() const { return swapchainExtent.get(); }
 		size_t get_swapchainImageViewsCount() const { return swapchainImageViews.size(); }
 		VkImageView get_swapchainImageView(size_t index) const { return swapchainImageViews[index]; }
+		VkRenderPass get_renderPass() const { return renderPass.get(); }
+		VkPipeline get_graphicsPipeline() const { return graphicsPipeline.get(); }
 
 		bool complete() const { return isComplete; }
 	private:
 		std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Renderer::createSwapchain(const Context& context) const;
 		std::vector<VkImage> getSwapchainImages(const Context& context) const;
 		std::vector<VkImageView> createSwapchainImageViews(const Context& context) const;
-		VkRenderPass createRenderPass() const;
+		VkRenderPass createRenderPass(const Context& context) const;
+		std::tuple<VkPipelineLayout, VkPipeline> createGraphicsPipeline(const Context& context) const;
 	};
 }
