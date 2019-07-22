@@ -13,10 +13,12 @@
 
 namespace blaze
 {
+	using RenderCommand = std::function<void(VkCommandBuffer buf)>;
+
 	class Renderer
 	{
 	public:
-		const int MAX_FRAMES_IN_FLIGHT = 2;
+		uint32_t max_frames_in_flight = 2;
 
 	private:
 		bool isComplete{ false };
@@ -40,7 +42,10 @@ namespace blaze
 		util::ManagedVector<VkSemaphore> renderFinishedSem;
 		util::ManagedVector<VkFence> inFlightFences;
 
-		int currentFrame{ 0 };
+		std::vector<RenderCommand> renderCommands;
+		std::vector<bool> commandBufferDirty;
+
+		uint32_t currentFrame{ 0 };
 
 	public:
 		Renderer() noexcept
@@ -86,7 +91,10 @@ namespace blaze
 				}
 
 				framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_commandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, buf.size(), buf.data()); });
+				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_commandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+				commandBufferDirty.resize(commandBuffers.size(), true);
+
+				max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
 
 				recordCommandBuffers();
 
@@ -122,7 +130,9 @@ namespace blaze
 			commandBuffers(std::move(other.commandBuffers)),
 			imageAvailableSem(std::move(other.imageAvailableSem)),
 			renderFinishedSem(std::move(other.renderFinishedSem)),
-			inFlightFences(std::move(other.inFlightFences))
+			inFlightFences(std::move(other.inFlightFences)),
+			renderCommands(std::move(other.renderCommands)),
+			commandBufferDirty(std::move(other.commandBufferDirty))
 		{
 		}
 
@@ -148,6 +158,8 @@ namespace blaze
 			imageAvailableSem = std::move(other.imageAvailableSem);
 			renderFinishedSem = std::move(other.renderFinishedSem);
 			inFlightFences = std::move(other.inFlightFences);
+			renderCommands = std::move(other.renderCommands);
+			commandBufferDirty = std::move(other.commandBufferDirty);
 			return *this;
 		}
 
@@ -171,6 +183,18 @@ namespace blaze
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
+		VkPhysicalDevice get_physicalDevice() const { return context.get_physicalDevice(); }
+
+		// Submit
+		template <class RNDRCMD>
+		void submit(const RNDRCMD& cmd)
+		{
+			renderCommands.emplace_back(cmd);
+			for (auto& val : commandBufferDirty)
+			{
+				val = true;
+			}
+		}
 
 		bool complete() const { return isComplete; }
 	private:
@@ -204,7 +228,7 @@ namespace blaze
 			}
 
 			framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_commandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, buf.size(), buf.data()); });
+			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_commandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
 
 			recordCommandBuffers();
 		}
@@ -218,5 +242,6 @@ namespace blaze
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
 		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const;
 		void recordCommandBuffers();
+		void rebuildCommandBuffer(int frame);
 	};
 }

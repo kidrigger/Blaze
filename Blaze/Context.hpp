@@ -60,8 +60,6 @@ namespace blaze
 				presentQueue = getQueue(queueFamilyIndices.presentIndex.value());
 				commandPool = util::Managed(createCommandPool(), [dev = device.get()](VkCommandPool& commandPool){ vkDestroyCommandPool(dev, commandPool, nullptr); });
 
-				// Command Pool
-
 				isComplete = true;
 			}
 			catch (std::exception& e)

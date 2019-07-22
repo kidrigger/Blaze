@@ -3,6 +3,7 @@
 #include "util/DeviceSelection.hpp"
 #include "util/files.hpp"
 #include "util/createFunctions.hpp"
+#include "Datatypes.hpp"
 
 #include <algorithm>
 #include <string>
@@ -17,10 +18,12 @@ namespace blaze
 	{
 		using namespace std;
 
-		vkWaitForFences(context.get_device(), 1, &inFlightFences[currentFrame], VK_TRUE, numeric_limits<uint64_t>::max());
-
 		uint32_t imageIndex;
 		auto result = vkAcquireNextImageKHR(context.get_device(), swapchain.get(), numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
+		rebuildCommandBuffer(imageIndex);
+
 		if (result != VK_SUCCESS)
 		{
 			throw runtime_error("Image acquire failed with " + to_string(result));
@@ -41,9 +44,9 @@ namespace blaze
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		vkResetFences(context.get_device(), 1, &inFlightFences[currentFrame]);
+		vkResetFences(context.get_device(), 1, &inFlightFences[imageIndex]);
 
-		result = vkQueueSubmit(context.get_graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]);
+		result = vkQueueSubmit(context.get_graphicsQueue(), 1, &submitInfo, inFlightFences[imageIndex]);
 		if (result != VK_SUCCESS)
 		{
 			throw runtime_error("Queue Submit failed with " + to_string(result));
@@ -72,7 +75,7 @@ namespace blaze
 			throw runtime_error("Image acquiring failed with " + to_string(result));
 		}
 
-		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+		currentFrame = (currentFrame + 1) % max_frames_in_flight;
 	}
 
 	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Renderer::createSwapchain() const
@@ -275,12 +278,15 @@ namespace blaze
 			fragmentShaderStageCreateInfo
 		};
 
+		auto bindingDescriptions = Vertex::getBindingDescription();
+		auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
 		VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
 		vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-		vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+		vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+		vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescriptions;
+		vertexInputCreateInfo.vertexAttributeDescriptionCount = 2;
+		vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
 		inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -438,7 +444,7 @@ namespace blaze
 			auto result = vkBeginCommandBuffer(commandBuffers[i], &commandBufferBeginInfo);
 			if (result != VK_SUCCESS)
 			{
-				throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(i));
+				throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 			}
 
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
@@ -455,15 +461,64 @@ namespace blaze
 
 			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
 
-			vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+			for (auto& cmd : renderCommands)
+			{
+				cmd(commandBuffers[i]);
+			}
 
 			vkCmdEndRenderPass(commandBuffers[i]);
 
 			result = vkEndCommandBuffer(commandBuffers[i]);
 			if (result != VK_SUCCESS)
 			{
-				throw std::runtime_error("End Command Buffer failed with " + std::to_string(i));
+				throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
 			}
+		}
+	}
+
+	void Renderer::rebuildCommandBuffer(int frame)
+	{
+		if (commandBufferDirty[frame])
+		{
+			vkWaitForFences(context.get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+			VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+			commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+			auto result = vkBeginCommandBuffer(commandBuffers[frame], &commandBufferBeginInfo);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
+			}
+
+			VkRenderPassBeginInfo renderpassBeginInfo = {};
+			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderpassBeginInfo.renderPass = renderPass.get();
+			renderpassBeginInfo.framebuffer = framebuffers[frame];
+			renderpassBeginInfo.renderArea.offset = { 0, 0 };
+			renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
+
+			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+			renderpassBeginInfo.clearValueCount = 1;
+			renderpassBeginInfo.pClearValues = &clearColor;
+			vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
+
+			for (auto& cmd : renderCommands)
+			{
+				cmd(commandBuffers[frame]);
+			}
+
+			vkCmdEndRenderPass(commandBuffers[frame]);
+
+			result = vkEndCommandBuffer(commandBuffers[frame]);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
+			}
+
+			commandBufferDirty[frame] = false;
 		}
 	}
 

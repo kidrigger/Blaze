@@ -1,12 +1,16 @@
 ﻿// Blaze.cpp : Defines the entry point for the application.
 //
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #include "Blaze.hpp"
 #include "util/Managed.hpp"
 #include "util/DeviceSelection.hpp"
 #include "util/createFunctions.hpp"
 #include "Context.hpp"
 #include "Renderer.hpp"
+#include "Datatypes.hpp"
 
 #include <optional>
 #include <vector>
@@ -17,11 +21,6 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
 
 #define VALIDATION_LAYERS_ENABLED
 
@@ -37,8 +36,6 @@ namespace blaze
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
 
-	const int MAX_FRAMES_IN_FLIGHT = 2;
-
 #ifdef VALIDATION_LAYERS_ENABLED
 	const bool enableValidationLayers = true;
 #else
@@ -49,12 +46,13 @@ namespace blaze
 	{
 		// Usings
 		using namespace std;
-		using std::byte;
+		using namespace util;
 
 		// Variables
 		GLFWwindow* window = nullptr;
 		Context ctx;
 		Renderer renderer;
+		VertexBuffer vertexBuffer;
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -69,7 +67,25 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
+		vector<Vertex> vertices = {
+			{{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+			{{-0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		};
+
+		vertexBuffer = VertexBuffer(renderer, sizeof(vertices[0]) * vertices.size());
+		vertexBuffer.map(renderer.get_device(), vertices);
+
+		auto renderCommand = [buf = vertexBuffer.get_buffer(), size = vertexBuffer.get_size()](VkCommandBuffer cmdBuffer)
+		{
+			VkBuffer buffers[] = { buf };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, buffers, offsets);
+			vkCmdDraw(cmdBuffer, static_cast<uint32_t>(size), 1, 0, 0);
+		};
+
 		// Run
+		bool ontime = true;
 		while (!glfwWindowShouldClose(window))
 		{
 			glfwPollEvents();
@@ -77,10 +93,15 @@ namespace blaze
 			try
 			{
 				renderer.renderFrame();
+				if (ontime) 
+				{
+					renderer.submit(renderCommand);
+					ontime = false;
+				}
 			}
 			catch (std::exception& e)
 			{
-				cerr << e.what() << "!!!!!" << endl;
+				cerr << e.what() << endl;
 			}
 		}
 
