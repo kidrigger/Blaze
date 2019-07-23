@@ -52,7 +52,7 @@ namespace blaze
 		GLFWwindow* window = nullptr;
 		Context ctx;
 		Renderer renderer;
-		VertexBuffer vertexBuffer;
+		IndexedVertexBuffer vertexBuffer;
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -68,19 +68,31 @@ namespace blaze
 		}
 
 		vector<Vertex> vertices = {
-			{{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-			{{-0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+			{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+			{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+			{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
 		};
 
-		vertexBuffer = VertexBuffer(renderer, vertices);
+		vector<uint32_t> indices = {
+			0, 1, 2, 0, 2, 3
+		};
 
-		auto renderCommand = [buf = vertexBuffer.get_buffer(), size = vertexBuffer.get_size()](VkCommandBuffer cmdBuffer)
+		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);
+
+		auto renderCommand = [
+			vert = vertexBuffer.get_vertexBuffer(),
+			idx = vertexBuffer.get_indexBuffer(),
+			size = vertexBuffer.get_verticeSize(),
+			idxc = vertexBuffer.get_indexCount()
+		]
+		(VkCommandBuffer cmdBuffer)
 		{
-			VkBuffer buffers[] = { buf };
+			VkBuffer buffers[] = { vert };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, buffers, offsets);
-			vkCmdDraw(cmdBuffer, static_cast<uint32_t>(size), 1, 0, 0);
+			vkCmdBindIndexBuffer(cmdBuffer, idx, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmdBuffer, idxc, 1, 0, 0, 0);
 		};
 
 		// Run
