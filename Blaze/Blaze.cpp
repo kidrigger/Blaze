@@ -86,8 +86,13 @@ namespace blaze
 
 		// Run
 		bool ontime = true;
+
+		double prevTime = glfwGetTime();
+		int intermittence = 0;
+
 		while (!glfwWindowShouldClose(window))
 		{
+			prevTime = glfwGetTime();
 			glfwPollEvents();
 
 			try
@@ -103,7 +108,11 @@ namespace blaze
 			{
 				cerr << e.what() << endl;
 			}
+
+			printf("\r%.4lf", (glfwGetTime() - prevTime));
 		}
+
+		cout << endl;
 
 		// Wait for all commands to finish
 		vkDeviceWaitIdle(renderer.get_device());

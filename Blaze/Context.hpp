@@ -60,6 +60,12 @@ namespace blaze
 				presentQueue = getQueue(queueFamilyIndices.presentIndex.value());
 				commandPool = util::Managed(createCommandPool(), [dev = device.get()](VkCommandPool& commandPool){ vkDestroyCommandPool(dev, commandPool, nullptr); });
 
+				{
+					VkPhysicalDeviceProperties props;
+					vkGetPhysicalDeviceProperties(physicalDevice.get(), &props);
+					std::cout << "Using " << props.deviceName << std::endl;
+				}
+
 				isComplete = true;
 			}
 			catch (std::exception& e)
