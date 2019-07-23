@@ -422,7 +422,7 @@ namespace blaze
 
 		VkCommandBufferAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = context.get_commandPool();
+		allocInfo.commandPool = context.get_graphicsCommandPool();
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 		auto result = vkAllocateCommandBuffers(context.get_device(), &allocInfo, commandBuffers.data());
@@ -481,6 +481,7 @@ namespace blaze
 		if (commandBufferDirty[frame])
 		{
 			vkWaitForFences(context.get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+
 			VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 			commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;

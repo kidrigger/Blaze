@@ -35,7 +35,7 @@ namespace blaze
 		util::QueueFamilyIndices queueFamilyIndices;
 		util::Unmanaged<VkQueue> graphicsQueue;
 		util::Unmanaged<VkQueue> presentQueue;
-		util::Managed<VkCommandPool> commandPool;
+		util::Managed<VkCommandPool> graphicsCommandPool;
 	public:
 		Context() noexcept
 			: enableValidationLayers(true) {}
@@ -58,7 +58,7 @@ namespace blaze
 				device = util::Managed(createLogicalDevice(), [](VkDevice& device) { vkDestroyDevice(device, nullptr); });
 				graphicsQueue = getQueue(queueFamilyIndices.graphicsIndex.value());
 				presentQueue = getQueue(queueFamilyIndices.presentIndex.value());
-				commandPool = util::Managed(createCommandPool(), [dev = device.get()](VkCommandPool& commandPool){ vkDestroyCommandPool(dev, commandPool, nullptr); });
+				graphicsCommandPool = util::Managed(createCommandPool(queueFamilyIndices.graphicsIndex.value()), [dev = device.get()](VkCommandPool& commandPool){ vkDestroyCommandPool(dev, commandPool, nullptr); });
 
 				{
 					VkPhysicalDeviceProperties props;
@@ -86,7 +86,7 @@ namespace blaze
 			device(std::move(other.device)),
 			graphicsQueue(std::move(other.graphicsQueue)),
 			presentQueue(std::move(other.presentQueue)),
-			commandPool(std::move(other.commandPool))
+			graphicsCommandPool(std::move(other.graphicsCommandPool))
 		{
 		}
 
@@ -106,21 +106,23 @@ namespace blaze
 			device = std::move(other.device);
 			graphicsQueue = std::move(other.graphicsQueue);
 			presentQueue = std::move(other.presentQueue);
-			commandPool = std::move(other.commandPool);
+			graphicsCommandPool = std::move(other.graphicsCommandPool);
 			return *this;
 		}
 
 		Context(const Context& other) = delete;
 		Context& operator=(const Context& other) = delete;
 
-		VkInstance get_instance() const { return instance.get(); }
-		VkSurfaceKHR get_surface() const { return surface.get(); }
-		VkPhysicalDevice get_physicalDevice() const { return physicalDevice.get(); }
-		VkDevice get_device() const { return device.get(); }
-		VkQueue get_graphicsQueue() const { return graphicsQueue.get(); }
-		VkQueue get_presentQueue() const { return presentQueue.get(); }
-		VkCommandPool get_commandPool() const { return commandPool.get(); }
-		const util::QueueFamilyIndices& get_queueFamilyIndices() const { return queueFamilyIndices; }
+		inline VkInstance get_instance() const { return instance.get(); }
+		inline VkSurfaceKHR get_surface() const { return surface.get(); }
+		inline VkPhysicalDevice get_physicalDevice() const { return physicalDevice.get(); }
+		inline VkDevice get_device() const { return device.get(); }
+		inline VkQueue get_graphicsQueue() const { return graphicsQueue.get(); }
+		inline VkQueue get_presentQueue() const { return presentQueue.get(); }
+		inline VkQueue get_transferQueue() const { return graphicsQueue.get(); }	// TODO: Explicit
+		inline VkCommandPool get_graphicsCommandPool() const { return graphicsCommandPool.get(); }
+		inline VkCommandPool get_transferCommandPool() const { return graphicsCommandPool.get(); }
+		inline const util::QueueFamilyIndices& get_queueFamilyIndices() const { return queueFamilyIndices; }
 
 		bool complete() const { return isComplete; }
 
@@ -133,6 +135,6 @@ namespace blaze
 		VkPhysicalDevice getPhysicalDevice() const;
 		VkDevice createLogicalDevice() const;
 		VkQueue getQueue(uint32_t index) const;
-		VkCommandPool createCommandPool() const;
+		VkCommandPool createCommandPool(uint32_t queueIndex) const;
 	};
 }

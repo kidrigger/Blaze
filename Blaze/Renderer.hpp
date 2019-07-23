@@ -91,7 +91,7 @@ namespace blaze
 				}
 
 				framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_commandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
 				commandBufferDirty.resize(commandBuffers.size(), true);
 
 				max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
@@ -184,6 +184,9 @@ namespace blaze
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
 		VkPhysicalDevice get_physicalDevice() const { return context.get_physicalDevice(); }
+		VkQueue get_transferQueue() const { return context.get_transferQueue(); }
+		VkCommandPool get_transferCommandPool() const { return context.get_transferCommandPool(); }
+		const Context& get_context() const { return context; }
 
 		// Submit
 		template <class RNDRCMD>
@@ -228,7 +231,7 @@ namespace blaze
 			}
 
 			framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_commandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
 
 			recordCommandBuffers();
 		}

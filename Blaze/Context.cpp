@@ -168,12 +168,12 @@ namespace blaze
 		return queue;
 	}
 
-	VkCommandPool Context::createCommandPool() const 
+	VkCommandPool Context::createCommandPool(uint32_t queueIndex) const 
 	{
 		VkCommandPool commandPool;
 		VkCommandPoolCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		createInfo.queueFamilyIndex = queueFamilyIndices.graphicsIndex.value();
+		createInfo.queueFamilyIndex = queueIndex;
 		createInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		auto result = vkCreateCommandPool(device.get(), &createInfo, nullptr, &commandPool);

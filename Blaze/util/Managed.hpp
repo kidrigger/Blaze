@@ -49,9 +49,9 @@ namespace blaze::util
 		Managed(const Managed& other) = delete;
 		Managed& operator=(const Managed& other) = delete;
 
-		const T& get() const { return handle; }
-		void set(const T& val) { handle = val; }
-		T* data() { return &handle; }
+		inline const T& get() const { return handle; }
+		inline void set(const T& val) { handle = val; }
+		inline T* data() { return &handle; }
 
 		~Managed()
 		{

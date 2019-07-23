@@ -73,8 +73,7 @@ namespace blaze
 			{{-0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 		};
 
-		vertexBuffer = VertexBuffer(renderer, sizeof(vertices[0]) * vertices.size());
-		vertexBuffer.map(renderer.get_device(), vertices);
+		vertexBuffer = VertexBuffer(renderer, vertices);
 
 		auto renderCommand = [buf = vertexBuffer.get_buffer(), size = vertexBuffer.get_size()](VkCommandBuffer cmdBuffer)
 		{
