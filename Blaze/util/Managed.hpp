@@ -52,6 +52,7 @@ namespace blaze::util
 		inline const T& get() const { return handle; }
 		inline void set(const T& val) { handle = val; }
 		inline T* data() { return &handle; }
+		inline const T* data() const { return &handle; }
 
 		~Managed()
 		{
@@ -185,6 +186,12 @@ namespace blaze::util
 		{
 		}
 
+		template <typename U>
+		ManagedVector(std::vector<T>&& handles, U destroyer) noexcept
+			: handles(std::move(handles)), destroyer(destroyer)
+		{
+		}
+
 		ManagedVector(ManagedVector&& other) noexcept
 			: ManagedVector()
 		{
@@ -231,6 +238,11 @@ namespace blaze::util
 
 		UnmanagedVector(const std::vector<T>& handles) noexcept
 			: handles(handles)
+		{
+		}
+
+		UnmanagedVector(std::vector<T>&& handles) noexcept
+			: handles(std::move(handles))
 		{
 		}
 

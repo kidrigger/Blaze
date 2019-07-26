@@ -11,6 +11,7 @@
 #include "Context.hpp"
 #include "Renderer.hpp"
 #include "Datatypes.hpp"
+#include "VertexBuffer.hpp"
 
 #include <optional>
 #include <vector>
@@ -21,6 +22,9 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #define VALIDATION_LAYERS_ENABLED
 
@@ -52,7 +56,21 @@ namespace blaze
 		GLFWwindow* window = nullptr;
 		Context ctx;
 		Renderer renderer;
-		IndexedVertexBuffer vertexBuffer;
+		IndexedVertexBuffer<Vertex> vertexBuffer;
+
+		UniformBufferObject cameraUBO
+		{
+			glm::mat4{1.0f},
+			glm::lookAt(
+				glm::vec3{0.0f, 0.0f, -1.0f},
+				glm::vec3{0.0f, 0.0f, 0.0f},
+				glm::vec3{0.0f, -1.0f, 0.0f}),
+			glm::perspective(
+				glm::radians(45.0f),
+				4.0f / 3.0f,
+				0.1f,
+				10.0f)
+		};
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -68,10 +86,10 @@ namespace blaze
 		}
 
 		vector<Vertex> vertices = {
-			{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-			{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-			{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+			{{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+			{{0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+			{{-0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
 		};
 
 		vector<uint32_t> indices = {
@@ -99,6 +117,7 @@ namespace blaze
 		bool ontime = true;
 
 		double prevTime = glfwGetTime();
+		double deltaTime = 0.0;
 		int intermittence = 0;
 
 		while (!glfwWindowShouldClose(window))
@@ -108,6 +127,8 @@ namespace blaze
 
 			try
 			{
+				cameraUBO.model = glm::rotate(cameraUBO.model, glm::radians(static_cast<float>(10*deltaTime)), glm::vec3{ 1.0f, 0.0f, 0.0f });
+				renderer.set_cameraUBO(cameraUBO);
 				renderer.renderFrame();
 				if (ontime) 
 				{
@@ -120,7 +141,8 @@ namespace blaze
 				cerr << e.what() << endl;
 			}
 
-			printf("\r%.4lf", (glfwGetTime() - prevTime));
+			deltaTime = glfwGetTime() - prevTime;
+			printf("\r%.4lf", deltaTime);
 		}
 
 		cout << endl;

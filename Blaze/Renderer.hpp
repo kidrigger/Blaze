@@ -3,6 +3,7 @@
 
 #include "util/Managed.hpp"
 #include "Context.hpp"
+#include "Datatypes.hpp"
 
 #include <map>
 #include <vector>
@@ -15,12 +16,65 @@ namespace blaze
 {
 	using RenderCommand = std::function<void(VkCommandBuffer buf)>;
 
+	template <typename T>
+	class UniformBuffer
+	{
+	private:
+		util::Managed<VkBuffer> buffer;
+		util::Managed<VkDeviceMemory> memory;
+		size_t size{ 0 };
+
+	public:
+		UniformBuffer() noexcept
+		{
+		}
+
+		UniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, const T& data)
+			: size(sizeof(data))
+		{
+			using namespace util;
+
+			auto [buf, mem] = createBuffer(device, physicalDevice, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+			buffer = Managed(buf, [device](VkBuffer& buf) { vkDestroyBuffer(device, buf, nullptr); });
+			memory = Managed(mem, [device](VkDeviceMemory& mem) { vkFreeMemory(device, mem, nullptr); });
+
+			void* memdata;
+			vkMapMemory(device, mem, 0, size, 0, &memdata);
+			memcpy(memdata, &data, size);
+			vkUnmapMemory(device, mem);
+		}
+
+		UniformBuffer(UniformBuffer&& other) noexcept
+			: buffer(std::move(other.buffer)),
+			memory(std::move(other.memory)),
+			size(other.size)
+		{
+		}
+
+		UniformBuffer& operator=(UniformBuffer&& other) noexcept
+		{
+			if (this = &other)
+			{
+				return *this;
+			}
+			buffer = std::move(other.buffer);
+			memory = std::move(other.memory);
+			size = other.size;
+		}
+
+		UniformBuffer(const UniformBuffer& other) = delete;
+		UniformBuffer& operator=(const UniformBuffer& other) = delete;
+
+		VkBuffer get_buffer() const { return buffer.get(); }
+		VkDeviceMemory get_memory() const { return memory.get(); }
+		size_t get_size() const { return size; }
+	};
+
 	class Renderer
 	{
-	public:
-		uint32_t max_frames_in_flight = 2;
-
 	private:
+		uint32_t max_frames_in_flight{ 2 };
 		bool isComplete{ false };
 		bool windowResized{ false };
 
@@ -31,13 +85,25 @@ namespace blaze
 		util::Managed<VkSwapchainKHR> swapchain;
 		util::Unmanaged<VkFormat> swapchainFormat;
 		util::Unmanaged<VkExtent2D> swapchainExtent;
+
 		util::UnmanagedVector<VkImage> swapchainImages;
 		util::ManagedVector<VkImageView> swapchainImageViews;
+
 		util::Managed<VkRenderPass> renderPass;
+
+		util::Managed<VkDescriptorSetLayout> descriptorSetLayout;
+		util::Managed<VkDescriptorPool> descriptorPool;
+		util::UnmanagedVector<VkDescriptorSet> descriptorSets;
+
+		std::vector<UniformBuffer<UniformBufferObject>> uniformBuffers;
+		UniformBufferObject cameraUBO{};
+
 		util::Managed<VkPipelineLayout> graphicsPipelineLayout;
 		util::Managed<VkPipeline> graphicsPipeline;
+
 		util::ManagedVector<VkFramebuffer> framebuffers;
 		util::ManagedVector<VkCommandBuffer, false> commandBuffers;
+
 		util::ManagedVector<VkSemaphore> imageAvailableSem;
 		util::ManagedVector<VkSemaphore> renderFinishedSem;
 		util::ManagedVector<VkFence> inFlightFences;
@@ -84,6 +150,11 @@ namespace blaze
 				swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
+				uniformBuffers = createUniformBuffers(cameraUBO);
+				descriptorSetLayout = Managed(createDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+				descriptorSets = createDescriptorSets();
+
 				{
 					auto [gPipelineLayout, gPipeline] = createGraphicsPipeline();
 					graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
@@ -96,14 +167,14 @@ namespace blaze
 
 				max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
 
-				recordCommandBuffers();
-
 				{
 					auto [startSems, endSems, fences] = createSyncObjects();
 					imageAvailableSem = ManagedVector(startSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
 					renderFinishedSem = ManagedVector(endSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
 					inFlightFences = ManagedVector(fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
 				}
+
+				recordCommandBuffers();
 
 				isComplete = true;
 			}
@@ -124,6 +195,11 @@ namespace blaze
 			swapchainImages(std::move(other.swapchainImages)),
 			swapchainImageViews(std::move(other.swapchainImageViews)),
 			renderPass(std::move(other.renderPass)),
+			descriptorSetLayout(std::move(other.descriptorSetLayout)),
+			descriptorPool(std::move(other.descriptorPool)),
+			descriptorSets(std::move(other.descriptorSets)),
+			uniformBuffers(std::move(other.uniformBuffers)),
+			cameraUBO(other.cameraUBO),
 			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
 			graphicsPipeline(std::move(other.graphicsPipeline)),
 			framebuffers(std::move(other.framebuffers)),
@@ -151,6 +227,11 @@ namespace blaze
 			swapchainImages = std::move(other.swapchainImages);
 			swapchainImageViews = std::move(other.swapchainImageViews);
 			renderPass = std::move(other.renderPass);
+			descriptorSetLayout = std::move(other.descriptorSetLayout);
+			descriptorPool = std::move(other.descriptorPool);
+			descriptorSets = std::move(other.descriptorSets);
+			uniformBuffers = std::move(other.uniformBuffers);
+			cameraUBO = other.cameraUBO;
 			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
 			graphicsPipeline = std::move(other.graphicsPipeline);
 			framebuffers = std::move(other.framebuffers);
@@ -199,6 +280,11 @@ namespace blaze
 			}
 		}
 
+		void set_cameraUBO(const UniformBufferObject& ubo)
+		{
+			cameraUBO = ubo;
+		}
+
 		bool complete() const { return isComplete; }
 	private:
 
@@ -224,6 +310,10 @@ namespace blaze
 			swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
+			uniformBuffers = createUniformBuffers(cameraUBO);
+			descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+			descriptorSets = createDescriptorSets();
+
 			{
 				auto [gPipelineLayout, gPipeline] = createGraphicsPipeline();
 				graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
@@ -232,6 +322,7 @@ namespace blaze
 
 			framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+			commandBufferDirty.resize(commandBuffers.size(), true);
 
 			recordCommandBuffers();
 		}
@@ -240,11 +331,23 @@ namespace blaze
 		std::vector<VkImage> getSwapchainImages() const;
 		std::vector<VkImageView> createSwapchainImageViews() const;
 		VkRenderPass createRenderPass() const;
+		VkDescriptorSetLayout createDescriptorSetLayout() const;
+		VkDescriptorPool createDescriptorPool() const;
+		std::vector<VkDescriptorSet> createDescriptorSets() const;
+		std::vector<UniformBuffer<UniformBufferObject>> createUniformBuffers(const UniformBufferObject& ubo) const;
 		std::tuple<VkPipelineLayout, VkPipeline> createGraphicsPipeline() const;
 		std::vector<VkFramebuffer> createFramebuffers() const;
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
 		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const;
 		void recordCommandBuffers();
 		void rebuildCommandBuffer(int frame);
+
+		void updateUniformBuffer(int frame, const UniformBufferObject& ubo)
+		{
+			void* data;
+			vkMapMemory(context.get_device(), uniformBuffers[frame].get_memory() , 0, uniformBuffers[frame].get_size(), 0, &data);
+			memcpy(data, &ubo, uniformBuffers[frame].get_size());
+			vkUnmapMemory(context.get_device(), uniformBuffers[frame].get_memory());
+		}
 	};
 }

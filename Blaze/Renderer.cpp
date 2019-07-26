@@ -23,6 +23,7 @@ namespace blaze
 
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 		rebuildCommandBuffer(imageIndex);
+		updateUniformBuffer(imageIndex, cameraUBO);
 
 		if (result != VK_SUCCESS)
 		{
@@ -250,6 +251,101 @@ namespace blaze
 		throw std::runtime_error("RenderPass creation failed with " + std::to_string(result));
 	}
 
+	VkDescriptorSetLayout Renderer::createDescriptorSetLayout() const
+	{
+		VkDescriptorSetLayout descriptorSetLayout;
+
+		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+
+		auto result = vkCreateDescriptorSetLayout(context.get_device(), &layoutInfo, nullptr, &descriptorSetLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw new std::runtime_error("DescriptorSet layout creation failed with " + std::to_string(result));
+		}
+
+		return descriptorSetLayout;
+	}
+
+	VkDescriptorPool Renderer::createDescriptorPool() const
+	{
+		VkDescriptorPoolSize poolSize = {};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = static_cast<uint32_t>(swapchainImages.size());
+
+		VkDescriptorPoolCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		createInfo.poolSizeCount = 1;
+		createInfo.pPoolSizes = &poolSize;
+		createInfo.maxSets = static_cast<uint32_t>(swapchainImages.size());
+
+		VkDescriptorPool pool;
+		auto result = vkCreateDescriptorPool(context.get_device(), &createInfo, nullptr, &pool);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Descriptor pool creation failed with " + std::to_string(result));
+		}
+		return pool;
+	}
+
+	std::vector<VkDescriptorSet> Renderer::createDescriptorSets() const
+	{
+		std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), descriptorSetLayout.get());
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool.get();
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(swapchainImages.size());
+		allocInfo.pSetLayouts = layouts.data();
+
+		std::vector<VkDescriptorSet> descriptorSets(swapchainImages.size());
+		auto result = vkAllocateDescriptorSets(context.get_device(), &allocInfo, descriptorSets.data());
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+		}
+
+		for (int i = 0; i < swapchainImages.size(); i++)
+		{
+			VkDescriptorBufferInfo info = {};
+			info.buffer = uniformBuffers[i].get_buffer();
+			info.offset = 0;
+			info.range = sizeof(UniformBufferObject);
+
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			write.descriptorCount = 1;
+			write.dstSet = descriptorSets[i];
+			write.dstBinding = 0;
+			write.dstArrayElement = 0;
+			write.pBufferInfo = &info;
+
+			vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+		}
+
+		return descriptorSets;
+	}
+
+	std::vector<UniformBuffer<UniformBufferObject>> Renderer::createUniformBuffers(const UniformBufferObject& ubo) const
+	{
+		std::vector<UniformBuffer<UniformBufferObject>> ubos;
+		ubos.reserve(swapchainImages.size());
+		for (int i = 0; i < swapchainImages.size(); i++)
+		{
+			ubos.emplace_back(context.get_device(), context.get_physicalDevice(), ubo);
+		}
+		return std::move(ubos);
+	}
+
 	std::tuple<VkPipelineLayout, VkPipeline> Renderer::createGraphicsPipeline() const
 	{
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
@@ -349,6 +445,8 @@ namespace blaze
 
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutCreateInfo.setLayoutCount = 1;
+		pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayout.data();
 
 		auto result = vkCreatePipelineLayout(context.get_device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
 		if (result != VK_SUCCESS)
@@ -437,42 +535,8 @@ namespace blaze
 	{
 		for (size_t i = 0; i < commandBuffers.size(); i++)
 		{
-			VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-			commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-			auto result = vkBeginCommandBuffer(commandBuffers[i], &commandBufferBeginInfo);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
-			}
-
-			VkRenderPassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderPass.get();
-			renderpassBeginInfo.framebuffer = framebuffers[i];
-			renderpassBeginInfo.renderArea.offset = { 0, 0 };
-			renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
-
-			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-			renderpassBeginInfo.clearValueCount = 1;
-			renderpassBeginInfo.pClearValues = &clearColor;
-			vkCmdBeginRenderPass(commandBuffers[i], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
-
-			for (auto& cmd : renderCommands)
-			{
-				cmd(commandBuffers[i]);
-			}
-
-			vkCmdEndRenderPass(commandBuffers[i]);
-
-			result = vkEndCommandBuffer(commandBuffers[i]);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
-			}
+			commandBufferDirty[i] = true;
+			rebuildCommandBuffer(i);
 		}
 	}
 
@@ -505,6 +569,8 @@ namespace blaze
 			vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
+
+			vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 0, 1, &descriptorSets[frame], 0, nullptr);
 
 			for (auto& cmd : renderCommands)
 			{
