@@ -8,11 +8,13 @@ find_package(Vulkan REQUIRED)
 file(GLOB_RECURSE SOURCE_FILES
 	"*.cpp"
 	"util/*.cpp"
+	"stb/stb_image.cpp"
 	)
 
 file(GLOB_RECURSE HEADER_FILES
 	"*.hpp"
 	"util/*.hpp"
+	"stb/stb_image.h"
 	)
 
 # Add source to this project's executable.
@@ -21,8 +23,9 @@ add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
 target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR)
 
 # TODO: Add tests and install targets if needed.
-include_directories ("glfw/include")
-include_directories ("glm")
+# include_directories ("glfw/include")
+# include_directories ("stb")
+# include_directories ("glm")
 
 target_link_libraries(Blaze glfw ${GLFW_LIBRARIES})
 target_link_libraries(Blaze glm)
