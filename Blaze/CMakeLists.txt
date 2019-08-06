@@ -8,14 +8,19 @@ find_package(Vulkan REQUIRED)
 file(GLOB_RECURSE SOURCE_FILES
 	"*.cpp"
 	"util/*.cpp"
-	"stb/stb_image.cpp"
+	"stb/*.cpp"
+	"vma/*.cpp"
 	)
 
 file(GLOB_RECURSE HEADER_FILES
 	"*.hpp"
 	"util/*.hpp"
-	"stb/stb_image.h"
+	"stb/*.h"
+	"vma/*.h"
 	)
+
+include_directories ("stb")
+include_directories ("vma")
 
 # Add source to this project's executable.
 add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})

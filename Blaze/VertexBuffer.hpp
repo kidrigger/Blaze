@@ -1,6 +1,7 @@
 
 #include "Renderer.hpp"
 #include "util/Managed.hpp"
+#include "DataTypes.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -13,8 +14,7 @@ namespace blaze
 	class VertexBuffer
 	{
 	private:
-		util::Managed<VkDeviceMemory> memory;
-		util::Managed<VkBuffer> buffer;
+		util::Managed<BufferObject> vertexBuffer;
 		size_t size;
 
 	public:
@@ -27,24 +27,19 @@ namespace blaze
 			:size(sizeof(data[0])* data.size())
 		{
 			using namespace util;
+			VmaAllocator allocator = renderer.get_context().get_allocator();
 
-			auto buffer_deleter = [dev = renderer.get_device()](VkBuffer& buf) { vkDestroyBuffer(dev, buf, nullptr); };
-			auto memory_deleter = [dev = renderer.get_device()](VkDeviceMemory& devmem) { vkFreeMemory(dev, devmem, nullptr); };
+			auto [stagingBuffer, stagingAlloc] = renderer.get_context().createBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
-			auto [stagingBuffer, stagingMemory] = createBuffer(renderer.get_device(), renderer.get_physicalDevice(), size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-			auto stagingBufferManager = Managed(stagingBuffer, buffer_deleter);
-			auto stagingMemoryManager = Managed(stagingMemory, memory_deleter);
+			auto stagingBufferRAII = Managed<BufferObject>({ buffer, allocation }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
 			void* bufferdata;
-			vkMapMemory(renderer.get_device(), stagingMemory, 0, size, 0, &bufferdata);
+			vmaMapMemory(allocator, allocation, &bufferdata);
 			memcpy(bufferdata, data.data(), size);
-			vkUnmapMemory(renderer.get_device(), stagingMemory);
+			vmaUnmapMemory(allocator, allocation);
 
-			auto [finalBuffer, finalMemory] = createBuffer(renderer.get_device(), renderer.get_physicalDevice(), size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			buffer = Managed(finalBuffer, buffer_deleter);
-			memory = Managed(finalMemory, memory_deleter);
+			auto [finalBuffer, finalAllocation] = renderer.get_context().createBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+			vertexBuffer = Managed({ finalBuffer, finalAllocation }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
 			try
 			{
@@ -106,9 +101,10 @@ namespace blaze
 		}
 
 		VertexBuffer(VertexBuffer&& other) noexcept
-			: buffer(std::move(other.buffer)),
-			memory(std::move(other.memory)),
-			size(other.size)
+			: buffer(other.buffer),
+			allocation(other.allocation),
+			size(other.size),
+			allocator(other.allocator)
 		{
 		}
 
@@ -118,17 +114,23 @@ namespace blaze
 			{
 				return *this;
 			}
-			buffer = std::move(other.buffer);
-			memory = std::move(other.memory);
+			buffer = other.buffer;
+			allocation = other.allocation;
 			size = other.size;
+			allocator = other.allocator;
 			return *this;
 		}
 
 		VertexBuffer(const VertexBuffer& other) = delete;
 		VertexBuffer& operator=(const VertexBuffer& other) = delete;
 
-		VkBuffer get_buffer() const { return buffer.get(); }
-		VkDeviceMemory get_memory() const { return memory.get(); }
+		~VertexBuffer()
+		{
+			vmaDestroyBuffer(allocator)
+		}
+
+		VkBuffer get_buffer() const { return vertexBuffer.get().buffer; }
+		VmaAllocation get_memory() const { return vertexBuffer.get().allocation->GetMemory(); }
 		size_t get_size() const { return size; }
 	};
 
@@ -137,64 +139,55 @@ namespace blaze
 	{
 
 	private:
-		util::Managed<VkDeviceMemory> vertexMemory;
-		util::Managed<VkBuffer> vertexBuffer;
-		size_t verticeSize;
-		util::Managed<VkDeviceMemory> indexMemory;
-		util::Managed<VkBuffer> indexBuffer;
-		size_t indiceSize;
+		util::Managed<BufferObject> vertexBuffer;
+		size_t vertexSize;
+		util::Managed<BufferObject> indexBuffer;
+		size_t indexSize;
 		uint32_t indexCount;
 
 	public:
 		IndexedVertexBuffer() noexcept
-			: verticeSize(0),
-			indiceSize(0),
+			: vertexSize(0),
+			indexSize(0),
 			indexCount(0)
 		{
 		}
 
 		IndexedVertexBuffer(const Renderer& renderer, const std::vector<T>& vertex_data, const std::vector<uint32_t>& index_data) noexcept
-			:verticeSize(sizeof(vertex_data[0])* vertex_data.size()),
-			indiceSize(sizeof(uint32_t)* index_data.size()),
+			:vertexSize(sizeof(vertex_data[0])* vertex_data.size()),
+			indexSize(sizeof(uint32_t)* index_data.size()),
 			indexCount(static_cast<uint32_t>(index_data.size()))
 		{
 			using namespace util;
-
-			auto buffer_deleter = [dev = renderer.get_device()](VkBuffer& buf) { vkDestroyBuffer(dev, buf, nullptr); };
-			auto memory_deleter = [dev = renderer.get_device()](VkDeviceMemory& devmem) { vkFreeMemory(dev, devmem, nullptr); };
+			auto allocator = renderer.get_context().get_allocator();
 
 			// Vertex Buffer
-
-			auto [stagingVertexBuffer, stagingVertexMemory] = createBuffer(renderer.get_device(), renderer.get_physicalDevice(), verticeSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-			auto stagingVertexBufferRAII = Managed(stagingVertexBuffer, buffer_deleter);
-			auto stagingVertexMemoryRAII = Managed(stagingVertexMemory, memory_deleter);
+			auto [stagingVertexBuffer, stagingVertexAllocation] = renderer.get_context().createBuffer(vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+			
+			auto stagingVertexBufferRAII = Managed<BufferObject>({ stagingVertexBuffer, stagingVertexAllocation }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
 			void* bufferdata;
-			vkMapMemory(renderer.get_device(), stagingVertexMemory, 0, verticeSize, 0, &bufferdata);
-			memcpy(bufferdata, vertex_data.data(), verticeSize);
-			vkUnmapMemory(renderer.get_device(), stagingVertexMemory);
+			vmaMapMemory(allocator, stagingVertexAllocation, &bufferdata);
+			memcpy(bufferdata, vertex_data.data(), vertexSize);
+			vmaUnmapMemory(allocator, stagingVertexAllocation);
 
-			auto [finalVertexBuffer, finalVertexMemory] = createBuffer(renderer.get_device(), renderer.get_physicalDevice(), verticeSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			auto [finalVertexBuffer, finalVertexAllocation] = renderer.get_context().createBuffer(vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-			vertexBuffer = Managed(finalVertexBuffer, buffer_deleter);
-			vertexMemory = Managed(finalVertexMemory, memory_deleter);
+			vertexBuffer = Managed<BufferObject>({ finalVertexBuffer, finalVertexAllocation }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
 			// Index buffer
 
-			auto [stagingIndexBuffer, stagingIndexMemory] = createBuffer(renderer.get_device(), renderer.get_physicalDevice(), indiceSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			auto [stagingIndexBuffer, stagingIndexMemory] = renderer.get_context().createBuffer(indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+			
+			auto stagingIndexBufferRAII = Managed<BufferObject>({ stagingIndexBuffer, stagingIndexMemory }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
-			auto stagingIndexBufferRAII = Managed(stagingIndexBuffer, buffer_deleter);
-			auto stagingIndexMemoryRAII = Managed(stagingIndexMemory, memory_deleter);
+			vmaMapMemory(allocator, stagingIndexMemory, &bufferdata);
+			memcpy(bufferdata, index_data.data(), indexSize);
+			vmaUnmapMemory(allocator, stagingIndexMemory);
 
-			vkMapMemory(renderer.get_device(), stagingIndexMemory, 0, indiceSize, 0, &bufferdata);
-			memcpy(bufferdata, index_data.data(), indiceSize);
-			vkUnmapMemory(renderer.get_device(), stagingIndexMemory);
+			auto [finalIndexBuffer, finalIndexMemory] = renderer.get_context().createBuffer(indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-			auto [finalIndexBuffer, finalIndexMemory] = createBuffer(renderer.get_device(), renderer.get_physicalDevice(), indiceSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			indexBuffer = Managed(finalIndexBuffer, buffer_deleter);
-			indexMemory = Managed(finalIndexMemory, memory_deleter);
+			indexBuffer = Managed<BufferObject>({ finalIndexBuffer, finalIndexMemory }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
 			try
 			{
@@ -223,10 +216,10 @@ namespace blaze
 				VkBufferCopy copyRegion = {};
 				copyRegion.srcOffset = 0;
 				copyRegion.dstOffset = 0;
-				copyRegion.size = verticeSize;
+				copyRegion.size = vertexSize;
 				vkCmdCopyBuffer(commandBuffer, stagingVertexBuffer, finalVertexBuffer, 1, &copyRegion);
 
-				copyRegion.size = indiceSize;
+				copyRegion.size = indexSize;
 				vkCmdCopyBuffer(commandBuffer, stagingIndexBuffer, finalIndexBuffer, 1, &copyRegion);
 
 				result = vkEndCommandBuffer(commandBuffer);
@@ -261,10 +254,10 @@ namespace blaze
 		IndexedVertexBuffer(IndexedVertexBuffer&& other) noexcept
 			: vertexBuffer(std::move(other.vertexBuffer)),
 			vertexMemory(std::move(other.vertexMemory)),
-			verticeSize(other.verticeSize),
+			vertexSize(other.vertexSize),
 			indexBuffer(std::move(other.indexBuffer)),
 			indexMemory(std::move(other.indexMemory)),
-			indiceSize(other.indiceSize),
+			indexSize(other.indexSize),
 			indexCount(other.indexCount)
 		{
 		}
@@ -276,11 +269,9 @@ namespace blaze
 				return *this;
 			}
 			vertexBuffer = std::move(other.vertexBuffer);
-			vertexMemory = std::move(other.vertexMemory);
-			verticeSize = other.verticeSize;
+			vertexSize = other.vertexSize;
 			indexBuffer = std::move(other.indexBuffer);
-			indexMemory = std::move(other.indexMemory);
-			indiceSize = other.indiceSize;
+			indexSize = other.indexSize;
 			indexCount = other.indexCount;
 			return *this;
 		}
@@ -288,12 +279,12 @@ namespace blaze
 		IndexedVertexBuffer(const IndexedVertexBuffer& other) = delete;
 		IndexedVertexBuffer& operator=(const IndexedVertexBuffer& other) = delete;
 
-		VkBuffer get_vertexBuffer() const { return vertexBuffer.get(); }
-		VkDeviceMemory get_vertexMemory() const { return vertexMemory.get(); }
-		size_t get_verticeSize() const { return verticeSize; }
-		VkBuffer get_indexBuffer() const { return indexBuffer.get(); }
-		VkDeviceMemory get_indexMemory() const { return indexMemory.get(); }
-		size_t get_indiceSize() const { return indiceSize; }
+		VkBuffer get_vertexBuffer() const { return vertexBuffer.get().buffer; }
+		VmaAllocation get_vertexAllocation() const { return vertexBuffer.get().allocation; }
+		size_t get_verticeSize() const { return vertexSize; }
+		VkBuffer get_indexBuffer() const { return indexBuffer.get().buffer; }
+		VmaAllocation get_indexAllocation() const { return indexMemory.get().allocation; }
+		size_t get_indiceSize() const { return indexSize; }
 		uint32_t get_indexCount() const { return indexCount; }
 	};
 }

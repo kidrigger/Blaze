@@ -62,7 +62,7 @@ namespace blaze
 		{
 			glm::mat4{1.0f},
 			glm::lookAt(
-				glm::vec3{0.0f, 0.0f, -1.0f},
+				glm::vec3{0.0f, 0.0f, -2.0f},
 				glm::vec3{0.0f, 0.0f, 0.0f},
 				glm::vec3{0.0f, -1.0f, 0.0f}),
 			glm::perspective(
@@ -86,14 +86,29 @@ namespace blaze
 		}
 
 		vector<Vertex> vertices = {
-			{{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-			{{0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-			{{-0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}},
+			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}},
+			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}},
+			{{-0.5f, 0.5f, -0.5f}, {0.2f, 1.0f, 0.2f}},
+			{{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 1.0f}},
+			{{0.5f, -0.5f, 0.5f}, {1.0f, 0.2f, 1.0f}},
+			{{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+			{{-0.5f, 0.5f, 0.5f}, {0.2f, 1.0f, 1.0f}}
 		};
 
 		vector<uint32_t> indices = {
-			0, 1, 2, 0, 2, 3
+			0, 1, 2,
+			0, 2, 3,
+			4, 5, 6,
+			4, 6, 7,
+			1, 0, 6,
+			1, 6, 5,
+			7, 6, 0,
+			7, 0, 3,
+			7, 3, 2,
+			7, 2, 4,
+			4, 2, 1,
+			4, 1, 5
 		};
 
 		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);
@@ -119,14 +134,17 @@ namespace blaze
 		double prevTime = glfwGetTime();
 		double deltaTime = 0.0;
 		int intermittence = 0;
+		double elapsed = 0.0;
 
 		while (!glfwWindowShouldClose(window))
 		{
 			prevTime = glfwGetTime();
 			glfwPollEvents();
+			elapsed += deltaTime;
 
 			try
 			{
+				cameraUBO.view = glm::lookAt(2.0f*glm::vec3(glm::cos(glm::radians(20*elapsed)), 0.0f, glm::sin(glm::radians(20 * elapsed))), glm::vec3{ 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f });
 				cameraUBO.model = glm::rotate(cameraUBO.model, glm::radians(static_cast<float>(10*deltaTime)), glm::vec3{ 1.0f, 0.0f, 0.0f });
 				renderer.set_cameraUBO(cameraUBO);
 				renderer.renderFrame();

@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include <array>
+#include <vk_mem_alloc.h>
 
 namespace blaze
 {
@@ -48,5 +49,11 @@ namespace blaze
 		alignas(16) glm::mat4 model;
 		alignas(16) glm::mat4 view;
 		alignas(16) glm::mat4 projection;
+	};
+
+	struct BufferObject
+	{
+		VkBuffer buffer{ VK_NULL_HANDLE };
+		VmaAllocation allocation{ VK_NULL_HANDLE };
 	};
 }

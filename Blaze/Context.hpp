@@ -8,6 +8,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <vk_mem_alloc.h>
+
 #include <exception>
 
 namespace blaze
@@ -36,6 +38,9 @@ namespace blaze
 		util::Unmanaged<VkQueue> graphicsQueue;
 		util::Unmanaged<VkQueue> presentQueue;
 		util::Managed<VkCommandPool> graphicsCommandPool;
+
+		util::Managed<VmaAllocator> allocator;
+
 	public:
 		Context() noexcept
 			: enableValidationLayers(true) {}
@@ -66,6 +71,8 @@ namespace blaze
 					std::cout << "Using " << props.deviceName << std::endl;
 				}
 
+				allocator = util::Managed(createAllocator(), [](VmaAllocator& alloc) {vmaDestroyAllocator(alloc); });
+
 				isComplete = true;
 			}
 			catch (std::exception& e)
@@ -86,7 +93,8 @@ namespace blaze
 			device(std::move(other.device)),
 			graphicsQueue(std::move(other.graphicsQueue)),
 			presentQueue(std::move(other.presentQueue)),
-			graphicsCommandPool(std::move(other.graphicsCommandPool))
+			graphicsCommandPool(std::move(other.graphicsCommandPool)),
+			allocator(std::move(other.allocator))
 		{
 		}
 
@@ -107,6 +115,7 @@ namespace blaze
 			graphicsQueue = std::move(other.graphicsQueue);
 			presentQueue = std::move(other.presentQueue);
 			graphicsCommandPool = std::move(other.graphicsCommandPool);
+			allocator = std::move(other.allocator);
 			return *this;
 		}
 
@@ -123,8 +132,28 @@ namespace blaze
 		inline VkCommandPool get_graphicsCommandPool() const { return graphicsCommandPool.get(); }
 		inline VkCommandPool get_transferCommandPool() const { return graphicsCommandPool.get(); }
 		inline const util::QueueFamilyIndices& get_queueFamilyIndices() const { return queueFamilyIndices; }
+		inline VmaAllocator get_allocator() const { return allocator.get(); }
 
 		bool complete() const { return isComplete; }
+		std::tuple<VkBuffer, VmaAllocation> createBuffer(size_t size, VkBufferUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const
+		{
+			VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+			bufferInfo.size = size;
+			bufferInfo.usage = vulkanUsage;
+
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = vmaUsage;
+
+			VkBuffer buffer;
+			VmaAllocation allocation;
+			auto result = vmaCreateBuffer(allocator.get(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Buffer could not be allocated");
+			}
+
+			return std::make_tuple(buffer, allocation);
+		}
 
 	private:
 
@@ -136,5 +165,6 @@ namespace blaze
 		VkDevice createLogicalDevice() const;
 		VkQueue getQueue(uint32_t index) const;
 		VkCommandPool createCommandPool(uint32_t queueIndex) const;
+		VmaAllocator createAllocator() const;
 	};
 }

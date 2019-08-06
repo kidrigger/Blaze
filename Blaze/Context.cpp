@@ -183,4 +183,16 @@ namespace blaze
 		}
 		return commandPool;
 	}
+
+	VmaAllocator Context::createAllocator() const
+	{
+		VmaAllocatorCreateInfo createInfo = {};
+		createInfo.physicalDevice = physicalDevice.get();
+		createInfo.device = device.get();
+
+		VmaAllocator alloc;
+		vmaCreateAllocator(&createInfo, &alloc);
+
+		return alloc;
+	};
 }

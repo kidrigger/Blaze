@@ -341,7 +341,7 @@ namespace blaze
 		ubos.reserve(swapchainImages.size());
 		for (int i = 0; i < swapchainImages.size(); i++)
 		{
-			ubos.emplace_back(context.get_device(), context.get_physicalDevice(), ubo);
+			ubos.emplace_back(*this, ubo);
 		}
 		return std::move(ubos);
 	}
@@ -533,7 +533,7 @@ namespace blaze
 
 	void Renderer::recordCommandBuffers()
 	{
-		for (size_t i = 0; i < commandBuffers.size(); i++)
+		for (int i = 0; i < commandBuffers.size(); i++)
 		{
 			commandBufferDirty[i] = true;
 			rebuildCommandBuffer(i);

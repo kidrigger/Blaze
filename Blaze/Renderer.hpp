@@ -14,14 +14,14 @@
 
 namespace blaze
 {
+	class Renderer;
 	using RenderCommand = std::function<void(VkCommandBuffer buf)>;
 
 	template <typename T>
 	class UniformBuffer
 	{
 	private:
-		util::Managed<VkBuffer> buffer;
-		util::Managed<VkDeviceMemory> memory;
+		util::Managed<BufferObject> buffer;
 		size_t size{ 0 };
 
 	public:
@@ -29,25 +29,23 @@ namespace blaze
 		{
 		}
 
-		UniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, const T& data)
+		UniformBuffer(const Renderer& renderer, const T& data)
 			: size(sizeof(data))
 		{
-			using namespace util;
+			VmaAllocator allocator = renderer.get_context().get_allocator();
 
-			auto [buf, mem] = createBuffer(device, physicalDevice, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-			buffer = Managed(buf, [device](VkBuffer& buf) { vkDestroyBuffer(device, buf, nullptr); });
-			memory = Managed(mem, [device](VkDeviceMemory& mem) { vkFreeMemory(device, mem, nullptr); });
+			auto [buf, alloc] = renderer.get_context().createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 			void* memdata;
-			vkMapMemory(device, mem, 0, size, 0, &memdata);
+			vmaMapMemory(renderer.get_context().get_allocator(), alloc, &memdata);
 			memcpy(memdata, &data, size);
-			vkUnmapMemory(device, mem);
+			vmaUnmapMemory(renderer.get_context().get_allocator(), alloc);
+
+			buffer = util::Managed<BufferObject>({ buf, alloc }, [allocator](BufferObject& buf) { vmaDestroyBuffer(allocator, buf.buffer, buf.allocation); });
 		}
 
 		UniformBuffer(UniformBuffer&& other) noexcept
 			: buffer(std::move(other.buffer)),
-			memory(std::move(other.memory)),
 			size(other.size)
 		{
 		}
@@ -59,15 +57,14 @@ namespace blaze
 				return *this;
 			}
 			buffer = std::move(other.buffer);
-			memory = std::move(other.memory);
 			size = other.size;
 		}
 
 		UniformBuffer(const UniformBuffer& other) = delete;
 		UniformBuffer& operator=(const UniformBuffer& other) = delete;
 
-		VkBuffer get_buffer() const { return buffer.get(); }
-		VkDeviceMemory get_memory() const { return memory.get(); }
+		VkBuffer get_buffer() const { return buffer.get().buffer; }
+		VmaAllocation get_allocation() const { return buffer.get().allocation; }
 		size_t get_size() const { return size; }
 	};
 
@@ -345,9 +342,9 @@ namespace blaze
 		void updateUniformBuffer(int frame, const UniformBufferObject& ubo)
 		{
 			void* data;
-			vkMapMemory(context.get_device(), uniformBuffers[frame].get_memory() , 0, uniformBuffers[frame].get_size(), 0, &data);
+			vmaMapMemory(context.get_allocator(), uniformBuffers[frame].get_allocation(), &data);
 			memcpy(data, &ubo, uniformBuffers[frame].get_size());
-			vkUnmapMemory(context.get_device(), uniformBuffers[frame].get_memory());
+			vmaUnmapMemory(context.get_allocator(), uniformBuffers[frame].get_allocation());
 		}
 	};
 }
