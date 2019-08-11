@@ -11,22 +11,24 @@ namespace blaze::util
 	private:
 		T handle;
 		std::function<void(T&)> destroyer;
+		bool is_valid;
 
 		friend void swap(Managed& a, Managed& b)
 		{
 			using std::swap;
 			swap(a.handle, b.handle);
 			swap(a.destroyer, b.destroyer);
+			swap(a.is_valid, b.is_valid);
 		}
 	public:
 		Managed() noexcept
-			: handle(), destroyer([](T& hand) {})
+			: handle(), destroyer([](T& hand) {}), is_valid(false)
 		{
 		}
 
 		template <typename U>
 		Managed(T handle, U destroyer) noexcept
-			: handle(handle), destroyer(destroyer)
+			: handle(handle), destroyer(destroyer), is_valid(true)
 		{
 		}
 
@@ -53,10 +55,12 @@ namespace blaze::util
 		inline void set(const T& val) { handle = val; }
 		inline T* data() { return &handle; }
 		inline const T* data() const { return &handle; }
+		inline bool valid() const { return is_valid; }
 
 		~Managed()
 		{
 			destroyer(handle);
+			is_valid = false;
 		}
 	};
 
@@ -65,14 +69,15 @@ namespace blaze::util
 	{
 	private:
 		T handle;
+		bool is_valid;
 	public:
 		Unmanaged() noexcept
-			: handle()
+			: handle(), is_valid(false)
 		{
 		}
 
 		Unmanaged(T handle) noexcept
-			: handle(handle)
+			: handle(handle), is_valid(true)
 		{
 		}
 
@@ -80,6 +85,7 @@ namespace blaze::util
 			: Unmanaged()
 		{
 			std::swap(handle, other.handle);
+			std::swap(is_valid, other.is_valid);
 		}
 
 		Unmanaged& operator=(Unmanaged&& other) noexcept
@@ -89,15 +95,17 @@ namespace blaze::util
 				return *this;
 			}
 			std::swap(handle, other.handle);
+			std::swap(is_valid, other.is_valid);
 			return *this;
 		}
 
 		Unmanaged(const Unmanaged& other) = delete;
 		Unmanaged& operator=(const Unmanaged& other) = delete;
 
-		const T& get() const { return handle; }
-		void set(const T& val) { handle = val; }
-		T* data() { return &handle; }
+		inline const T& get() const { return handle; }
+		inline void set(const T& val) { handle = val; }
+		inline T* data() { return &handle; }
+		inline bool const valid() { return is_valid; }
 	};
 
 	template <typename T, bool singular = true>
@@ -106,22 +114,24 @@ namespace blaze::util
 	private:
 		std::vector<T> handles;
 		std::function<void(T&)> destroyer;
+		bool is_valid;
 
 		friend void swap(ManagedVector& a, ManagedVector& b)
 		{
 			using std::swap;
 			swap(a.handles, b.handles);
 			swap(a.destroyer, b.destroyer);
+			swap(a.is_valid, b.is_valid);
 		}
 	public:
 		ManagedVector() noexcept
-			: handles(), destroyer([](T& hand) {})
+			: handles(), destroyer([](T& hand) {}), is_valid(false)
 		{
 		}
 
 		template <typename U>
 		ManagedVector(const std::vector<T>& handles, U destroyer) noexcept
-			: handles(handles), destroyer(destroyer)
+			: handles(handles), destroyer(destroyer), is_valid(true)
 		{
 		}
 
@@ -152,12 +162,15 @@ namespace blaze::util
 		void resize(size_t size) { handles.resize(size); }
 		size_t size() const { return handles.size(); }
 
+		bool valid() const { return is_valid; }
+
 		~ManagedVector()
 		{
 			for (auto handle : handles)
 			{
 				destroyer(handle);
 			}
+			is_valid = false;
 		}
 	};
 
@@ -167,28 +180,30 @@ namespace blaze::util
 	private:
 		std::vector<T> handles;
 		std::function<void(std::vector<T>&)> destroyer;
+		bool is_valid;
 
 		friend void swap(ManagedVector& a, ManagedVector& b)
 		{
 			using std::swap;
 			swap(a.handles, b.handles);
 			swap(a.destroyer, b.destroyer);
+			swap(a.is_valid, b.is_valid);
 		}
 	public:
 		ManagedVector() noexcept
-			: handles(), destroyer([](std::vector<T>& hand) {})
+			: handles(), destroyer([](std::vector<T>& hand) {}), is_valid(false)
 		{
 		}
 
 		template <typename U>
 		ManagedVector(const std::vector<T>& handles, U destroyer) noexcept
-			: handles(handles), destroyer(destroyer)
+			: handles(handles), destroyer(destroyer), is_valid(true)
 		{
 		}
 
 		template <typename U>
 		ManagedVector(std::vector<T>&& handles, U destroyer) noexcept
-			: handles(std::move(handles)), destroyer(destroyer)
+			: handles(std::move(handles)), destroyer(destroyer), is_valid(true)
 		{
 		}
 
@@ -218,6 +233,7 @@ namespace blaze::util
 		T* data() { return handles.data(); }
 		void resize(size_t size) { handles.resize(size); }
 		size_t size() const { return handles.size(); }
+		bool valid() const { return is_valid; }
 
 		~ManagedVector()
 		{
@@ -230,19 +246,20 @@ namespace blaze::util
 	{
 	private:
 		std::vector<T> handles;
+		bool is_valid;
 	public:
 		UnmanagedVector() noexcept
-			: handles()
+			: handles(), is_valid(false)
 		{
 		}
 
 		UnmanagedVector(const std::vector<T>& handles) noexcept
-			: handles(handles)
+			: handles(handles), is_valid(true)
 		{
 		}
 
 		UnmanagedVector(std::vector<T>&& handles) noexcept
-			: handles(std::move(handles))
+			: handles(std::move(handles)), is_valid(true)
 		{
 		}
 
@@ -250,6 +267,7 @@ namespace blaze::util
 			: UnmanagedVector()
 		{
 			std::swap(handles, other.handles);
+			std::swap(is_valid, other.is_valid);
 		}
 
 		UnmanagedVector& operator=(UnmanagedVector&& other) noexcept
@@ -259,6 +277,7 @@ namespace blaze::util
 				return *this;
 			}
 			std::swap(handles, other.handles);
+			std::swap(is_valid, other.is_valid);
 			return *this;
 		}
 
@@ -272,5 +291,7 @@ namespace blaze::util
 		T* data() { return handles.data(); }
 		void resize(size_t size) { handles.resize(size); }
 		size_t size() const { return handles.size(); }
+
+		bool valid() const { return is_valid; }
 	};
 }

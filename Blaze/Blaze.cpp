@@ -12,6 +12,7 @@
 #include "Renderer.hpp"
 #include "Datatypes.hpp"
 #include "VertexBuffer.hpp"
+#include "util/loaders.hpp"
 
 #include <optional>
 #include <vector>
@@ -57,6 +58,7 @@ namespace blaze
 		Context ctx;
 		Renderer renderer;
 		IndexedVertexBuffer<Vertex> vertexBuffer;
+		TextureImage image;
 
 		UniformBufferObject cameraUBO
 		{
@@ -128,8 +130,12 @@ namespace blaze
 			vkCmdDrawIndexed(cmdBuffer, idxc, 1, 0, 0, 0);
 		};
 
+		auto image_data = loadImage("assets/container2.png");
+		image = TextureImage(renderer, image_data);
+		unloadImage(image_data);
+
 		// Run
-		bool ontime = true;
+		bool onetime = true;
 
 		double prevTime = glfwGetTime();
 		double deltaTime = 0.0;
@@ -148,10 +154,10 @@ namespace blaze
 				cameraUBO.model = glm::rotate(cameraUBO.model, glm::radians(static_cast<float>(10*deltaTime)), glm::vec3{ 1.0f, 0.0f, 0.0f });
 				renderer.set_cameraUBO(cameraUBO);
 				renderer.renderFrame();
-				if (ontime) 
+				if (onetime) 
 				{
 					renderer.submit(renderCommand);
-					ontime = false;
+					onetime = false;
 				}
 			}
 			catch (std::exception& e)

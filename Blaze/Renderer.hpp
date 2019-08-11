@@ -283,6 +283,9 @@ namespace blaze
 		}
 
 		bool complete() const { return isComplete; }
+
+		VkCommandBuffer startTransferCommands() const;
+		void endTransferCommands(VkCommandBuffer commandBuffer) const;
 	private:
 
 		void recreateSwapchain()

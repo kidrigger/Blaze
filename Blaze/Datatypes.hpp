@@ -56,4 +56,10 @@ namespace blaze
 		VkBuffer buffer{ VK_NULL_HANDLE };
 		VmaAllocation allocation{ VK_NULL_HANDLE };
 	};
+
+	struct ImageObject
+	{
+		VkImage image{ VK_NULL_HANDLE };
+		VmaAllocation allocation{ VK_NULL_HANDLE };
+	};
 }

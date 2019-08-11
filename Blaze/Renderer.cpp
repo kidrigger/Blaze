@@ -181,25 +181,7 @@ namespace blaze
 		std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
 		for (size_t i = 0; i < swapchainImages.size(); i++)
 		{
-			VkImageViewCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = swapchainImages[i];
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = swapchainFormat.get();
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-			auto result = vkCreateImageView(context.get_device(), &createInfo, nullptr, &swapchainImageViews[i]);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("Failed to create image view with " + std::to_string(result));
-			}
+			swapchainImageViews[i] = util::createImageView(context.get_device(), swapchainImages[i], swapchainFormat.get());
 		}
 		return swapchainImageViews;
 	}
@@ -613,5 +595,59 @@ namespace blaze
 		}
 
 		return make_tuple(startSems, endSems, blockeFences);
+	}
+
+	VkCommandBuffer Renderer::startTransferCommands() const
+	{
+		VkCommandBuffer commandBuffer;
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = get_transferCommandPool();
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+		auto result = vkAllocateCommandBuffers(context.get_device(), &allocInfo, &commandBuffer);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
+		}
+
+		VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
+		}
+
+		return commandBuffer;
+	}
+
+	void Renderer::endTransferCommands(VkCommandBuffer commandBuffer) const 
+	{
+		auto result = vkEndCommandBuffer(commandBuffer);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
+		}
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		VkFence fence = util::createFence(context.get_device());
+		vkResetFences(context.get_device(), 1, &fence);
+
+		result = vkQueueSubmit(get_transferQueue(), 1, &submitInfo, fence);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Submit Command Buffer failed with " + std::to_string(result));
+		}
+
+		vkWaitForFences(context.get_device(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkDestroyFence(context.get_device(), fence, nullptr);
+		vkFreeCommandBuffers(context.get_device(), get_transferCommandPool(), 1, &commandBuffer);
 	}
 }

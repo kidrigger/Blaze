@@ -93,7 +93,10 @@ namespace blaze::util
 			swapchainAdequate = !swapchainSupport.formats.empty() && !swapchainSupport.presentModes.empty();
 		}
 
-		return queueFamilyIndices.complete() && extensionsSupported && swapchainAdequate;
+		VkPhysicalDeviceFeatures physicalDeviceFeatures;
+		vkGetPhysicalDeviceFeatures(device, &physicalDeviceFeatures);
+
+		return queueFamilyIndices.complete() && extensionsSupported && swapchainAdequate && physicalDeviceFeatures.samplerAnisotropy;
 	}
 
 	bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers)

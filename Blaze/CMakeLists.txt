@@ -74,3 +74,12 @@ add_custom_command(TARGET Blaze POST_BUILD
         "${PROJECT_BINARY_DIR}/shaders"
         "$<TARGET_FILE_DIR:Blaze>/shaders"
 )
+
+file(GLOB_RECURSE ASSETS
+	"assets/*"
+)
+
+add_custom_command(TARGET Blaze POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/"
+	COMMAND ${CMAKE_COMMAND} -E copy ${ASSETS} "$<TARGET_FILE_DIR:Blaze>/assets/"
+)
