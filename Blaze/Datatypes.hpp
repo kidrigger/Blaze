@@ -13,8 +13,9 @@ namespace blaze
 {
 	struct Vertex
 	{
-		glm::vec3 position;
-		glm::vec3 color;
+		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 color;
+		alignas(16) glm::vec2 texCoords;
 
 		static VkVertexInputBindingDescription getBindingDescription()
 		{
@@ -26,9 +27,9 @@ namespace blaze
 			return bindingDesc;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+		static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
 		{
-			std::array<VkVertexInputAttributeDescription, 2> attributeDesc = {};
+			std::array<VkVertexInputAttributeDescription, 3> attributeDesc = {};
 
 			attributeDesc[0].binding = 0;
 			attributeDesc[0].location = 0;
@@ -39,6 +40,11 @@ namespace blaze
 			attributeDesc[1].location = 1;
 			attributeDesc[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 			attributeDesc[1].offset = offsetof(Vertex, color);
+
+			attributeDesc[2].binding = 0;
+			attributeDesc[2].location = 2;
+			attributeDesc[2].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDesc[2].offset = offsetof(Vertex, texCoords);
 
 			return attributeDesc;
 		}

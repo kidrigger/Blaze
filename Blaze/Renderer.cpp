@@ -233,7 +233,7 @@ namespace blaze
 		throw std::runtime_error("RenderPass creation failed with " + std::to_string(result));
 	}
 
-	VkDescriptorSetLayout Renderer::createDescriptorSetLayout() const
+	VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
 	{
 		VkDescriptorSetLayout descriptorSetLayout;
 
@@ -258,6 +258,31 @@ namespace blaze
 		return descriptorSetLayout;
 	}
 
+	VkDescriptorSetLayout Renderer::createMaterialDescriptorSetLayout() const
+	{
+		VkDescriptorSetLayout descriptorSetLayout;
+
+		VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+		samplerLayoutBinding.binding = 0;
+		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerLayoutBinding.descriptorCount = 1;
+		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		samplerLayoutBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &samplerLayoutBinding;
+
+		auto result = vkCreateDescriptorSetLayout(get_device(), &layoutInfo, nullptr, &descriptorSetLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw new std::runtime_error("DescriptorSet layout creation failed with " + std::to_string(result));
+		}
+
+		return descriptorSetLayout;
+	};
+
 	VkDescriptorPool Renderer::createDescriptorPool() const
 	{
 		VkDescriptorPoolSize poolSize = {};
@@ -281,7 +306,7 @@ namespace blaze
 
 	std::vector<VkDescriptorSet> Renderer::createDescriptorSets() const
 	{
-		std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), descriptorSetLayout.get());
+		std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), uboDescriptorSetLayout.get());
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = descriptorPool.get();
@@ -351,7 +376,7 @@ namespace blaze
 		fragmentShaderStageCreateInfo.module = fragmentShaderModule.get();
 		fragmentShaderStageCreateInfo.pName = "main";
 
-		VkPipelineShaderStageCreateInfo shaderStagesCreateInfo[] = {
+		std::array<VkPipelineShaderStageCreateInfo, 2> shaderStagesCreateInfo = {
 			vertexShaderStageCreateInfo,
 			fragmentShaderStageCreateInfo
 		};
@@ -363,7 +388,7 @@ namespace blaze
 		vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
 		vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescriptions;
-		vertexInputCreateInfo.vertexAttributeDescriptionCount = 2;
+		vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 		vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
@@ -425,10 +450,15 @@ namespace blaze
 		dynamicStateCreateInfo.dynamicStateCount = 2;
 		dynamicStateCreateInfo.pDynamicStates = dynamicStates;
 
+		std::array<VkDescriptorSetLayout, 2> descriptorSetLayouts = {
+			uboDescriptorSetLayout.get(),
+			materialDescriptorSetLayout.get()
+		};
+
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutCreateInfo.setLayoutCount = 1;
-		pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayout.data();
+		pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
 		auto result = vkCreatePipelineLayout(context.get_device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
 		if (result != VK_SUCCESS)
@@ -438,8 +468,8 @@ namespace blaze
 
 		VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
 		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineCreateInfo.stageCount = 2;
-		pipelineCreateInfo.pStages = shaderStagesCreateInfo;
+		pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStagesCreateInfo.size());
+		pipelineCreateInfo.pStages = shaderStagesCreateInfo.data();
 		pipelineCreateInfo.pVertexInputState = &vertexInputCreateInfo;
 		pipelineCreateInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
 		pipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
@@ -556,7 +586,7 @@ namespace blaze
 
 			for (auto& cmd : renderCommands)
 			{
-				cmd(commandBuffers[frame]);
+				cmd(commandBuffers[frame], graphicsPipelineLayout.get(), frame);
 			}
 
 			vkCmdEndRenderPass(commandBuffers[frame]);

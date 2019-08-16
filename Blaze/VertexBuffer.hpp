@@ -235,7 +235,7 @@ namespace blaze
 			memcpy(bufferdata, image_data.data, image_data.size);
 			vmaUnmapMemory(allocator, stagingAlloc);
 
-			auto [finalImage, finalAllocation] = renderer.get_context().createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+			auto [finalImage, finalAllocation] = renderer.get_context().createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 			image = Managed<ImageObject>({ finalImage, finalAllocation }, [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 			try
@@ -276,6 +276,13 @@ namespace blaze
 				region.imageExtent = { width, height, 1 };
 
 				vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, finalImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+				barrier.oldLayout = barrier.newLayout;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				srcStage = dstStage;
+				dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
 				renderer.endTransferCommands(commandBuffer);
 			}

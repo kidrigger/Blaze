@@ -15,7 +15,7 @@
 namespace blaze
 {
 	class Renderer;
-	using RenderCommand = std::function<void(VkCommandBuffer buf)>;
+	using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout, uint32_t frame)>;
 
 	template <typename T>
 	class UniformBuffer
@@ -88,9 +88,11 @@ namespace blaze
 
 		util::Managed<VkRenderPass> renderPass;
 
-		util::Managed<VkDescriptorSetLayout> descriptorSetLayout;
+		util::Managed<VkDescriptorSetLayout> uboDescriptorSetLayout;
 		util::Managed<VkDescriptorPool> descriptorPool;
 		util::UnmanagedVector<VkDescriptorSet> descriptorSets;
+
+		util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
 
 		std::vector<UniformBuffer<UniformBufferObject>> uniformBuffers;
 		UniformBufferObject cameraUBO{};
@@ -148,7 +150,8 @@ namespace blaze
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
 				uniformBuffers = createUniformBuffers(cameraUBO);
-				descriptorSetLayout = Managed(createDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+				uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+				materialDescriptorSetLayout = Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 				descriptorSets = createDescriptorSets();
 
@@ -192,7 +195,8 @@ namespace blaze
 			swapchainImages(std::move(other.swapchainImages)),
 			swapchainImageViews(std::move(other.swapchainImageViews)),
 			renderPass(std::move(other.renderPass)),
-			descriptorSetLayout(std::move(other.descriptorSetLayout)),
+			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
+			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
 			descriptorPool(std::move(other.descriptorPool)),
 			descriptorSets(std::move(other.descriptorSets)),
 			uniformBuffers(std::move(other.uniformBuffers)),
@@ -224,7 +228,8 @@ namespace blaze
 			swapchainImages = std::move(other.swapchainImages);
 			swapchainImageViews = std::move(other.swapchainImageViews);
 			renderPass = std::move(other.renderPass);
-			descriptorSetLayout = std::move(other.descriptorSetLayout);
+			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
+			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
 			descriptorPool = std::move(other.descriptorPool);
 			descriptorSets = std::move(other.descriptorSets);
 			uniformBuffers = std::move(other.uniformBuffers);
@@ -258,6 +263,8 @@ namespace blaze
 		const VkFramebuffer& get_framebuffer(size_t index) const { return framebuffers[index]; }
 		size_t get_commandBufferCount() const { return commandBuffers.size(); }
 		const VkCommandBuffer& get_commandBuffer(size_t index) const { return commandBuffers[index]; }
+		VkDescriptorSetLayout get_uboLayout() const { return uboDescriptorSetLayout.get(); }
+		VkDescriptorSetLayout get_materialLayout() const { return materialDescriptorSetLayout.get(); }
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
@@ -331,7 +338,8 @@ namespace blaze
 		std::vector<VkImage> getSwapchainImages() const;
 		std::vector<VkImageView> createSwapchainImageViews() const;
 		VkRenderPass createRenderPass() const;
-		VkDescriptorSetLayout createDescriptorSetLayout() const;
+		VkDescriptorSetLayout createUBODescriptorSetLayout() const;
+		VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 		VkDescriptorPool createDescriptorPool() const;
 		std::vector<VkDescriptorSet> createDescriptorSets() const;
 		std::vector<UniformBuffer<UniformBufferObject>> createUniformBuffers(const UniformBufferObject& ubo) const;

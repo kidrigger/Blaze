@@ -88,14 +88,14 @@ namespace blaze
 		}
 
 		vector<Vertex> vertices = {
-			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}},
-			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}},
-			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}},
-			{{-0.5f, 0.5f, -0.5f}, {0.2f, 1.0f, 0.2f}},
-			{{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 1.0f}},
-			{{0.5f, -0.5f, 0.5f}, {1.0f, 0.2f, 1.0f}},
-			{{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
-			{{-0.5f, 0.5f, 0.5f}, {0.2f, 1.0f, 1.0f}}
+			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}, {1.0f, 1.0f}},
+			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}, {1.0f, 0.0f}},
+			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {0.0f, 0.0f}},
+			{{-0.5f, 0.5f, -0.5f}, {0.2f, 1.0f, 0.2f}, {0.0f, 1.0f}},
+			{{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 1.0f}, {0.0f, 0.0f}},
+			{{0.5f, -0.5f, 0.5f}, {1.0f, 0.2f, 1.0f}, {1.0f, 0.0f}},
+			{{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+			{{-0.5f, 0.5f, 0.5f}, {0.2f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 		};
 
 		vector<uint32_t> indices = {
@@ -115,24 +115,90 @@ namespace blaze
 
 		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);
 
+		auto image_data = loadImage("assets/container2.png");
+		image = TextureImage(renderer, image_data);
+		unloadImage(image_data);
+
+		auto createDescriptorPool = [&renderer]()
+		{
+			VkDescriptorPoolSize poolSize = {};
+			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			poolSize.descriptorCount = static_cast<uint32_t>(renderer.get_swapchainImageCount());
+
+			VkDescriptorPoolCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+			createInfo.poolSizeCount = 1;
+			createInfo.pPoolSizes = &poolSize;
+			createInfo.maxSets = static_cast<uint32_t>(renderer.get_swapchainImageCount());
+			createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+			VkDescriptorPool pool;
+			auto result = vkCreateDescriptorPool(renderer.get_device(), &createInfo, nullptr, &pool);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Descriptor pool creation failed with " + std::to_string(result));
+			}
+			return pool;
+		};
+
+		auto createDescriptorSet = [&renderer](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureImage& texture, uint32_t binding)
+		{
+			std::vector<VkDescriptorSetLayout> layouts(renderer.get_swapchainImageCount(), layout);
+			VkDescriptorSetAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = pool;
+			allocInfo.descriptorSetCount = static_cast<uint32_t>(renderer.get_swapchainImageCount());
+			allocInfo.pSetLayouts = layouts.data();
+
+			std::vector<VkDescriptorSet> descriptorSets(renderer.get_swapchainImageCount());
+			auto result = vkAllocateDescriptorSets(renderer.get_device(), &allocInfo, descriptorSets.data());
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+			}
+
+			for (int i = 0; i < renderer.get_swapchainImageCount(); i++)
+			{
+				VkDescriptorImageInfo info = {};
+				info.imageView = texture.get_imageView();
+				info.sampler = texture.get_imageSampler();
+				info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+				VkWriteDescriptorSet write = {};
+				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				write.descriptorCount = 1;
+				write.dstSet = descriptorSets[i];
+				write.dstBinding = 0;
+				write.dstArrayElement = 0;
+				write.pImageInfo = &info;
+
+				vkUpdateDescriptorSets(renderer.get_device(), 1, &write, 0, nullptr);
+			}
+
+			return descriptorSets;
+		};
+
+		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+		ManagedVector<VkDescriptorSet, false> ds = ManagedVector<VkDescriptorSet, false>(createDescriptorSet(renderer.get_materialLayout(), dsPool.get(), image, 1), [dev = renderer.get_device(), pool = dsPool.get()](std::vector<VkDescriptorSet>& dset) { vkFreeDescriptorSets(dev, pool, static_cast<uint32_t>(dset.size()), dset.data()); });
+
+
 		auto renderCommand = [
 			vert = vertexBuffer.get_vertexBuffer(),
 			idx = vertexBuffer.get_indexBuffer(),
 			size = vertexBuffer.get_verticeSize(),
-			idxc = vertexBuffer.get_indexCount()
+			idxc = vertexBuffer.get_indexCount(),
+			&ds
 		]
-		(VkCommandBuffer cmdBuffer)
+		(VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frame)
 		{
 			VkBuffer buffers[] = { vert };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, buffers, offsets);
 			vkCmdBindIndexBuffer(cmdBuffer, idx, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &ds[frame], 0, nullptr);
 			vkCmdDrawIndexed(cmdBuffer, idxc, 1, 0, 0, 0);
 		};
-
-		auto image_data = loadImage("assets/container2.png");
-		image = TextureImage(renderer, image_data);
-		unloadImage(image_data);
 
 		// Run
 		bool onetime = true;
