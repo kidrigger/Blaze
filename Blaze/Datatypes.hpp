@@ -67,5 +67,6 @@ namespace blaze
 	{
 		VkImage image{ VK_NULL_HANDLE };
 		VmaAllocation allocation{ VK_NULL_HANDLE };
+		VkFormat format;
 	};
 }

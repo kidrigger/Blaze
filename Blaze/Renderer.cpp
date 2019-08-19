@@ -181,7 +181,7 @@ namespace blaze
 		std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
 		for (size_t i = 0; i < swapchainImages.size(); i++)
 		{
-			swapchainImageViews[i] = util::createImageView(context.get_device(), swapchainImages[i], swapchainFormat.get());
+			swapchainImageViews[i] = util::createImageView(context.get_device(), swapchainImages[i], swapchainFormat.get(), VK_IMAGE_ASPECT_COLOR_BIT);
 		}
 		return swapchainImageViews;
 	}
@@ -202,10 +202,25 @@ namespace blaze
 		colorAttachmentRef.attachment = 0;
 		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+		VkAttachmentDescription depthAttachment = {};
+		depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference depthAttachmentRef = {};
+		depthAttachmentRef.attachment = 1;
+		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		VkSubpassDescription subpassDesc = {};
 		subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpassDesc.colorAttachmentCount = 1;
 		subpassDesc.pColorAttachments = &colorAttachmentRef;
+		subpassDesc.pDepthStencilAttachment = &depthAttachmentRef;
 
 		VkSubpassDependency dependency = {};
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -215,10 +230,14 @@ namespace blaze
 		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+		std::array<VkAttachmentDescription, 2> attachments = {
+			colorAttachment,
+			depthAttachment
+		};
 		VkRenderPassCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		createInfo.attachmentCount = 1;
-		createInfo.pAttachments = &colorAttachment;
+		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		createInfo.pAttachments = attachments.data();
 		createInfo.subpassCount = 1;
 		createInfo.pSubpasses = &subpassDesc;
 		createInfo.dependencyCount = 1;
@@ -440,6 +459,18 @@ namespace blaze
 		colorblendCreateInfo.attachmentCount = 1;
 		colorblendCreateInfo.pAttachments = &colorblendAttachment;
 
+		VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = {};
+		depthStencilStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
+		depthStencilStateCreateInfo.depthWriteEnable = VK_TRUE;
+		depthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;
+		depthStencilStateCreateInfo.maxDepthBounds = 0.0f;	// Don't care
+		depthStencilStateCreateInfo.minDepthBounds = 1.0f;	// Don't care
+		depthStencilStateCreateInfo.stencilTestEnable = VK_FALSE;
+		depthStencilStateCreateInfo.front = {}; // Don't Care
+		depthStencilStateCreateInfo.back = {}; // Don't Care
+
 		VkDynamicState dynamicStates[] = {
 			VK_DYNAMIC_STATE_VIEWPORT,
 			VK_DYNAMIC_STATE_LINE_WIDTH
@@ -475,7 +506,7 @@ namespace blaze
 		pipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
 		pipelineCreateInfo.pRasterizationState = &rasterizerCreateInfo;
 		pipelineCreateInfo.pMultisampleState = &multisampleCreateInfo;
-		pipelineCreateInfo.pDepthStencilState = nullptr;
+		pipelineCreateInfo.pDepthStencilState = &depthStencilStateCreateInfo;
 		pipelineCreateInfo.pColorBlendState = &colorblendCreateInfo;
 		pipelineCreateInfo.pDynamicState = nullptr;
 		pipelineCreateInfo.layout = pipelineLayout;
@@ -500,15 +531,16 @@ namespace blaze
 		vector<VkFramebuffer> swapchainFramebuffers(swapchainImageViews.size());
 		for (size_t i = 0; i < swapchainImageViews.size(); i++)
 		{
-			VkImageView attachments[] = {
-				swapchainImageViews[i]
+			std::array<VkImageView, 2> attachments = {
+				swapchainImageViews[i],
+				depthBufferView.get()
 			};
 
 			VkFramebufferCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			createInfo.renderPass = renderPass.get();
-			createInfo.attachmentCount = 1;
-			createInfo.pAttachments = attachments;
+			createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+			createInfo.pAttachments = attachments.data();
 			createInfo.width = swapchainExtent.get().width;
 			createInfo.height = swapchainExtent.get().height;
 			createInfo.layers = 1;
@@ -575,9 +607,11 @@ namespace blaze
 			renderpassBeginInfo.renderArea.offset = { 0, 0 };
 			renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
 
-			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-			renderpassBeginInfo.clearValueCount = 1;
-			renderpassBeginInfo.pClearValues = &clearColor;
+			std::array<VkClearValue, 2> clearColor;
+			clearColor[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearColor[1].depthStencil = { 1.0f, 0 };
+			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+			renderpassBeginInfo.pClearValues = clearColor.data();
 			vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
@@ -625,6 +659,39 @@ namespace blaze
 		}
 
 		return make_tuple(startSems, endSems, blockeFences);
+	}
+
+	ImageObject Renderer::createDepthBuffer() const
+	{
+		auto format = VK_FORMAT_D32_SFLOAT;
+		ImageObject obj = context.createImage(swapchainExtent.get().width, swapchainExtent.get().height, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+		VkCommandBuffer commandBuffer = startTransferCommands();
+
+		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		barrier.image = obj.image;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+		endTransferCommands(commandBuffer);
+
+		return obj;
 	}
 
 	VkCommandBuffer Renderer::startTransferCommands() const

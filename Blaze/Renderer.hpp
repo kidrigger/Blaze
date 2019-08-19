@@ -2,6 +2,7 @@
 #pragma once
 
 #include "util/Managed.hpp"
+#include "util/createFunctions.hpp"
 #include "Context.hpp"
 #include "Datatypes.hpp"
 
@@ -110,6 +111,9 @@ namespace blaze
 		std::vector<RenderCommand> renderCommands;
 		std::vector<bool> commandBufferDirty;
 
+		util::Managed<ImageObject> depthBuffer;
+		util::Managed<VkImageView> depthBufferView;
+
 		uint32_t currentFrame{ 0 };
 
 	public:
@@ -147,6 +151,10 @@ namespace blaze
 
 				swapchainImages = getSwapchainImages();
 				swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+
+				depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
+				depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
 				uniformBuffers = createUniformBuffers(cameraUBO);
@@ -194,6 +202,8 @@ namespace blaze
 			swapchainExtent(std::move(other.swapchainExtent)),
 			swapchainImages(std::move(other.swapchainImages)),
 			swapchainImageViews(std::move(other.swapchainImageViews)),
+			depthBuffer(std::move(other.depthBuffer)),
+			depthBufferView(std::move(other.depthBufferView)),
 			renderPass(std::move(other.renderPass)),
 			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
 			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
@@ -227,6 +237,8 @@ namespace blaze
 			swapchainExtent = std::move(other.swapchainExtent);
 			swapchainImages = std::move(other.swapchainImages);
 			swapchainImageViews = std::move(other.swapchainImageViews);
+			depthBuffer = std::move(other.depthBuffer);
+			depthBufferView = std::move(other.depthBufferView);
 			renderPass = std::move(other.renderPass);
 			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
 			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
@@ -315,6 +327,10 @@ namespace blaze
 
 			swapchainImages = getSwapchainImages();
 			swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+
+			depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
+			depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+
 			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
 			uniformBuffers = createUniformBuffers(cameraUBO);
@@ -349,6 +365,8 @@ namespace blaze
 		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const;
 		void recordCommandBuffers();
 		void rebuildCommandBuffer(int frame);
+
+		ImageObject createDepthBuffer() const;
 
 		void updateUniformBuffer(int frame, const UniformBufferObject& ubo)
 		{

@@ -235,8 +235,7 @@ namespace blaze
 			memcpy(bufferdata, image_data.data, image_data.size);
 			vmaUnmapMemory(allocator, stagingAlloc);
 
-			auto [finalImage, finalAllocation] = renderer.get_context().createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-			image = Managed<ImageObject>({ finalImage, finalAllocation }, [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+			image = Managed(renderer.get_context().createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 			try
 			{
@@ -275,7 +274,7 @@ namespace blaze
 				region.imageOffset = { 0,0 };
 				region.imageExtent = { width, height, 1 };
 
-				vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, finalImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+				vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 				barrier.oldLayout = barrier.newLayout;
 				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -291,8 +290,8 @@ namespace blaze
 				std::cerr << e.what() << std::endl;
 			}
 
-			imageView = util::Managed(util::createImageView(renderer.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM), [dev = renderer.get_device() ](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-			imageSampler = util::Managed(createSampler(renderer.get_device()), [dev = renderer.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			imageView = Managed(createImageView(renderer.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT), [dev = renderer.get_device() ](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			imageSampler = Managed(createSampler(renderer.get_device()), [dev = renderer.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 		}
 
 		TextureImage(TextureImage&& other) noexcept

@@ -4,6 +4,7 @@
 #include "util/Managed.hpp"
 #include "util/debugMessenger.hpp"
 #include "util/DeviceSelection.hpp"
+#include "Datatypes.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -156,7 +157,7 @@ namespace blaze
 			return std::make_tuple(buffer, allocation);
 		}
 
-		std::tuple<VkImage, VmaAllocation> createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const
+		ImageObject createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const
 		{
 			VkImageCreateInfo imageInfo = {};
 			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -184,7 +185,7 @@ namespace blaze
 				throw std::runtime_error("Buffer could not be allocated");
 			}
 
-			return std::make_tuple(image, allocation);
+			return ImageObject{ image, allocation, format };
 		}
 
 	private:
