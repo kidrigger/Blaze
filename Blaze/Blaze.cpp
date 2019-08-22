@@ -13,6 +13,7 @@
 #include "Datatypes.hpp"
 #include "VertexBuffer.hpp"
 #include "util/loaders.hpp"
+#include "Texture.hpp"
 
 #include <optional>
 #include <vector>
@@ -62,9 +63,9 @@ namespace blaze
 
 		UniformBufferObject cameraUBO
 		{
-			glm::mat4{1.0f},
+			glm::mat4(1.0f),
 			glm::lookAt(
-				glm::vec3{0.0f, 0.0f, -2.0f},
+				glm::vec3{0.0f, 0.0f, -4.0f},
 				glm::vec3{0.0f, 0.0f, 0.0f},
 				glm::vec3{0.0f, -1.0f, 0.0f}),
 			glm::perspective(
@@ -115,21 +116,19 @@ namespace blaze
 
 		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);
 
-		auto image_data = loadImage("assets/container2.png");
-		image = TextureImage(renderer, image_data);
-		unloadImage(image_data);
+		image = loadImage(renderer, "assets/container2.png");
 
 		auto createDescriptorPool = [&renderer]()
 		{
 			VkDescriptorPoolSize poolSize = {};
 			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSize.descriptorCount = static_cast<uint32_t>(renderer.get_swapchainImageCount());
+			poolSize.descriptorCount = 1;
 
 			VkDescriptorPoolCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			createInfo.poolSizeCount = 1;
 			createInfo.pPoolSizes = &poolSize;
-			createInfo.maxSets = static_cast<uint32_t>(renderer.get_swapchainImageCount());
+			createInfo.maxSets = 1;
 			createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 			VkDescriptorPool pool;
@@ -143,60 +142,57 @@ namespace blaze
 
 		auto createDescriptorSet = [&renderer](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureImage& texture, uint32_t binding)
 		{
-			std::vector<VkDescriptorSetLayout> layouts(renderer.get_swapchainImageCount(), layout);
 			VkDescriptorSetAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 			allocInfo.descriptorPool = pool;
-			allocInfo.descriptorSetCount = static_cast<uint32_t>(renderer.get_swapchainImageCount());
-			allocInfo.pSetLayouts = layouts.data();
+			allocInfo.descriptorSetCount = 1;
+			allocInfo.pSetLayouts = &layout;
 
-			std::vector<VkDescriptorSet> descriptorSets(renderer.get_swapchainImageCount());
-			auto result = vkAllocateDescriptorSets(renderer.get_device(), &allocInfo, descriptorSets.data());
+			VkDescriptorSet descriptorSet;
+			auto result = vkAllocateDescriptorSets(renderer.get_device(), &allocInfo, &descriptorSet);
 			if (result != VK_SUCCESS)
 			{
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 			}
 
-			for (int i = 0; i < renderer.get_swapchainImageCount(); i++)
-			{
-				VkDescriptorImageInfo info = {};
-				info.imageView = texture.get_imageView();
-				info.sampler = texture.get_imageSampler();
-				info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			VkDescriptorImageInfo info = {};
+			info.imageView = texture.get_imageView();
+			info.sampler = texture.get_imageSampler();
+			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-				VkWriteDescriptorSet write = {};
-				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-				write.descriptorCount = 1;
-				write.dstSet = descriptorSets[i];
-				write.dstBinding = 0;
-				write.dstArrayElement = 0;
-				write.pImageInfo = &info;
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			write.descriptorCount = 1;
+			write.dstSet = descriptorSet;
+			write.dstBinding = 0;
+			write.dstArrayElement = 0;
+			write.pImageInfo = &info;
 
-				vkUpdateDescriptorSets(renderer.get_device(), 1, &write, 0, nullptr);
-			}
+			vkUpdateDescriptorSets(renderer.get_device(), 1, &write, 0, nullptr);
 
-			return descriptorSets;
+			return descriptorSet;
 		};
 
 		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-		ManagedVector<VkDescriptorSet, false> ds = ManagedVector<VkDescriptorSet, false>(createDescriptorSet(renderer.get_materialLayout(), dsPool.get(), image, 1), [dev = renderer.get_device(), pool = dsPool.get()](std::vector<VkDescriptorSet>& dset) { vkFreeDescriptorSets(dev, pool, static_cast<uint32_t>(dset.size()), dset.data()); });
+		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_materialLayout(), dsPool.get(), image, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
 
+		loadModel("assets/helmet/DamagedHelmet.gltf");
 
 		auto renderCommand = [
 			vert = vertexBuffer.get_vertexBuffer(),
 			idx = vertexBuffer.get_indexBuffer(),
 			size = vertexBuffer.get_verticeSize(),
 			idxc = vertexBuffer.get_indexCount(),
-			&ds
+			dset = ds.get()
 		]
-		(VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frame)
+		(VkCommandBuffer cmdBuffer, VkPipelineLayout layout)
 		{
 			VkBuffer buffers[] = { vert };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, buffers, offsets);
 			vkCmdBindIndexBuffer(cmdBuffer, idx, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &ds[frame], 0, nullptr);
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &dset, 0, nullptr);
 			vkCmdDrawIndexed(cmdBuffer, idxc, 1, 0, 0, 0);
 		};
 
@@ -216,8 +212,8 @@ namespace blaze
 
 			try
 			{
-				cameraUBO.view = glm::lookAt(2.0f*glm::vec3(glm::cos(glm::radians(20*elapsed)), 0.0f, glm::sin(glm::radians(20 * elapsed))), glm::vec3{ 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f });
-				cameraUBO.model = glm::rotate(cameraUBO.model, glm::radians(static_cast<float>(10*deltaTime)), glm::vec3{ 1.0f, 0.0f, 0.0f });
+				cameraUBO.view = glm::lookAt(4.0f*glm::vec3(glm::cos(glm::radians(20*elapsed)), 0.0f, glm::sin(glm::radians(20 * elapsed))), glm::vec3{ 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f });
+				// cameraUBO.model = glm::rotate(cameraUBO.model, glm::radians(static_cast<float>(10*deltaTime)), glm::vec3{ 1.0f, 0.0f, 0.0f });
 				renderer.set_cameraUBO(cameraUBO);
 				renderer.renderFrame();
 				if (onetime) 

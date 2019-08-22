@@ -8,19 +8,21 @@ find_package(Vulkan REQUIRED)
 file(GLOB_RECURSE SOURCE_FILES
 	"*.cpp"
 	"util/*.cpp"
-	"stb/*.cpp"
 	"vma/*.cpp"
+	"gltf/*.cpp"
 	)
 
 file(GLOB_RECURSE HEADER_FILES
 	"*.hpp"
 	"util/*.hpp"
-	"stb/*.h"
 	"vma/*.h"
+	"gltf/*.h"
+	"gltf/*.hpp"
 	)
 
-include_directories ("stb")
 include_directories ("vma")
+include_directories ("gltf")
+include_directories (".")
 
 # Add source to this project's executable.
 add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
@@ -75,11 +77,23 @@ add_custom_command(TARGET Blaze POST_BUILD
         "$<TARGET_FILE_DIR:Blaze>/shaders"
 )
 
-file(GLOB_RECURSE ASSETS
-	"assets/*"
-)
+#file (GLOB TEXTURES "assets/container2.png")
+#add_custom_command(TARGET Blaze POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/"
+#	COMMAND ${CMAKE_COMMAND} -E copy "${TEXTURES}" "$<TARGET_FILE_DIR:Blaze>/assets/"
+#)
 
-add_custom_command(TARGET Blaze POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/"
-	COMMAND ${CMAKE_COMMAND} -E copy ${ASSETS} "$<TARGET_FILE_DIR:Blaze>/assets/"
-)
+#file (GLOB_RECURSE SPONZA "assets/sponza/*")
+#add_custom_command(TARGET Blaze POST_BUILD
+#	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/sponza"
+#	COMMAND ${CMAKE_COMMAND} -E copy "${SPONZA}" "$<TARGET_FILE_DIR:Blaze>/assets/sponza"
+#)
+
+#file (GLOB_RECURSE SPONZA "assets/helmet/*")
+#add_custom_command(TARGET Blaze POST_BUILD
+#	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/helmet"
+#	COMMAND ${CMAKE_COMMAND} -E copy "${SPONZA}" "$<TARGET_FILE_DIR:Blaze>/assets/helmet"
+#)
+
+file (MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/assets")
+file (COPY "${PROJECT_SOURCE_DIR}/Blaze/assets/" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/assets")

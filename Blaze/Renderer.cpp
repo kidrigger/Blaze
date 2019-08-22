@@ -620,7 +620,7 @@ namespace blaze
 
 			for (auto& cmd : renderCommands)
 			{
-				cmd(commandBuffers[frame], graphicsPipelineLayout.get(), frame);
+				cmd(commandBuffers[frame], graphicsPipelineLayout.get());
 			}
 
 			vkCmdEndRenderPass(commandBuffers[frame]);

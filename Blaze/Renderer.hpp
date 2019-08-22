@@ -16,7 +16,7 @@
 namespace blaze
 {
 	class Renderer;
-	using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout, uint32_t frame)>;
+	using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout)>;
 
 	template <typename T>
 	class UniformBuffer
