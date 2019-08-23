@@ -195,12 +195,12 @@ namespace blaze
 		IndexedVertexBuffer(const IndexedVertexBuffer& other) = delete;
 		IndexedVertexBuffer& operator=(const IndexedVertexBuffer& other) = delete;
 
-		VkBuffer get_vertexBuffer() const { return vertexBuffer.get().buffer; }
-		VmaAllocation get_vertexAllocation() const { return vertexBuffer.get().allocation; }
-		size_t get_verticeSize() const { return vertexSize; }
-		VkBuffer get_indexBuffer() const { return indexBuffer.get().buffer; }
-		VmaAllocation get_indexAllocation() const { return indexMemory.get().allocation; }
-		size_t get_indiceSize() const { return indexSize; }
-		uint32_t get_indexCount() const { return indexCount; }
+		const VkBuffer& get_vertexBuffer() const { return vertexBuffer.get().buffer; }
+		const VmaAllocation& get_vertexAllocation() const { return vertexBuffer.get().allocation; }
+		const size_t& get_verticeSize() const { return vertexSize; }
+		const VkBuffer& get_indexBuffer() const { return indexBuffer.get().buffer; }
+		const VmaAllocation& get_indexAllocation() const { return indexMemory.get().allocation; }
+		const size_t& get_indiceSize() const { return indexSize; }
+		const uint32_t& get_indexCount() const { return indexCount; }
 	};
 }

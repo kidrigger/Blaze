@@ -12,8 +12,9 @@
 #include "Renderer.hpp"
 #include "Datatypes.hpp"
 #include "VertexBuffer.hpp"
-#include "util/loaders.hpp"
 #include "Texture.hpp"
+#include "Model.hpp"
+#include "Camera.hpp"
 
 #include <optional>
 #include <vector>
@@ -61,19 +62,7 @@ namespace blaze
 		IndexedVertexBuffer<Vertex> vertexBuffer;
 		TextureImage image;
 
-		UniformBufferObject cameraUBO
-		{
-			glm::mat4(1.0f),
-			glm::lookAt(
-				glm::vec3{0.0f, 0.0f, -4.0f},
-				glm::vec3{0.0f, 0.0f, 0.0f},
-				glm::vec3{0.0f, -1.0f, 0.0f}),
-			glm::perspective(
-				glm::radians(45.0f),
-				4.0f / 3.0f,
-				0.1f,
-				10.0f)
-		};
+		Camera cam({ 0.0f, 0.0f, -4.0f }, { 0.0f, 0.0f, 4.0f }, { 0.0f, -1.0f, 0.0f }, glm::radians(45.0f), 4.0f / 3.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -88,7 +77,7 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		vector<Vertex> vertices = {
+		/*vector<Vertex> vertices = {
 			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}, {1.0f, 1.0f}},
 			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}, {1.0f, 0.0f}},
 			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {0.0f, 0.0f}},
@@ -114,33 +103,11 @@ namespace blaze
 			4, 1, 5
 		};
 
-		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);
+		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);*/
 
 		image = loadImage(renderer, "assets/container2.png");
 
-		auto createDescriptorPool = [&renderer]()
-		{
-			VkDescriptorPoolSize poolSize = {};
-			poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSize.descriptorCount = 1;
-
-			VkDescriptorPoolCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			createInfo.poolSizeCount = 1;
-			createInfo.pPoolSizes = &poolSize;
-			createInfo.maxSets = 1;
-			createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-			VkDescriptorPool pool;
-			auto result = vkCreateDescriptorPool(renderer.get_device(), &createInfo, nullptr, &pool);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("Descriptor pool creation failed with " + std::to_string(result));
-			}
-			return pool;
-		};
-
-		auto createDescriptorSet = [&renderer](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureImage& texture, uint32_t binding)
+		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureImage& texture, uint32_t binding)
 		{
 			VkDescriptorSetAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -149,7 +116,7 @@ namespace blaze
 			allocInfo.pSetLayouts = &layout;
 
 			VkDescriptorSet descriptorSet;
-			auto result = vkAllocateDescriptorSets(renderer.get_device(), &allocInfo, &descriptorSet);
+			auto result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
 			if (result != VK_SUCCESS)
 			{
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
@@ -169,15 +136,19 @@ namespace blaze
 			write.dstArrayElement = 0;
 			write.pImageInfo = &info;
 
-			vkUpdateDescriptorSets(renderer.get_device(), 1, &write, 0, nullptr);
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 
 			return descriptorSet;
 		};
 
-		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+		VkDescriptorPoolSize poolSize = {};
+		poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSize.descriptorCount = 1;
+		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
+		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_materialLayout(), dsPool.get(), image, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
 
-		loadModel("assets/helmet/DamagedHelmet.gltf");
+		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
 
 		auto renderCommand = [
 			vert = vertexBuffer.get_vertexBuffer(),
@@ -212,13 +183,16 @@ namespace blaze
 
 			try
 			{
-				cameraUBO.view = glm::lookAt(4.0f*glm::vec3(glm::cos(glm::radians(20*elapsed)), 0.0f, glm::sin(glm::radians(20 * elapsed))), glm::vec3{ 0.0f }, glm::vec3{ 0.0f, -1.0f, 0.0f });
-				// cameraUBO.model = glm::rotate(cameraUBO.model, glm::radians(static_cast<float>(10*deltaTime)), glm::vec3{ 1.0f, 0.0f, 0.0f });
-				renderer.set_cameraUBO(cameraUBO);
+				cam.moveTo(4.0f * glm::vec3(glm::cos(glm::radians(20 * elapsed)), 0.0f, glm::sin(glm::radians(20 * elapsed))));
+				cam.rotateTo(0, glm::radians<float>(-20.0f * static_cast<float>(elapsed) - 90.0f));
+				renderer.set_cameraUBO(cam.getUbo());
 				renderer.renderFrame();
 				if (onetime) 
 				{
-					renderer.submit(renderCommand);
+					// renderer.submit(renderCommand);
+					// Until Model Importer imports textures
+					renderer.submit([dset = ds.get()](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &dset, 0, nullptr); });
+					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model(cmdBuffer, layout); });
 					onetime = false;
 				}
 			}

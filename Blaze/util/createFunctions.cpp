@@ -72,4 +72,22 @@ namespace blaze::util
 		}
 		return view;
 	}
+
+	VkDescriptorPool createDescriptorPool(VkDevice device, std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets)
+	{
+		VkDescriptorPoolCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		createInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		createInfo.pPoolSizes = poolSizes.data();
+		createInfo.maxSets = maxSets;
+		createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+		VkDescriptorPool pool;
+		auto result = vkCreateDescriptorPool(device, &createInfo, nullptr, &pool);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Descriptor pool creation failed with " + std::to_string(result));
+		}
+		return pool;
+	};
 }
