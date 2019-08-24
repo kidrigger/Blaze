@@ -77,7 +77,8 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		/*vector<Vertex> vertices = {
+/*
+		vector<Vertex> vertices = {
 			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}, {1.0f, 1.0f}},
 			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}, {1.0f, 0.0f}},
 			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {0.0f, 0.0f}},
@@ -103,7 +104,7 @@ namespace blaze
 			4, 1, 5
 		};
 
-		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);*/
+		vertexBuffer = IndexedVertexBuffer(renderer, vertices, indices);
 
 		image = loadImage(renderer, "assets/container2.png");
 
@@ -122,11 +123,6 @@ namespace blaze
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 			}
 
-			VkDescriptorImageInfo info = {};
-			info.imageView = texture.get_imageView();
-			info.sampler = texture.get_imageSampler();
-			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
 			VkWriteDescriptorSet write = {};
 			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -134,7 +130,7 @@ namespace blaze
 			write.dstSet = descriptorSet;
 			write.dstBinding = 0;
 			write.dstArrayElement = 0;
-			write.pImageInfo = &info;
+			write.pImageInfo = &texture.get_imageInfo();;
 
 			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 
@@ -147,8 +143,6 @@ namespace blaze
 		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
 		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_materialLayout(), dsPool.get(), image, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
-
-		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
 
 		auto renderCommand = [
 			vert = vertexBuffer.get_vertexBuffer(),
@@ -166,6 +160,9 @@ namespace blaze
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &dset, 0, nullptr);
 			vkCmdDrawIndexed(cmdBuffer, idxc, 1, 0, 0, 0);
 		};
+		*/
+
+		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
 
 		// Run
 		bool onetime = true;
@@ -190,9 +187,7 @@ namespace blaze
 				if (onetime) 
 				{
 					// renderer.submit(renderCommand);
-					// Until Model Importer imports textures
-					renderer.submit([dset = ds.get()](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &dset, 0, nullptr); });
-					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model(cmdBuffer, layout); });
+					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
 					onetime = false;
 				}
 			}

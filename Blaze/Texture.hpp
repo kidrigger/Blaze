@@ -23,6 +23,7 @@ namespace blaze
 		util::Managed<VkSampler> imageSampler;
 		uint32_t width{ 0 };
 		uint32_t height{ 0 };
+		VkDescriptorImageInfo imageInfo;
 	public:
 		TextureImage() noexcept
 		{
@@ -101,12 +102,17 @@ namespace blaze
 
 			imageView = Managed(createImageView(renderer.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT), [dev = renderer.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 			imageSampler = Managed(createSampler(renderer.get_device()), [dev = renderer.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+
+			imageInfo.imageView = imageView.get();
+			imageInfo.sampler = imageSampler.get();
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		}
 
 		TextureImage(TextureImage&& other) noexcept
 			: image(std::move(other.image)),
 			imageView(std::move(other.imageView)),
 			imageSampler(std::move(other.imageSampler)),
+			imageInfo(std::move(other.imageInfo)),
 			width(other.width),
 			height(other.height)
 		{
@@ -121,6 +127,7 @@ namespace blaze
 			image = std::move(other.image);
 			imageView = std::move(other.imageView);
 			imageSampler = std::move(other.imageSampler);
+			imageInfo = std::move(other.imageInfo);
 			width = std::move(other.width);
 			height = std::move(other.height);
 			return *this;
@@ -132,6 +139,7 @@ namespace blaze
 		VkImage get_image() const { return image.get().image; }
 		VkImageView get_imageView() const { return imageView.get(); }
 		VkSampler get_imageSampler() const { return imageSampler.get(); }
+		const VkDescriptorImageInfo& get_imageInfo() const { return imageInfo; }
 
 	private:
 		VkSampler createSampler(VkDevice device) const
