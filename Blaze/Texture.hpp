@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stb_image.h>
-#include "Renderer.hpp"
+#include "Context.hpp"
 
 namespace blaze
 {
@@ -29,14 +29,14 @@ namespace blaze
 		{
 		}
 
-		TextureImage(const Renderer& renderer, const ImageData& image_data)
+		TextureImage(const Context& context, const ImageData& image_data)
 			: width(image_data.width),
 			height(image_data.height)
 		{
 			using namespace util;
-			VmaAllocator allocator = renderer.get_context().get_allocator();
+			VmaAllocator allocator = context.get_allocator();
 
-			auto [stagingBuffer, stagingAlloc] = renderer.get_context().createBuffer(image_data.size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 			auto stagingBufferRAII = Managed<BufferObject>({ stagingBuffer, stagingAlloc }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
@@ -45,11 +45,11 @@ namespace blaze
 			memcpy(bufferdata, image_data.data, image_data.size);
 			vmaUnmapMemory(allocator, stagingAlloc);
 
-			image = Managed(renderer.get_context().createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+			image = Managed(context.createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 			try
 			{
-				VkCommandBuffer commandBuffer = renderer.startTransferCommands();
+				VkCommandBuffer commandBuffer = context.startTransferCommands();
 
 				VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 				VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -93,15 +93,15 @@ namespace blaze
 
 				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-				renderer.endTransferCommands(commandBuffer);
+				context.endTransferCommands(commandBuffer);
 			}
 			catch (std::exception& e)
 			{
 				std::cerr << e.what() << std::endl;
 			}
 
-			imageView = Managed(createImageView(renderer.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT), [dev = renderer.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-			imageSampler = Managed(createSampler(renderer.get_device()), [dev = renderer.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			imageView = Managed(createImageView(context.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			imageSampler = Managed(createSampler(context.get_device()), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 			imageInfo.imageView = imageView.get();
 			imageInfo.sampler = imageSampler.get();
@@ -173,7 +173,7 @@ namespace blaze
 		}
 	};
 
-	[[nodiscard]] TextureImage loadImage(const Renderer& renderer, const std::string& name)
+	[[nodiscard]] TextureImage loadImage(const Context& context, const std::string& name)
 	{
 		ImageData image;
 		int width, height, numChannels;
@@ -188,7 +188,7 @@ namespace blaze
 			throw std::runtime_error("Image " + name + " could not be loaded.");
 		}
 
-		auto&& ti = TextureImage(renderer, image);
+		auto&& ti = TextureImage(context, image);
 		stbi_image_free(image.data);
 
 		return std::move(ti);

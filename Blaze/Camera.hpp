@@ -56,9 +56,11 @@ namespace blaze
 		{
 			if (uboDirty)
 			{
-				ubo.model = glm::mat4{ 1.0f };
+				ubo.model = glm::rotate(glm::mat4{ 1.0f }, glm::radians<float>(90.0f), glm::vec3{1.0f, 0.0f, 0.0f});
 				ubo.view = glm::lookAt(position, target + position, up);
 				ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
+				ubo.lightPos = position;// glm::vec3(2.0f, 0.0f, 0.0f);
+				ubo.viewPos = position;
 				uboDirty = false;
 			}
 			return ubo;

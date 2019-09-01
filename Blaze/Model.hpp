@@ -14,16 +14,25 @@ namespace blaze
 	class Material
 	{
 		TextureImage diffuse;
+		TextureImage metallicRoughness;
+		TextureImage normal;
+		TextureImage occlusion;
 		util::Managed<VkDescriptorSet> descriptorSet;
 
 	public:
-		Material(TextureImage&& diff)
-			: diffuse(std::move(diff))
+		Material(TextureImage&& diff, TextureImage&& norm, TextureImage&& metal, TextureImage&& ao)
+			: diffuse(std::move(diff)),
+			metallicRoughness(std::move(metal)),
+			normal(std::move(norm)),
+			occlusion(std::move(ao))
 		{
 		}
 
 		Material(Material&& other) noexcept
 			: diffuse(std::move(other.diffuse)),
+			metallicRoughness(std::move(other.metallicRoughness)),
+			normal(std::move(other.normal)),
+			occlusion(std::move(other.occlusion)),
 			descriptorSet(std::move(other.descriptorSet))
 		{
 		}
@@ -35,6 +44,9 @@ namespace blaze
 				return *this;
 			}
 			diffuse = std::move(other.diffuse);
+			metallicRoughness = std::move(other.metallicRoughness);
+			normal = std::move(other.normal);
+			occlusion = std::move(other.occlusion);
 			descriptorSet = std::move(other.descriptorSet);
 			return *this;
 		}
@@ -54,16 +66,28 @@ namespace blaze
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 			}
 
-			VkWriteDescriptorSet write = {};
-			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			write.descriptorCount = 1;
-			write.dstSet = newDescriptorSet;
-			write.dstBinding = 0;
-			write.dstArrayElement = 0;
-			write.pImageInfo = &diffuse.get_imageInfo();;
+			std::array<VkDescriptorImageInfo, 4> imageInfos = {
+				diffuse.get_imageInfo(),
+				metallicRoughness.get_imageInfo(),
+				normal.get_imageInfo(),
+				occlusion.get_imageInfo()
+			};
+			int idx = 0;
+			std::array<VkWriteDescriptorSet, 4> writes = {};
+			for(auto& write : writes)
+			{
+				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				write.descriptorCount = 1;
+				write.dstSet = newDescriptorSet;
+				write.dstBinding = idx;
+				write.dstArrayElement = 0;
+				write.pImageInfo = &imageInfos[idx];
 
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+				idx++;
+			}
+
+			vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
 			descriptorSet = util::Managed(newDescriptorSet, [device, pool](VkDescriptorSet& dset) { vkFreeDescriptorSets(device, pool, 1, &dset); });
 		}
@@ -212,33 +236,97 @@ namespace blaze
 		materials.reserve(model.materials.size());
 		for (auto& material : model.materials)
 		{
-			auto& image = model.images[model.textures[material.pbrMetallicRoughness.baseColorTexture.index].source];
-			uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-			uint8_t* data = new uint8_t[texelCount * 4];
-			if (image.component == 3)
+			auto toRGBA = [](uint8_t* data, tinygltf::Image& image, uint64_t texelCount)
 			{
-				int offset = 0;
-				for (uint64_t i = 0; i < texelCount; i++)
+				if (image.component == 3)
 				{
-					for (int j = 0; j < 3; j++)
+					int offset = 0;
+					for (uint64_t i = 0; i < texelCount; i++)
 					{
-						data[i + j + offset] = image.image[i + j];
+						for (int j = 0; j < 3; j++)
+						{
+							data[i + j + offset] = image.image[i + j];
+						}
+						offset++;
 					}
-					offset++;
 				}
-			}
-			else if (image.component == 4)
+				else if (image.component == 4)
+				{
+					memcpy(data, image.image.data(), texelCount * 4);
+				}
+			};
+
+			ImageData diffuseImageData;
+			ImageData normalImageData;
+			ImageData metallicRoughtnessImageData;
+			ImageData occlusionImageData;
+
 			{
-				memcpy(data, image.image.data(), texelCount * 4);
+				auto& image = model.images[model.textures[material.pbrMetallicRoughness.baseColorTexture.index].source];
+				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+				uint8_t* data = new uint8_t[texelCount * 4];
+
+				toRGBA(data, image, texelCount);
+
+				diffuseImageData.data = data;
+				diffuseImageData.width = image.width;
+				diffuseImageData.height = image.height;
+				diffuseImageData.size = image.width * image.height * 4;
+				diffuseImageData.numChannels = 4;
 			}
-			ImageData imgData;
-			imgData.data = data;
-			imgData.width = image.width;
-			imgData.height = image.height;
-			imgData.size = image.width * image.height * 4;
-			imgData.numChannels = 4;
-			materials.emplace_back(TextureImage{ renderer, imgData });
-			delete[] data;
+
+			{
+				auto& image = model.images[model.textures[material.normalTexture.index].source];
+				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+				uint8_t* data = new uint8_t[texelCount * 4];
+
+				toRGBA(data, image, texelCount);
+
+				normalImageData.data = data;
+				normalImageData.width = image.width;
+				normalImageData.height = image.height;
+				normalImageData.size = image.width * image.height * 4;
+				normalImageData.numChannels = 4;
+			}
+
+			{
+				auto& image = model.images[model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index].source];
+				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+				uint8_t* data = new uint8_t[texelCount * 4];
+
+				toRGBA(data, image, texelCount);
+
+				metallicRoughtnessImageData.data = data;
+				metallicRoughtnessImageData.width = image.width;
+				metallicRoughtnessImageData.height = image.height;
+				metallicRoughtnessImageData.size = image.width * image.height * 4;
+				metallicRoughtnessImageData.numChannels = 4;
+			}
+
+			{
+				auto& image = model.images[model.textures[material.occlusionTexture.index].source];
+				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+				uint8_t* data = new uint8_t[texelCount * 4];
+
+				toRGBA(data, image, texelCount);
+
+				occlusionImageData.data = data;
+				occlusionImageData.width = image.width;
+				occlusionImageData.height = image.height;
+				occlusionImageData.size = image.width * image.height * 4;
+				occlusionImageData.numChannels = 4;
+			}
+
+			materials.emplace_back(
+				TextureImage{ renderer.get_context(), diffuseImageData },
+				TextureImage{ renderer.get_context(), normalImageData },
+				TextureImage{ renderer.get_context(), metallicRoughtnessImageData },
+				TextureImage{ renderer.get_context(), occlusionImageData });
+
+			delete[] diffuseImageData.data;
+			delete[] normalImageData.data;
+			delete[] metallicRoughtnessImageData.data;
+			delete[] occlusionImageData.data;
 		}
 		// default material
 		{
@@ -250,7 +338,11 @@ namespace blaze
 			imgData.height = 256;
 			imgData.size = 256 * 256 * 4;
 			imgData.numChannels = 4;
-			materials.emplace_back(TextureImage{ renderer, imgData });
+			materials.emplace_back(
+				TextureImage{ renderer.get_context(), imgData },
+				TextureImage{ renderer.get_context(), imgData },
+				TextureImage{ renderer.get_context(), imgData },
+				TextureImage{ renderer.get_context(), imgData });
 			delete[] data;
 		}
 
@@ -292,6 +384,16 @@ namespace blaze
 						const auto& bufferView = model.bufferViews[accessor.bufferView];
 
 						normBuffer = reinterpret_cast<float*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+					}
+
+					const auto& tanAccessorIterator = primitive.attributes.find(TANGENT);
+					bool hasTanAccessor = (tanAccessorIterator != primitive.attributes.end());
+					if (hasTanAccessor)
+					{
+						const auto& accessor = model.accessors[tanAccessorIterator->second];
+						const auto& bufferView = model.bufferViews[accessor.bufferView];
+
+						tanBuffer = reinterpret_cast<float*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
 					}
 
 					const auto& tex0AccessorIterator = primitive.attributes.find(TEXCOORD_0);
@@ -343,13 +445,14 @@ namespace blaze
 				{
 					vertexBuffer.push_back({
 						glm::make_vec3(&posBuffer[3 * i]),
-						glm::normalize(normBuffer ? glm::make_vec3(&normBuffer[3 * i]) : glm::vec3(0.0f)),
+						glm::normalize(normBuffer ? glm::make_vec3(&normBuffer[3 * i]) : glm::vec3(0.0f, 0.0f, 1.0f)),
+						glm::normalize(tanBuffer ? glm::make_vec3(&tanBuffer[3 * i]) : glm::vec3(1.0f, 0.0f, 0.0f)),
 						tex0Buffer ? glm::make_vec2(&tex0Buffer[2 * i]) : glm::vec2(0.0f) });
 				}
 			}
 		}
 
-		auto ivb = IndexedVertexBuffer(renderer, vertexBuffer, indexBuffer);
+		auto ivb = IndexedVertexBuffer(renderer.get_context(), vertexBuffer, indexBuffer);
 		blazeModel = Model(renderer, primitives, materials, std::move(ivb));
 
 		return blazeModel;

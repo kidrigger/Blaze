@@ -188,6 +188,9 @@ namespace blaze
 			return ImageObject{ image, allocation, format };
 		}
 
+		VkCommandBuffer startTransferCommands() const;
+		void endTransferCommands(VkCommandBuffer commandBuffer) const;
+
 	private:
 
 		VkInstance createInstance(const std::vector<const char*>& requiredExtensions) const;

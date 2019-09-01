@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include "util/DeviceSelection.hpp"
+#include "util/createFunctions.hpp"
 
 namespace blaze
 {
@@ -196,4 +197,58 @@ namespace blaze
 
 		return alloc;
 	};
+
+	VkCommandBuffer Context::startTransferCommands() const
+	{
+		VkCommandBuffer commandBuffer;
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = graphicsCommandPool.get();
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+		auto result = vkAllocateCommandBuffers(device.get(), &allocInfo, &commandBuffer);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
+		}
+
+		VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
+		}
+
+		return commandBuffer;
+	}
+
+	void Context::endTransferCommands(VkCommandBuffer commandBuffer) const
+	{
+		auto result = vkEndCommandBuffer(commandBuffer);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
+		}
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		VkFence fence = util::createFence(device.get());
+		vkResetFences(device.get(), 1, &fence);
+
+		result = vkQueueSubmit(get_transferQueue(), 1, &submitInfo, fence);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Submit Command Buffer failed with " + std::to_string(result));
+		}
+
+		vkWaitForFences(device.get(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		vkDestroyFence(device.get(), fence, nullptr);
+		vkFreeCommandBuffers(device.get(), get_transferCommandPool(), 1, &commandBuffer);
+	}
 }

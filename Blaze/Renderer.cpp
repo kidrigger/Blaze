@@ -281,17 +281,21 @@ namespace blaze
 	{
 		VkDescriptorSetLayout descriptorSetLayout;
 
-		VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-		samplerLayoutBinding.binding = 0;
-		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		samplerLayoutBinding.descriptorCount = 1;
-		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		samplerLayoutBinding.pImmutableSamplers = nullptr;
+		std::array<VkDescriptorSetLayoutBinding, 4> samplerLayoutBindings;
+		uint32_t bindingLocation = 0;
+		for (auto& layoutBinding : samplerLayoutBindings)
+		{
+			layoutBinding.binding = bindingLocation++;
+			layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			layoutBinding.descriptorCount = 1;
+			layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			layoutBinding.pImmutableSamplers = nullptr;
+		}
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = &samplerLayoutBinding;
+		layoutInfo.bindingCount = static_cast<uint32_t>(samplerLayoutBindings.size());
+		layoutInfo.pBindings = samplerLayoutBindings.data();
 
 		auto result = vkCreateDescriptorSetLayout(get_device(), &layoutInfo, nullptr, &descriptorSetLayout);
 		if (result != VK_SUCCESS)
@@ -367,7 +371,7 @@ namespace blaze
 		ubos.reserve(swapchainImages.size());
 		for (int i = 0; i < swapchainImages.size(); i++)
 		{
-			ubos.emplace_back(*this, ubo);
+			ubos.emplace_back(context, ubo);
 		}
 		return std::move(ubos);
 	}
@@ -666,7 +670,7 @@ namespace blaze
 		auto format = VK_FORMAT_D32_SFLOAT;
 		ImageObject obj = context.createImage(swapchainExtent.get().width, swapchainExtent.get().height, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
-		VkCommandBuffer commandBuffer = startTransferCommands();
+		VkCommandBuffer commandBuffer = context.startTransferCommands();
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
@@ -689,62 +693,8 @@ namespace blaze
 
 		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-		endTransferCommands(commandBuffer);
+		context.endTransferCommands(commandBuffer);
 
 		return obj;
-	}
-
-	VkCommandBuffer Renderer::startTransferCommands() const
-	{
-		VkCommandBuffer commandBuffer;
-		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = get_transferCommandPool();
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = 1;
-		auto result = vkAllocateCommandBuffers(context.get_device(), &allocInfo, &commandBuffer);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
-		}
-
-		VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
-		}
-
-		return commandBuffer;
-	}
-
-	void Renderer::endTransferCommands(VkCommandBuffer commandBuffer) const 
-	{
-		auto result = vkEndCommandBuffer(commandBuffer);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
-		}
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-
-		VkFence fence = util::createFence(context.get_device());
-		vkResetFences(context.get_device(), 1, &fence);
-
-		result = vkQueueSubmit(get_transferQueue(), 1, &submitInfo, fence);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("Submit Command Buffer failed with " + std::to_string(result));
-		}
-
-		vkWaitForFences(context.get_device(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-		vkDestroyFence(context.get_device(), fence, nullptr);
-		vkFreeCommandBuffers(context.get_device(), get_transferCommandPool(), 1, &commandBuffer);
 	}
 }
