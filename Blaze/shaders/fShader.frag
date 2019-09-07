@@ -66,7 +66,7 @@ void main() {
 	vec3 metalRough = texture(metalRoughnessImage, texCoords).rgb;
 	float metallic	= metalRough.b;
 	float roughness = metalRough.g;
-	float ao = metalRough.r;
+	float ao		= texture(occlusionImage, texCoords).r;
 
 	vec3 F0 = vec3(0.04); 
 	F0      = mix(F0, albedo, metallic);
