@@ -12,6 +12,11 @@ layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
 layout(set = 1, binding = 1) uniform sampler2D metalRoughnessImage;
 layout(set = 1, binding = 2) uniform sampler2D normalImage;
 layout(set = 1, binding = 3) uniform sampler2D occlusionImage;
+layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
+
+layout(push_constant) uniform MaterialData {
+	vec4 baseColorFactor;
+} material;
 
 layout(location = 0) out vec4 outColor;
 
@@ -62,11 +67,12 @@ void main() {
 	vec3 N		 = normalize(TBN * norm);
 	vec3 V		 = normalize(viewPos - position);
 
-	vec3 albedo		= texture(diffuseImage, texCoords).rgb * 0.5f;
+	vec3 albedo		= texture(diffuseImage, texCoords).rgb * material.baseColorFactor.rgb;
 	vec3 metalRough = texture(metalRoughnessImage, texCoords).rgb;
 	float metallic	= metalRough.b;
 	float roughness = metalRough.g;
 	float ao		= texture(occlusionImage, texCoords).r;
+	vec3 emission	= texture(emissiveImage, texCoords).rgb;
 
 	vec3 F0 = vec3(0.04); 
 	F0      = mix(F0, albedo, metallic);
@@ -98,8 +104,8 @@ void main() {
 	}
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
-	vec3 color	 = ambient + L0;
-	color		 = color / (color + vec3(1.0));
+	vec3 color	 = ambient + L0 + emission;
+	// color		 = color / (color + vec3(1.0));
 	color		 = pow(color, vec3(1.0/2.2));
 	outColor	 = vec4(color, 1.0f);
 }

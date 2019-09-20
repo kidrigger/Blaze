@@ -12,7 +12,7 @@ namespace blaze
 {
 	class Camera
 	{
-		UniformBufferObject ubo;
+		CameraUniformBufferObject ubo;
 		bool uboDirty;
 
 		glm::vec3 position;
@@ -52,7 +52,7 @@ namespace blaze
 			uboDirty = true;
 		}
 
-		const UniformBufferObject& getUbo()
+		const CameraUniformBufferObject& getUbo()
 		{
 			if (uboDirty)
 			{

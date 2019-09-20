@@ -281,7 +281,7 @@ namespace blaze
 	{
 		VkDescriptorSetLayout descriptorSetLayout;
 
-		std::array<VkDescriptorSetLayoutBinding, 4> samplerLayoutBindings;
+		std::array<VkDescriptorSetLayoutBinding, 5> samplerLayoutBindings;
 		uint32_t bindingLocation = 0;
 		for (auto& layoutBinding : samplerLayoutBindings)
 		{
@@ -348,7 +348,7 @@ namespace blaze
 			VkDescriptorBufferInfo info = {};
 			info.buffer = uniformBuffers[i].get_buffer();
 			info.offset = 0;
-			info.range = sizeof(UniformBufferObject);
+			info.range = sizeof(CameraUniformBufferObject);
 
 			VkWriteDescriptorSet write = {};
 			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -365,9 +365,9 @@ namespace blaze
 		return descriptorSets;
 	}
 
-	std::vector<UniformBuffer<UniformBufferObject>> Renderer::createUniformBuffers(const UniformBufferObject& ubo) const
+	std::vector<UniformBuffer<CameraUniformBufferObject>> Renderer::createUniformBuffers(const CameraUniformBufferObject& ubo) const
 	{
-		std::vector<UniformBuffer<UniformBufferObject>> ubos;
+		std::vector<UniformBuffer<CameraUniformBufferObject>> ubos;
 		ubos.reserve(swapchainImages.size());
 		for (int i = 0; i < swapchainImages.size(); i++)
 		{
@@ -490,10 +490,17 @@ namespace blaze
 			materialDescriptorSetLayout.get()
 		};
 
+		VkPushConstantRange pushConstantRange = {};
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(MaterialPushConstantBlock);
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
 		pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
+		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 
 		auto result = vkCreatePipelineLayout(context.get_device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
 		if (result != VK_SUCCESS)

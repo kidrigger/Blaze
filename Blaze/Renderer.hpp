@@ -45,8 +45,8 @@ namespace blaze
 
 		util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
 
-		std::vector<UniformBuffer<UniformBufferObject>> uniformBuffers;
-		UniformBufferObject cameraUBO{};
+		std::vector<UniformBuffer<CameraUniformBufferObject>> uniformBuffers;
+		CameraUniformBufferObject cameraUBO{};
 
 		util::Managed<VkPipelineLayout> graphicsPipelineLayout;
 		util::Managed<VkPipeline> graphicsPipeline;
@@ -246,7 +246,7 @@ namespace blaze
 			}
 		}
 
-		void set_cameraUBO(const UniformBufferObject& ubo)
+		void set_cameraUBO(const CameraUniformBufferObject& ubo)
 		{
 			cameraUBO = ubo;
 		}
@@ -305,7 +305,7 @@ namespace blaze
 		VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 		VkDescriptorPool createDescriptorPool() const;
 		std::vector<VkDescriptorSet> createDescriptorSets() const;
-		std::vector<UniformBuffer<UniformBufferObject>> createUniformBuffers(const UniformBufferObject& ubo) const;
+		std::vector<UniformBuffer<CameraUniformBufferObject>> createUniformBuffers(const CameraUniformBufferObject& ubo) const;
 		std::tuple<VkPipelineLayout, VkPipeline> createGraphicsPipeline() const;
 		std::vector<VkFramebuffer> createFramebuffers() const;
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
@@ -315,7 +315,7 @@ namespace blaze
 
 		ImageObject createDepthBuffer() const;
 
-		void updateUniformBuffer(int frame, const UniformBufferObject& ubo)
+		void updateUniformBuffer(int frame, const CameraUniformBufferObject& ubo)
 		{
 			void* data;
 			vmaMapMemory(context.get_allocator(), uniformBuffers[frame].get_allocation(), &data);
