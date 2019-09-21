@@ -11,6 +11,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <glfw/glfw3.h>
 
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 namespace blaze
 {
 	class Material
@@ -126,10 +129,43 @@ namespace blaze
 		}
 	};
 
+	struct Node
+	{
+		glm::vec3 translation;
+		glm::quat rotation;
+		glm::vec3 scale;
+		glm::mat4 localTRS;
+		glm::mat4 worldTRS{};
+		std::vector<int> children;
+
+		std::pair<int, int> primitive_range;
+
+		Node(const glm::vec3& trans, const glm::quat& rot, const glm::vec3& sc, const std::vector<int>& children, const std::pair<int, int> primitive_range) :
+			translation(trans), rotation(rot), scale(sc), children(children), primitive_range(primitive_range)
+		{
+			localTRS = glm::translate(glm::mat4(1.0f), translation) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+		}
+
+		Node(const glm::mat4& TRS, const std::vector<int>& children, const std::pair<int, int> primitive_range) :
+			localTRS(TRS), children(children), primitive_range(primitive_range)
+		{
+			glm::vec3 skew;
+			glm::vec4 pers;
+			glm::decompose(TRS, scale, rotation, translation, skew, pers);
+		}
+
+		void update(const glm::mat4 parentTRS = glm::mat4(1.0f))
+		{
+			localTRS = glm::translate(glm::mat4(1.0f), translation) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
+			worldTRS = localTRS * parentTRS;
+		}
+	};
+
 	class Model
 	{
 	private:
 		util::Managed<VkDescriptorPool> descriptorPool;
+		std::vector<Node> nodes;
 		std::vector<Primitive> primitives;
 		std::vector<Material> materials;
 		IndexedVertexBuffer<Vertex> vbo;
@@ -139,8 +175,8 @@ namespace blaze
 		{
 		}
 
-		Model(const Renderer& renderer, std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb)
-			: primitives(std::move(prims)), materials(std::move(mats)), vbo(std::move(ivb))
+		Model(const Renderer& renderer, std::vector<Node>& nodes, std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb)
+			: nodes(std::move(nodes)), primitives(std::move(prims)), materials(std::move(mats)), vbo(std::move(ivb))
 		{
 			using namespace util;
 
@@ -161,6 +197,7 @@ namespace blaze
 
 		Model(Model&& other) noexcept
 			: primitives(std::move(other.primitives)),
+			nodes(std::move(other.nodes)),
 			materials(std::move(other.materials)),
 			vbo(std::move(other.vbo)),
 			descriptorPool(std::move(other.descriptorPool))
@@ -174,6 +211,7 @@ namespace blaze
 				return *this;
 			}
 			primitives = std::move(other.primitives);
+			nodes = std::move(other.nodes);
 			materials = std::move(other.materials);
 			vbo = std::move(other.vbo);
 			descriptorPool = std::move(other.descriptorPool);
@@ -183,17 +221,44 @@ namespace blaze
 		Model(const Model& other) = delete;
 		Model& operator=(const Model& other) = delete;
 
+		void update()
+		{
+			update_nodes();
+		}
+
 		void draw(VkCommandBuffer buf, VkPipelineLayout layout)
 		{
 			VkBuffer vbufs[] = { vbo.get_vertexBuffer() };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
 			vkCmdBindIndexBuffer(buf, vbo.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-			for (auto& primitive : primitives)
+			for (auto& node : nodes)
 			{
-				vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &materials[primitive.material].get_descriptorSet(), 0, nullptr);
-				vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(MaterialPushConstantBlock), &materials[primitive.material].get_pushConstantBlock());
-				vkCmdDrawIndexed(buf, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &node.worldTRS);
+				for (int i = node.primitive_range.first; i < node.primitive_range.second; i++)
+				{
+					auto& primitive = primitives[i];
+					vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &materials[primitive.material].get_descriptorSet(), 0, nullptr);
+					vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(MaterialPushConstantBlock), &materials[primitive.material].get_pushConstantBlock());
+					vkCmdDrawIndexed(buf, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				}
+			}
+		}
+
+	private:
+		void update_nodes(int node = 0, int parent = -1)
+		{
+			if (parent == -1)
+			{
+				nodes[node].update();
+			}
+			else
+			{
+				nodes[node].update(nodes[parent].worldTRS);
+			}
+			for (int child : nodes[node].children)
+			{
+				update_nodes(child, node);
 			}
 		}
 	};

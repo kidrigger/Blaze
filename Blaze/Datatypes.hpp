@@ -60,7 +60,6 @@ namespace blaze
 
 	struct CameraUniformBufferObject
 	{
-		alignas(16) glm::mat4 model;
 		alignas(16) glm::mat4 view;
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 lightPos;

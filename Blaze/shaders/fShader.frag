@@ -15,7 +15,7 @@ layout(set = 1, binding = 3) uniform sampler2D occlusionImage;
 layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
 
 layout(push_constant) uniform MaterialData {
-	vec4 baseColorFactor;
+	layout(offset = 64) vec4 baseColorFactor;
 	vec4 emissiveColorFactor;
 	float metallicFactor;
 	float roughnessFactor;

@@ -3,25 +3,12 @@
 
 namespace blaze {
 
-	namespace util {
-		[[nodiscard]] inline glm::vec4 gltf_to_glm_vec4(std::vector<double>& gltf_vec4)
-		{
-			glm::vec4 glm_vec4(0.0f);
-			for (int i = 0; i < gltf_vec4.size(); i++)
-			{
-				glm_vec4[i] = static_cast<float>(gltf_vec4[i]);
-			}
-			return glm_vec4;
-		}
-	}
-
 	[[nodiscard]] Model blaze::loadModel(const Renderer& renderer, const std::string& name)
 	{
-		using namespace tinygltf;
 		using namespace std;
 
 		tinygltf::Model model;
-		TinyGLTF loader;
+		tinygltf::TinyGLTF loader;
 		string err;
 		string warn;
 		Model blazeModel;
@@ -62,6 +49,7 @@ namespace blaze {
 
 		vector<Vertex> vertexBuffer;
 		vector<uint32_t> indexBuffer;
+		vector<Node> nodes;
 		vector<Primitive> primitives;
 		vector<Material> materials;
 
@@ -105,7 +93,7 @@ namespace blaze {
 			ImageData emissiveImageData = imgData;
 
 			{
-				pushConstantBlock.baseColorFactor = util::gltf_to_glm_vec4(material.pbrMetallicRoughness.baseColorFactor);
+				pushConstantBlock.baseColorFactor = glm::make_vec4(material.pbrMetallicRoughness.baseColorFactor.data());
 
 				if (material.pbrMetallicRoughness.baseColorTexture.index < 0)
 				{
@@ -210,7 +198,7 @@ namespace blaze {
 				{
 					pushConstantBlock.emissiveTextureSet = material.emissiveTexture.texCoord;
 
-					pushConstantBlock.emissiveColorFactor = util::gltf_to_glm_vec4(material.emissiveFactor);
+					pushConstantBlock.emissiveColorFactor = glm::make_vec4(material.emissiveFactor.data());
 
 					auto& image = model.images[model.textures[material.emissiveTexture.index].source];
 					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
@@ -268,6 +256,33 @@ namespace blaze {
 		{
 			const auto& node = model.nodes[node_index];
 			const auto& mesh = model.meshes[node.mesh];
+
+			auto node_range = std::make_pair(static_cast<int>(primitives.size()), static_cast<int>(primitives.size() + mesh.primitives.size()));
+
+			if (node.matrix.size() == 16)
+			{
+				nodes.emplace_back(glm::make_mat4(node.matrix.data()), node.children, node_range);
+			}
+			else
+			{
+				glm::vec3 T(0.0f);
+				glm::quat R(0.0f, 0.0f, 0.0f, 1.0f);
+				glm::vec3 S(1.0f);
+				if (node.translation.size() == 3)
+				{
+					T = glm::make_vec3(node.translation.data());
+				}
+				if (node.rotation.size() == 4)
+				{
+					R = glm::make_quat(node.rotation.data());
+				}
+				if (node.scale.size() == 3)
+				{
+					S = glm::make_vec3(node.scale.data());
+				}
+				nodes.emplace_back(T, R, S, node.children, node_range);
+			}
+
 			for (auto& primitive : mesh.primitives)
 			{
 				float* posBuffer = nullptr;
@@ -370,7 +385,7 @@ namespace blaze {
 		}
 
 		auto ivb = IndexedVertexBuffer(renderer.get_context(), vertexBuffer, indexBuffer);
-		blazeModel = Model(renderer, primitives, materials, std::move(ivb));
+		blazeModel = Model(renderer, nodes, primitives, materials, std::move(ivb));
 
 		return blazeModel;
 	}

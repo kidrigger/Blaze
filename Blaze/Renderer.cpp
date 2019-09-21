@@ -421,9 +421,9 @@ namespace blaze
 
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
-		viewport.y = 0.0f;
+		viewport.y = swapchainExtent.get().height;
 		viewport.width = (float)swapchainExtent.get().width;
-		viewport.height = (float)swapchainExtent.get().height;
+		viewport.height = -(float)swapchainExtent.get().height;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
@@ -445,7 +445,7 @@ namespace blaze
 		rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizerCreateInfo.lineWidth = 1.0f;
 		rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizerCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
 
 		VkPipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
@@ -490,17 +490,28 @@ namespace blaze
 			materialDescriptorSetLayout.get()
 		};
 
-		VkPushConstantRange pushConstantRange = {};
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(MaterialPushConstantBlock);
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		std::vector<VkPushConstantRange> pushConstantRanges;
+
+		{
+			VkPushConstantRange pushConstantRange = {};
+
+			pushConstantRange.offset = 0;
+			pushConstantRange.size = sizeof(glm::mat4);
+			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			pushConstantRanges.push_back(pushConstantRange);
+
+			pushConstantRange.offset = sizeof(glm::mat4);
+			pushConstantRange.size = sizeof(MaterialPushConstantBlock);
+			pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			pushConstantRanges.push_back(pushConstantRange);
+		}
 
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
 		pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
-		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
+		pipelineLayoutCreateInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+		pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
 
 		auto result = vkCreatePipelineLayout(context.get_device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
 		if (result != VK_SUCCESS)
