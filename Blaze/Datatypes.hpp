@@ -69,7 +69,18 @@ namespace blaze
 
 	struct MaterialPushConstantBlock
 	{
-		glm::vec4 baseColorFactor;
+		glm::vec4 baseColorFactor{ 1.0f, 0, 1.0f, 1.0f };
+		glm::vec4 emissiveColorFactor{ 1.0f, 0, 1.0f, 1.0f };
+		float metallicFactor{ 1.0f };
+		float roughnessFactor{ 1.0f };
+		int baseColorTextureSet{ -1 };
+		int physicalDescriptorTextureSet{ -1 };
+		int normalTextureSet{ -1 };
+		int occlusionTextureSet{ -1 };
+		int emissiveTextureSet{ -1 };
+		// float workflow;
+		// float alphaMask;
+		// alphaMaskCutoff;
 	};
 
 	struct BufferObject

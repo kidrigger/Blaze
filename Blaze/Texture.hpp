@@ -9,11 +9,11 @@ namespace blaze
 {
 	struct ImageData
 	{
-		uint8_t* data;
-		uint32_t width;
-		uint32_t height;
-		uint32_t numChannels;
-		uint32_t size;
+		uint8_t* data{ nullptr };
+		uint32_t width{ 0 };
+		uint32_t height{ 0 };
+		uint32_t numChannels{ 0 };
+		uint32_t size{ 0 };
 	};
 
 	class TextureImage
@@ -24,7 +24,8 @@ namespace blaze
 		util::Managed<VkSampler> imageSampler;
 		uint32_t width{ 0 };
 		uint32_t height{ 0 };
-		VkDescriptorImageInfo imageInfo;
+		VkDescriptorImageInfo imageInfo{};
+		bool is_valid{ false };
 	public:
 		TextureImage() noexcept
 		{
@@ -32,8 +33,11 @@ namespace blaze
 
 		TextureImage(const Context& context, const ImageData& image_data)
 			: width(image_data.width),
-			height(image_data.height)
+			height(image_data.height),
+			is_valid(false)
 		{
+			if (!image_data.data) return;
+
 			using namespace util;
 			VmaAllocator allocator = context.get_allocator();
 
@@ -107,6 +111,8 @@ namespace blaze
 			imageInfo.imageView = imageView.get();
 			imageInfo.sampler = imageSampler.get();
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			is_valid = true;
 		}
 
 		TextureImage(TextureImage&& other) noexcept
@@ -115,7 +121,8 @@ namespace blaze
 			imageSampler(std::move(other.imageSampler)),
 			imageInfo(std::move(other.imageInfo)),
 			width(other.width),
-			height(other.height)
+			height(other.height),
+			is_valid(other.is_valid)
 		{
 		}
 
@@ -129,13 +136,16 @@ namespace blaze
 			imageView = std::move(other.imageView);
 			imageSampler = std::move(other.imageSampler);
 			imageInfo = std::move(other.imageInfo);
-			width = std::move(other.width);
-			height = std::move(other.height);
+			width = other.width;
+			height = other.height;
+			is_valid = other.is_valid;
 			return *this;
 		}
 
 		TextureImage(const TextureImage& other) = delete;
 		TextureImage& operator=(const TextureImage& other) = delete;
+
+		bool valid() const { return is_valid; }
 
 		VkImage get_image() const { return image.get().image; }
 		VkImageView get_imageView() const { return imageView.get(); }

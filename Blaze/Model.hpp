@@ -83,9 +83,11 @@ namespace blaze
 				occlusion.get_imageInfo(),
 				emissive.get_imageInfo()
 			};
+
+			std::array<VkWriteDescriptorSet, 5> writes{};
+			
 			int idx = 0;
-			std::array<VkWriteDescriptorSet, 5> writes = {};
-			for(auto& write : writes)
+			for(VkWriteDescriptorSet& write : writes)
 			{
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

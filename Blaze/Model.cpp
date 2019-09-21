@@ -88,96 +88,155 @@ namespace blaze {
 				}
 			};
 
-			MaterialPushConstantBlock pushConstantBlock;
-			ImageData diffuseImageData;
-			ImageData normalImageData;
-			ImageData metallicRoughtnessImageData;
-			ImageData occlusionImageData;
-			ImageData emissiveImageData;
+			ImageData imgData;
+			uint32_t* data = new uint32_t[256 * 256];
+			memset(data, 0xFF00FFFF, 256 * 256);
+			imgData.data = reinterpret_cast<uint8_t*>(data);
+			imgData.width = 256;
+			imgData.height = 256;
+			imgData.size = 256 * 256 * 4;
+			imgData.numChannels = 4;
+
+			MaterialPushConstantBlock pushConstantBlock = {};
+			ImageData diffuseImageData = imgData;
+			ImageData normalImageData = imgData;
+			ImageData metallicRoughnessImageData = imgData;
+			ImageData occlusionImageData = imgData;
+			ImageData emissiveImageData = imgData;
 
 			{
 				pushConstantBlock.baseColorFactor = util::gltf_to_glm_vec4(material.pbrMetallicRoughness.baseColorFactor);
 
-				auto& image = model.images[model.textures[material.pbrMetallicRoughness.baseColorTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+				if (material.pbrMetallicRoughness.baseColorTexture.index < 0)
+				{
+					pushConstantBlock.baseColorTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.baseColorTextureSet = material.pbrMetallicRoughness.baseColorTexture.texCoord;
 
-				toRGBA(data, image, texelCount);
+					auto& image = model.images[model.textures[material.pbrMetallicRoughness.baseColorTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
 
-				diffuseImageData.data = data;
-				diffuseImageData.width = image.width;
-				diffuseImageData.height = image.height;
-				diffuseImageData.size = image.width * image.height * 4;
-				diffuseImageData.numChannels = 4;
+					toRGBA(data, image, texelCount);
+
+					diffuseImageData.data = data;
+					diffuseImageData.width = image.width;
+					diffuseImageData.height = image.height;
+					diffuseImageData.size = image.width * image.height * 4;
+					diffuseImageData.numChannels = 4;
+				}
 			}
 
 			{
-				auto& image = model.images[model.textures[material.normalTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+				if (material.normalTexture.index < 0)
+				{
+					pushConstantBlock.normalTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.normalTextureSet = material.normalTexture.texCoord;
 
-				toRGBA(data, image, texelCount);
+					auto& image = model.images[model.textures[material.normalTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
 
-				normalImageData.data = data;
-				normalImageData.width = image.width;
-				normalImageData.height = image.height;
-				normalImageData.size = image.width * image.height * 4;
-				normalImageData.numChannels = 4;
+					toRGBA(data, image, texelCount);
+
+					normalImageData.data = data;
+					normalImageData.width = image.width;
+					normalImageData.height = image.height;
+					normalImageData.size = image.width * image.height * 4;
+					normalImageData.numChannels = 4;
+				}
 			}
 
 			{
-				auto& image = model.images[model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+				pushConstantBlock.metallicFactor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+				pushConstantBlock.roughnessFactor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
 
-				toRGBA(data, image, texelCount);
+				if (material.pbrMetallicRoughness.metallicRoughnessTexture.index < 0)
+				{
+					pushConstantBlock.physicalDescriptorTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.physicalDescriptorTextureSet = material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
 
-				metallicRoughtnessImageData.data = data;
-				metallicRoughtnessImageData.width = image.width;
-				metallicRoughtnessImageData.height = image.height;
-				metallicRoughtnessImageData.size = image.width * image.height * 4;
-				metallicRoughtnessImageData.numChannels = 4;
+					auto& image = model.images[model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
+
+					toRGBA(data, image, texelCount);
+
+					metallicRoughnessImageData.data = data;
+					metallicRoughnessImageData.width = image.width;
+					metallicRoughnessImageData.height = image.height;
+					metallicRoughnessImageData.size = image.width * image.height * 4;
+					metallicRoughnessImageData.numChannels = 4;
+				}
 			}
 
 			{
-				auto& image = model.images[model.textures[material.occlusionTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+				if (material.occlusionTexture.index < 0)
+				{
+					pushConstantBlock.occlusionTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.occlusionTextureSet = material.occlusionTexture.texCoord;
 
-				toRGBA(data, image, texelCount);
+					auto& image = model.images[model.textures[material.occlusionTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
 
-				occlusionImageData.data = data;
-				occlusionImageData.width = image.width;
-				occlusionImageData.height = image.height;
-				occlusionImageData.size = image.width * image.height * 4;
-				occlusionImageData.numChannels = 4;
+					toRGBA(data, image, texelCount);
+
+					occlusionImageData.data = data;
+					occlusionImageData.width = image.width;
+					occlusionImageData.height = image.height;
+					occlusionImageData.size = image.width * image.height * 4;
+					occlusionImageData.numChannels = 4;
+				}
 			}
 
 			{
-				auto& image = model.images[model.textures[material.emissiveTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+				if (material.emissiveTexture.index < 0)
+				{
+					pushConstantBlock.emissiveTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.emissiveTextureSet = material.emissiveTexture.texCoord;
 
-				toRGBA(data, image, texelCount);
+					pushConstantBlock.emissiveColorFactor = util::gltf_to_glm_vec4(material.emissiveFactor);
 
-				emissiveImageData.data = data;
-				emissiveImageData.width = image.width;
-				emissiveImageData.height = image.height;
-				emissiveImageData.size = image.width * image.height * 4;
-				emissiveImageData.numChannels = 4;
+					auto& image = model.images[model.textures[material.emissiveTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
+
+					toRGBA(data, image, texelCount);
+
+					emissiveImageData.data = data;
+					emissiveImageData.width = image.width;
+					emissiveImageData.height = image.height;
+					emissiveImageData.size = image.width * image.height * 4;
+					emissiveImageData.numChannels = 4;
+				}
 			}
 
 			materials.emplace_back(
 				pushConstantBlock,
 				TextureImage{ renderer.get_context(), diffuseImageData },
 				TextureImage{ renderer.get_context(), normalImageData },
-				TextureImage{ renderer.get_context(), metallicRoughtnessImageData },
+				TextureImage{ renderer.get_context(), metallicRoughnessImageData },
 				TextureImage{ renderer.get_context(), occlusionImageData },
 				TextureImage{ renderer.get_context(), emissiveImageData });
 
 			delete[] diffuseImageData.data;
 			delete[] normalImageData.data;
-			delete[] metallicRoughtnessImageData.data;
+			delete[] metallicRoughnessImageData.data;
 			delete[] occlusionImageData.data;
 			delete[] emissiveImageData.data;
 		}

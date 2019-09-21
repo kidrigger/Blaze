@@ -16,6 +16,14 @@ layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
 
 layout(push_constant) uniform MaterialData {
 	vec4 baseColorFactor;
+	vec4 emissiveColorFactor;
+	float metallicFactor;
+	float roughnessFactor;
+	int baseColorTextureSet;
+	int physicalDescriptorTextureSet;
+	int normalTextureSet;
+	int occlusionTextureSet;
+	int emissiveTextureSet;
 } material;
 
 layout(location = 0) out vec4 outColor;
@@ -67,12 +75,38 @@ void main() {
 	vec3 N		 = normalize(TBN * norm);
 	vec3 V		 = normalize(viewPos - position);
 
-	vec3 albedo		= texture(diffuseImage, texCoords).rgb * material.baseColorFactor.rgb;
-	vec3 metalRough = texture(metalRoughnessImage, texCoords).rgb;
-	float metallic	= metalRough.b;
-	float roughness = metalRough.g;
-	float ao		= texture(occlusionImage, texCoords).r;
-	vec3 emission	= texture(emissiveImage, texCoords).rgb;
+	vec3 albedo;
+	float metallic;
+	float roughness;
+	float ao;
+	vec3 emission;
+
+	if (material.baseColorTextureSet < 0) {
+		albedo = material.baseColorFactor.rgb;
+	} else {
+		albedo = texture(diffuseImage, texCoords).rgb * material.baseColorFactor.rgb;
+	}
+
+	if (material.physicalDescriptorTextureSet < 0) {
+		metallic  = material.metallicFactor;
+		roughness = material.roughnessFactor;
+		ao		  = 1.0f;
+	} else {
+		vec3 metalRough = texture(metalRoughnessImage, texCoords).rgb;
+		metallic		= metalRough.b * material.metallicFactor;
+		roughness		= metalRough.g * material.roughnessFactor;
+		ao				= metalRough.r;
+	}
+
+	if (material.occlusionTextureSet >= 0) {
+		ao = texture(occlusionImage, texCoords).r;
+	}
+
+	if (material.emissiveTextureSet < 0) {
+		emission = vec3(0.0f);
+	} else {
+		emission = texture(emissiveImage, texCoords).rgb * material.emissiveColorFactor.rgb;
+	}
 
 	vec3 F0 = vec3(0.04); 
 	F0      = mix(F0, albedo, metallic);
@@ -105,7 +139,7 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	// color		 = color / (color + vec3(1.0));
+	color		 = color / (color + vec3(1.0));
 	color		 = pow(color, vec3(1.0/2.2));
 	outColor	 = vec4(color, 1.0f);
 }
