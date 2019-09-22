@@ -57,7 +57,10 @@ namespace blaze
 			{
 				ubo.view = glm::lookAt(position, target + position, up);
 				ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
-				ubo.lightPos = position;// glm::vec3(2.0f, 0.0f, 0.0f);
+				for (int i = 0; i < 16; i++)
+				{
+					ubo.lightPos[i] = glm::vec4(position, 1.0f);// glm::vec3(2.0f, 0.0f, 0.0f);
+				}
 				ubo.viewPos = position;
 				uboDirty = false;
 			}

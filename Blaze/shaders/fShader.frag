@@ -4,9 +4,15 @@
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoords;
-layout(location = 6) in vec3 lightPos;
-layout(location = 7) in vec3 viewPos;
 layout(location = 10) in mat3 TBN;
+
+layout(set = 0, binding = 0) uniform UniformBufferObject
+{
+	mat4 view;
+	mat4 projection;
+	vec3 viewPos;
+	vec4 lightPos[16];
+} ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
 layout(set = 1, binding = 1) uniform sampler2D metalRoughnessImage;
@@ -29,6 +35,21 @@ layout(push_constant) uniform MaterialData {
 layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359f;
+
+vec4 SRGBtoLINEAR(vec4 srgbIn)
+{
+	#ifdef MANUAL_SRGB
+	#ifdef SRGB_FAST_APPROXIMATION
+	vec3 linOut = pow(srgbIn.xyz,vec3(2.2));
+	#else //SRGB_FAST_APPROXIMATION
+	vec3 bLess = step(vec3(0.04045),srgbIn.xyz);
+	vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
+	#endif //SRGB_FAST_APPROXIMATION
+	return vec4(linOut,srgbIn.w);;
+	#else //MANUAL_SRGB
+	return srgbIn;
+	#endif //MANUAL_SRGB
+}
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
@@ -73,7 +94,7 @@ void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
 	vec3 norm = normalize(2.0f * texture(normalImage, texCoords).rgb - 1.0f);
 	vec3 N		 = normalize(TBN * norm);
-	vec3 V		 = normalize(viewPos - position);
+	vec3 V		 = normalize(ubo.viewPos - position);
 
 	vec3 albedo;
 	float metallic;
@@ -84,7 +105,7 @@ void main() {
 	if (material.baseColorTextureSet < 0) {
 		albedo = material.baseColorFactor.rgb;
 	} else {
-		albedo = texture(diffuseImage, texCoords).rgb * material.baseColorFactor.rgb;
+		albedo = SRGBtoLINEAR(texture(diffuseImage, texCoords)).rgb * material.baseColorFactor.rgb;
 	}
 
 	if (material.physicalDescriptorTextureSet < 0) {
@@ -105,19 +126,21 @@ void main() {
 	if (material.emissiveTextureSet < 0) {
 		emission = vec3(0.0f);
 	} else {
-		emission = texture(emissiveImage, texCoords).rgb * material.emissiveColorFactor.rgb;
+		emission = SRGBtoLINEAR(texture(emissiveImage, texCoords)).rgb * material.emissiveColorFactor.rgb;
 	}
 
 	vec3 F0 = vec3(0.04); 
 	F0      = mix(F0, albedo, metallic);
 
 	vec3 L0 = vec3(0.0f);
-	{
-		vec3 L		 = normalize(lightPos - position);
+
+	for (int i = 0; i < 1; i++) {
+
+		vec3 L		 = normalize(ubo.lightPos[i].xyz - position);
 		vec3 H		 = normalize(V + L);
 		float cosine = max(dot(L, N), 0.0f);
 
-		float dist		  = length(lightPos - position);
+		float dist		  = length(ubo.lightPos[i].xyz - position);
         float attenuation = 1.0 / (dist * dist);
         vec3 radiance     = lightColor * attenuation;
 		
@@ -139,7 +162,5 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	color		 = color / (color + vec3(1.0));
-	color		 = pow(color, vec3(1.0/2.2));
-	outColor	 = vec4(color, 1.0f);
+	outColor	 = SRGBtoLINEAR(vec4(color, 1.0f));
 }
