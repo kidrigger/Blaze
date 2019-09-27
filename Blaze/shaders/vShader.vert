@@ -12,7 +12,8 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inTangent;
-layout(location = 3) in vec2 inTexCoords;
+layout(location = 3) in vec2 inTexCoords0;
+layout(location = 4) in vec2 inTexCoords1;
 
 layout(push_constant) uniform TRS {
 	mat4 model;
@@ -20,15 +21,17 @@ layout(push_constant) uniform TRS {
 
 layout(location = 0) out vec3 outPosition;
 layout(location = 1) out vec3 normals;
-layout(location = 2) out vec2 texCoords;
+layout(location = 2) out vec2 texCoords0;
+layout(location = 3) out vec2 texCoords1;
 
 layout(location = 10) out mat3 TBN;
 
 void main() {
 	gl_Position = ubo.projection * ubo.view * trs.model * vec4(inPosition, 1.0);
 	outPosition = (trs.model * vec4(inPosition, 1.0)).xyz;
-	normals = inNormal;
-	texCoords = inTexCoords;
+	normals = mat3(transpose(inverse(trs.model))) * inNormal;
+	texCoords0 = inTexCoords0;
+	texCoords1 = inTexCoords1;
 
 	vec3 T = normalize(vec3(trs.model * vec4(inTangent, 0.0)));
 	vec3 B = normalize(vec3(trs.model * vec4(cross(inNormal, inTangent), 0.0)));

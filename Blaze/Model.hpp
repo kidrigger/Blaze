@@ -135,7 +135,7 @@ namespace blaze
 		glm::quat rotation;
 		glm::vec3 scale;
 		glm::mat4 localTRS;
-		glm::mat4 worldTRS{};
+		ModelPushConstantBlock pcb;
 		std::vector<int> children;
 
 		std::pair<int, int> primitive_range;
@@ -157,7 +157,7 @@ namespace blaze
 		void update(const glm::mat4 parentTRS = glm::mat4(1.0f))
 		{
 			localTRS = glm::translate(glm::mat4(1.0f), translation) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
-			worldTRS = localTRS * parentTRS;
+			pcb.model = localTRS * parentTRS;
 		}
 	};
 
@@ -165,6 +165,7 @@ namespace blaze
 	{
 	private:
 		util::Managed<VkDescriptorPool> descriptorPool;
+		std::vector<int> prime_nodes;
 		std::vector<Node> nodes;
 		std::vector<Primitive> primitives;
 		std::vector<Material> materials;
@@ -175,8 +176,8 @@ namespace blaze
 		{
 		}
 
-		Model(const Renderer& renderer, std::vector<Node>& nodes, std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb)
-			: nodes(std::move(nodes)), primitives(std::move(prims)), materials(std::move(mats)), vbo(std::move(ivb))
+		Model(const Renderer& renderer, const std::vector<int>& top_level_nodes, std::vector<Node>& nodes, std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb)
+			: prime_nodes(top_level_nodes), nodes(std::move(nodes)), primitives(std::move(prims)), materials(std::move(mats)), vbo(std::move(ivb))
 		{
 			using namespace util;
 
@@ -197,6 +198,7 @@ namespace blaze
 
 		Model(Model&& other) noexcept
 			: primitives(std::move(other.primitives)),
+			prime_nodes(std::move(other.prime_nodes)),
 			nodes(std::move(other.nodes)),
 			materials(std::move(other.materials)),
 			vbo(std::move(other.vbo)),
@@ -211,6 +213,7 @@ namespace blaze
 				return *this;
 			}
 			primitives = std::move(other.primitives);
+			prime_nodes = std::move(other.prime_nodes);
 			nodes = std::move(other.nodes);
 			materials = std::move(other.materials);
 			vbo = std::move(other.vbo);
@@ -223,7 +226,10 @@ namespace blaze
 
 		void update()
 		{
-			update_nodes();
+			for (int i : prime_nodes)
+			{
+				update_nodes(i);
+			}
 		}
 
 		void draw(VkCommandBuffer buf, VkPipelineLayout layout)
@@ -234,19 +240,21 @@ namespace blaze
 			vkCmdBindIndexBuffer(buf, vbo.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
 			for (auto& node : nodes)
 			{
-				vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &node.worldTRS);
+				vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelPushConstantBlock), &node.pcb);
 				for (int i = node.primitive_range.first; i < node.primitive_range.second; i++)
 				{
 					auto& primitive = primitives[i];
 					vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &materials[primitive.material].get_descriptorSet(), 0, nullptr);
-					vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(MaterialPushConstantBlock), &materials[primitive.material].get_pushConstantBlock());
+					vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(ModelPushConstantBlock), sizeof(MaterialPushConstantBlock), &materials[primitive.material].get_pushConstantBlock());
 					vkCmdDrawIndexed(buf, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
 				}
 			}
 		}
 
+		Node* root() { return &nodes[0]; }
+
 	private:
-		void update_nodes(int node = 0, int parent = -1)
+		void update_nodes(int node, int parent = -1)
 		{
 			if (parent == -1)
 			{
@@ -254,7 +262,7 @@ namespace blaze
 			}
 			else
 			{
-				nodes[node].update(nodes[parent].worldTRS);
+				nodes[node].update(nodes[parent].pcb.model);
 			}
 			for (int child : nodes[node].children)
 			{

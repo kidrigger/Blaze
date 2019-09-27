@@ -3,7 +3,8 @@
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
-layout(location = 2) in vec2 texCoords;
+layout(location = 2) in vec2 texCoords0;
+layout(location = 3) in vec2 texCoords1;
 layout(location = 10) in mat3 TBN;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject
@@ -92,8 +93,13 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
-	vec3 norm = normalize(2.0f * texture(normalImage, texCoords).rgb - 1.0f);
-	vec3 N		 = normalize(TBN * norm);
+	vec3 N;
+	if (material.normalTextureSet < 0) {
+		N = normalize(normal);
+	} else {
+		vec3 norm = normalize(2.0f * texture(normalImage, (material.normalTextureSet == 0 ? texCoords0 : texCoords1)).rgb - 1.0f);
+		N		  = normalize(TBN * norm);
+	}
 	vec3 V		 = normalize(ubo.viewPos - position);
 
 	vec3 albedo;
@@ -105,7 +111,7 @@ void main() {
 	if (material.baseColorTextureSet < 0) {
 		albedo = material.baseColorFactor.rgb;
 	} else {
-		albedo = SRGBtoLINEAR(texture(diffuseImage, texCoords)).rgb * material.baseColorFactor.rgb;
+		albedo = SRGBtoLINEAR(texture(diffuseImage, texCoords0)).rgb * material.baseColorFactor.rgb;
 	}
 
 	if (material.physicalDescriptorTextureSet < 0) {
@@ -113,20 +119,20 @@ void main() {
 		roughness = material.roughnessFactor;
 		ao		  = 1.0f;
 	} else {
-		vec3 metalRough = texture(metalRoughnessImage, texCoords).rgb;
+		vec3 metalRough = texture(metalRoughnessImage, texCoords0).rgb;
 		metallic		= metalRough.b * material.metallicFactor;
 		roughness		= metalRough.g * material.roughnessFactor;
 		ao				= metalRough.r;
 	}
 
 	if (material.occlusionTextureSet >= 0) {
-		ao = texture(occlusionImage, texCoords).r;
+		ao = texture(occlusionImage, texCoords0).r;
 	}
 
 	if (material.emissiveTextureSet < 0) {
 		emission = vec3(0.0f);
 	} else {
-		emission = SRGBtoLINEAR(texture(emissiveImage, texCoords)).rgb * material.emissiveColorFactor.rgb;
+		emission = SRGBtoLINEAR(texture(emissiveImage, texCoords0)).rgb * material.emissiveColorFactor.rgb;
 	}
 
 	vec3 F0 = vec3(0.04); 
@@ -162,5 +168,5 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	outColor	 = SRGBtoLINEAR(vec4(color, 1.0f));
+	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
 }

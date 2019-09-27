@@ -496,11 +496,11 @@ namespace blaze
 			VkPushConstantRange pushConstantRange = {};
 
 			pushConstantRange.offset = 0;
-			pushConstantRange.size = sizeof(glm::mat4);
+			pushConstantRange.size = sizeof(ModelPushConstantBlock);
 			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges.push_back(pushConstantRange);
 
-			pushConstantRange.offset = sizeof(glm::mat4);
+			pushConstantRange.offset = sizeof(ModelPushConstantBlock);
 			pushConstantRange.size = sizeof(MaterialPushConstantBlock);
 			pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 			pushConstantRanges.push_back(pushConstantRange);

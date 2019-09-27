@@ -49,6 +49,48 @@ namespace blaze
 	const bool enableValidationLayers = false;
 #endif
 
+	bool firstMouse = true;
+	double lastX = 0.0;
+	double lastY = 0.0;
+
+	double yaw = -90.0;
+	double pitch = 0.0;
+
+	glm::vec3 cameraFront{ 0.0f, 0.0f, 1.0f };
+
+	void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+	{
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		double xoffset = xpos - lastX;
+		double yoffset = lastY - ypos;
+		lastX = xpos;
+		lastY = ypos;
+
+		double sensitivity = 0.05f;
+		xoffset *= sensitivity;
+		yoffset *= sensitivity;
+
+		yaw += xoffset;
+		pitch += yoffset;
+
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+
+		glm::vec3 front;
+		front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+		front.y = sin(glm::radians(pitch));
+		front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+		cameraFront = glm::normalize(front);
+	}
+
 	void run()
 	{
 		// Usings
@@ -61,14 +103,19 @@ namespace blaze
 		IndexedVertexBuffer<Vertex> vertexBuffer;
 		TextureImage image;
 
-		Camera cam({ 0.0f, 0.0f, -4.0f }, { 0.0f, 0.0f, 4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), 4.0f / 3.0f);
+		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), 4.0f / 3.0f, 1.0f, 1000.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
+		glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
 		window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", nullptr, nullptr);
 		assert(window != nullptr);
+
+		glfwSetCursorPosCallback(window, mouse_callback);
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 		renderer = Renderer(window);
 		if (!renderer.complete())
@@ -76,7 +123,7 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
+		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
 
 		// Run
 		bool onetime = true;
@@ -92,11 +139,28 @@ namespace blaze
 			glfwPollEvents();
 			elapsed += deltaTime;
 
+			{
+				if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+				{
+					glfwSetWindowShouldClose(window, GLFW_TRUE);
+				}
+				glm::vec3 cameraPos(0.f);
+				float cameraSpeed = 0.005f; // adjust accordingly
+				if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+					cameraPos += cameraSpeed * cameraFront;
+				if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+					cameraPos -= cameraSpeed * cameraFront;
+				if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+					cameraPos -= glm::normalize(glm::cross(cameraFront, cam.getUp())) * cameraSpeed;
+				if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+					cameraPos += glm::normalize(glm::cross(cameraFront, cam.getUp())) * cameraSpeed;
+				cam.moveBy(cameraPos);
+			}
+			cam.lookTo(cameraFront);
+
 			try
 			{
 				model.update();
-				cam.moveTo(4.0f * glm::vec3(glm::cos(glm::radians(20 * elapsed)), 0.0f, -glm::sin(glm::radians(20 * elapsed))));
-				cam.rotateTo(0, glm::radians<float>(20.0f * static_cast<float>(elapsed) - 90.0f));
 				renderer.set_cameraUBO(cam.getUbo());
 				renderer.renderFrame();
 				if (onetime) 

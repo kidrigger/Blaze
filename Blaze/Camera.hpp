@@ -30,6 +30,11 @@ namespace blaze
 		{
 			ubo.view = glm::lookAt(position, target + position, up);
 			ubo.projection = glm::perspective(fov, aspect, 0.1f, 10.0f);
+			for (int i = 0; i < 16; i++)
+			{
+				ubo.lightPos[i] = glm::vec4(position, 0.0f);
+			}
+			ubo.viewPos = position;
 			uboDirty = false;
 		}
 
@@ -51,6 +56,15 @@ namespace blaze
 			uboDirty = true;
 		}
 
+		void lookTo(const glm::vec3& direction)
+		{
+			target = direction;
+			uboDirty = true;
+		}
+
+		const glm::vec3& getPosition() const { return position; }
+		const glm::vec3& getUp() const { return up; }
+
 		const CameraUniformBufferObject& getUbo()
 		{
 			if (uboDirty)
@@ -59,7 +73,7 @@ namespace blaze
 				ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 				for (int i = 0; i < 16; i++)
 				{
-					ubo.lightPos[i] = glm::vec4(position, 1.0f);// glm::vec3(2.0f, 0.0f, 0.0f);
+					ubo.lightPos[i] = glm::vec4(position, 0.0f);
 				}
 				ubo.viewPos = position;
 				uboDirty = false;
