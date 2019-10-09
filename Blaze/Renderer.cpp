@@ -421,7 +421,7 @@ namespace blaze
 
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
-		viewport.y = swapchainExtent.get().height;
+		viewport.y = static_cast<float>(swapchainExtent.get().height);
 		viewport.width = (float)swapchainExtent.get().width;
 		viewport.height = -(float)swapchainExtent.get().height;
 		viewport.minDepth = 0.0f;

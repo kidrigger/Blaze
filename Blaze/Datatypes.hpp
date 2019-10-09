@@ -70,6 +70,7 @@ namespace blaze
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 viewPos;
 		alignas(16) glm::vec4 lightPos[16];
+		alignas(16) int numLights;
 	};
 
 	struct MaterialPushConstantBlock

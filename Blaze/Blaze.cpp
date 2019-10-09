@@ -85,9 +85,9 @@ namespace blaze
 			pitch = -89.0f;
 
 		glm::vec3 front;
-		front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-		front.y = sin(glm::radians(pitch));
-		front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+		front.x = static_cast<float>(cos(glm::radians(yaw)) * cos(glm::radians(pitch)));
+		front.y = static_cast<float>(sin(glm::radians(pitch)));
+		front.z = static_cast<float>(sin(glm::radians(yaw)) * cos(glm::radians(pitch)));
 		cameraFront = glm::normalize(front);
 	}
 
@@ -104,6 +104,7 @@ namespace blaze
 		TextureImage image;
 
 		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), 4.0f / 3.0f, 1.0f, 1000.0f);
+		cam.addLight(glm::vec3{ 0.0f }, 1.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -114,6 +115,12 @@ namespace blaze
 		window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", nullptr, nullptr);
 		assert(window != nullptr);
 
+		{
+			double x, y;
+			glfwGetCursorPos(window, &x, &y);
+			mouse_callback(window, x, y);
+		}
+
 		glfwSetCursorPosCallback(window, mouse_callback);
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -123,7 +130,8 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
+		auto model = loadModel(renderer, "assets/orientation_test/OrientationTest.gltf");
+		model.get_root()->scale = glm::vec3(0.1f);
 
 		// Run
 		bool onetime = true;
@@ -145,18 +153,19 @@ namespace blaze
 					glfwSetWindowShouldClose(window, GLFW_TRUE);
 				}
 				glm::vec3 cameraPos(0.f);
-				float cameraSpeed = 0.005f; // adjust accordingly
+				float cameraSpeed = 1.f * static_cast<float>(deltaTime); // adjust accordingly
 				if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 					cameraPos += cameraSpeed * cameraFront;
 				if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 					cameraPos -= cameraSpeed * cameraFront;
 				if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-					cameraPos -= glm::normalize(glm::cross(cameraFront, cam.getUp())) * cameraSpeed;
+					cameraPos -= glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
 				if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-					cameraPos += glm::normalize(glm::cross(cameraFront, cam.getUp())) * cameraSpeed;
+					cameraPos += glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
 				cam.moveBy(cameraPos);
 			}
 			cam.lookTo(cameraFront);
+			cam.setLight(0, cam.get_position(), 1.0f);
 
 			try
 			{

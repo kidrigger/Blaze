@@ -5,6 +5,7 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoords0;
 layout(location = 3) in vec2 texCoords1;
+layout(location = 4) in vec3 incolor;
 layout(location = 10) in mat3 TBN;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject
@@ -13,6 +14,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
 	mat4 projection;
 	vec3 viewPos;
 	vec4 lightPos[16];
+	int numLights;
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
@@ -140,15 +142,15 @@ void main() {
 
 	vec3 L0 = vec3(0.0f);
 
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < ubo.numLights; i++) {
 
 		vec3 L		 = normalize(ubo.lightPos[i].xyz - position);
 		vec3 H		 = normalize(V + L);
 		float cosine = max(dot(L, N), 0.0f);
 
 		float dist		  = length(ubo.lightPos[i].xyz - position);
-        float attenuation = 1.0 / (dist * dist);
-        vec3 radiance     = lightColor * attenuation;
+		float attenuation = 1.0 / (dist * dist);
+		vec3 radiance     = lightColor * attenuation;
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G   = GeometrySmith(N, V, L, roughness);
@@ -168,5 +170,5 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
+	outColor = vec4(color, 1.0f); // SRGBtoLINEAR(vec4(color, 1.0f));
 }

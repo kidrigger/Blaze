@@ -140,6 +140,11 @@ namespace blaze
 
 		std::pair<int, int> primitive_range;
 
+		Node() :
+			translation(0.0f), rotation(1.0f, 0.0f, 0.0f, 0.0f), scale(1.0f), primitive_range(0, 0), localTRS(1.0f)
+		{
+		}
+
 		Node(const glm::vec3& trans, const glm::quat& rot, const glm::vec3& sc, const std::vector<int>& children, const std::pair<int, int> primitive_range) :
 			translation(trans), rotation(rot), scale(sc), children(children), primitive_range(primitive_range)
 		{
@@ -154,16 +159,20 @@ namespace blaze
 			glm::decompose(TRS, scale, rotation, translation, skew, pers);
 		}
 
+		Node(const Node& other) = default;
+		Node& operator=(const Node& other) = default;
+
 		void update(const glm::mat4 parentTRS = glm::mat4(1.0f))
 		{
 			localTRS = glm::translate(glm::mat4(1.0f), translation) * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
-			pcb.model = localTRS * parentTRS;
+			pcb.model = parentTRS * localTRS;
 		}
 	};
 
 	class Model
 	{
 	private:
+		Node root;
 		util::Managed<VkDescriptorPool> descriptorPool;
 		std::vector<int> prime_nodes;
 		std::vector<Node> nodes;
@@ -177,7 +186,12 @@ namespace blaze
 		}
 
 		Model(const Renderer& renderer, const std::vector<int>& top_level_nodes, std::vector<Node>& nodes, std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb)
-			: prime_nodes(top_level_nodes), nodes(std::move(nodes)), primitives(std::move(prims)), materials(std::move(mats)), vbo(std::move(ivb))
+			: prime_nodes(top_level_nodes),
+			nodes(std::move(nodes)),
+			primitives(std::move(prims)),
+			materials(std::move(mats)),
+			vbo(std::move(ivb)),
+			root(glm::mat4(1.0f), top_level_nodes, std::make_pair<int, int>(0, 0))
 		{
 			using namespace util;
 
@@ -226,6 +240,7 @@ namespace blaze
 
 		void update()
 		{
+			root.update();
 			for (int i : prime_nodes)
 			{
 				update_nodes(i);
@@ -251,14 +266,14 @@ namespace blaze
 			}
 		}
 
-		Node* root() { return &nodes[0]; }
+		Node* get_root() { return &root; }
 
 	private:
 		void update_nodes(int node, int parent = -1)
 		{
 			if (parent == -1)
 			{
-				nodes[node].update();
+				nodes[node].update(root.pcb.model);
 			}
 			else
 			{

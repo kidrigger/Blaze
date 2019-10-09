@@ -357,19 +357,35 @@ namespace blaze {
 						{
 							uint32_t* dices = reinterpret_cast<uint32_t*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
 							indices = vector<uint32_t>(dices, dices + indexCount);
+
+							assert(indices.size() == indexCount);
 						}
 						break;
 						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
 						{
 							uint16_t* dices = reinterpret_cast<uint16_t*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
 							indices = vector<uint32_t>(dices, dices + indexCount);
+
 							assert(indices.size() == indexCount);
 							// throw runtime_error("USHORT index not supported");
 						}
 						break;
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+						{
+							uint8_t* dices = reinterpret_cast<uint8_t*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+							indices = vector<uint32_t>(dices, dices + indexCount);
+
+							assert(indices.size() == indexCount);
+							// throw runtime_error("USHORT index not supported");
+						}
+						break;
+						default:
+						{
+							assert(false && "This shouldn't be possible");
+						}
+						break;
 						}
 					}
-
 					Primitive newPrimitive{ static_cast<uint32_t>(indexBuffer.size()), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(indexCount), static_cast<uint32_t>((primitive.material >= 0 ? primitive.material : materials.size() - 1)) };
 					primitives.push_back(newPrimitive);
 
@@ -391,29 +407,28 @@ namespace blaze {
 				}
 			}
 
+			glm::vec3 T(0.0f);
+			glm::quat R(1.0f, 0.0f, 0.0f, 0.0f);
+			glm::vec3 S(1.0f);
+			glm::mat4 M(1.0f);
+			if (node.translation.size() == 3)
+			{
+				T = glm::make_vec3(node.translation.data());
+			}
+			if (node.rotation.size() == 4)
+			{
+				R = glm::make_quat(node.rotation.data());
+			}
+			if (node.scale.size() == 3)
+			{
+				S = glm::make_vec3(node.scale.data());
+			}
 			if (node.matrix.size() == 16)
 			{
-				nodes.emplace_back(glm::make_mat4(node.matrix.data()), node.children, node_range);
+				M = glm::make_mat4(node.matrix.data());
 			}
-			else
-			{
-				glm::vec3 T(0.0f);
-				glm::quat R(0.0f, 0.0f, 0.0f, 1.0f);
-				glm::vec3 S(1.0f);
-				if (node.translation.size() == 3)
-				{
-					T = glm::make_vec3(node.translation.data());
-				}
-				if (node.rotation.size() == 4)
-				{
-					R = glm::make_quat(node.rotation.data());
-				}
-				if (node.scale.size() == 3)
-				{
-					S = glm::make_vec3(node.scale.data());
-				}
-				nodes.emplace_back(T, R, S, node.children, node_range);
-			}
+			nodes.emplace_back(glm::translate(glm::mat4(1.0f), T) * glm::mat4_cast(R) * glm::scale(glm::mat4(1.0f), S) * M, node.children, node_range);
+			
 		}
 
 		const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];

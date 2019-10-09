@@ -24,6 +24,8 @@ layout(location = 1) out vec3 normals;
 layout(location = 2) out vec2 texCoords0;
 layout(location = 3) out vec2 texCoords1;
 
+layout(location = 4) out vec3 color;
+
 layout(location = 10) out mat3 TBN;
 
 void main() {
@@ -32,6 +34,8 @@ void main() {
 	normals = mat3(transpose(inverse(trs.model))) * inNormal;
 	texCoords0 = inTexCoords0;
 	texCoords1 = inTexCoords1;
+
+	color = vec3(trs.model[3][0], trs.model[3][1], trs.model[3][2]);
 
 	vec3 T = normalize(vec3(trs.model * vec4(inTangent, 0.0)));
 	vec3 B = normalize(vec3(trs.model * vec4(cross(inNormal, inTangent), 0.0)));

@@ -30,12 +30,9 @@ namespace blaze
 		{
 			ubo.view = glm::lookAt(position, target + position, up);
 			ubo.projection = glm::perspective(fov, aspect, 0.1f, 10.0f);
-			for (int i = 0; i < 16; i++)
-			{
-				ubo.lightPos[i] = glm::vec4(position, 0.0f);
-			}
 			ubo.viewPos = position;
-			uboDirty = false;
+			ubo.numLights = 0;
+			uboDirty = true;
 		}
 
 		void moveBy(const glm::vec3& offset)
@@ -62,8 +59,32 @@ namespace blaze
 			uboDirty = true;
 		}
 
-		const glm::vec3& getPosition() const { return position; }
-		const glm::vec3& getUp() const { return up; }
+		void addLight(const glm::vec3& position, float brightness)
+		{
+			if (ubo.numLights < 16)
+			{
+				ubo.lightPos[ubo.numLights++] = glm::vec4(position, brightness);
+			}
+			else
+			{
+				throw std::runtime_error("Max Light Count Reached.");
+			}
+		}
+
+		void setLight(int index, const glm::vec3& position, float brightness)
+		{
+			if (ubo.numLights > index)
+			{
+				ubo.lightPos[index] = glm::vec4(position, brightness);
+			}
+			else
+			{
+				throw std::runtime_error("Max Light index Wrong.");
+			}
+		}
+
+		const glm::vec3& get_position() const { return position; }
+		const glm::vec3& get_up() const { return up; }
 
 		const CameraUniformBufferObject& getUbo()
 		{
@@ -71,10 +92,6 @@ namespace blaze
 			{
 				ubo.view = glm::lookAt(position, target + position, up);
 				ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
-				for (int i = 0; i < 16; i++)
-				{
-					ubo.lightPos[i] = glm::vec4(position, 0.0f);
-				}
 				ubo.viewPos = position;
 				uboDirty = false;
 			}
