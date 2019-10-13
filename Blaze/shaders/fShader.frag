@@ -5,16 +5,20 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoords0;
 layout(location = 3) in vec2 texCoords1;
-layout(location = 4) in vec3 incolor;
-layout(location = 10) in mat3 TBN;
+layout(location = 4) in vec3 inColor;
 
-layout(set = 0, binding = 0) uniform UniformBufferObject
-{
+struct Light {
+	vec3 position;
+	int type;
+	vec3 direction;
+};
+
+layout(set = 0, binding = 0) uniform UniformBufferObject {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	vec4 lightPos[16];
 	int numLights;
+	vec4 lightPos[16];
 } ubo;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
@@ -52,6 +56,23 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 	#else //MANUAL_SRGB
 	return srgbIn;
 	#endif //MANUAL_SRGB
+}
+
+vec3 getNormal()
+{
+	vec3 tangentNormal = texture(normalImage, material.normalTextureSet == 0 ? texCoords0 : texCoords1).xyz * 2.0 - 1.0;
+
+	vec3 q1 = dFdx(position);
+	vec3 q2 = dFdy(position);
+	vec2 st1 = dFdx(texCoords0);
+	vec2 st2 = dFdy(texCoords0);
+
+	vec3 N = normalize(normal);
+	vec3 T = normalize(q1 * st2.t - q2 * st1.t);
+	vec3 B = -normalize(cross(N, T));
+	mat3 TBN = mat3(T, B, N);
+
+	return normalize(TBN * tangentNormal);
 }
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
@@ -95,14 +116,8 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
-	vec3 N;
-	if (material.normalTextureSet < 0) {
-		N = normalize(normal);
-	} else {
-		vec3 norm = normalize(2.0f * texture(normalImage, (material.normalTextureSet == 0 ? texCoords0 : texCoords1)).rgb - 1.0f);
-		N		  = normalize(TBN * norm);
-	}
-	vec3 V		 = normalize(ubo.viewPos - position);
+	vec3 N = (material.normalTextureSet > -1 ? getNormal() : normalize(normal));
+	vec3 V = normalize(ubo.viewPos - position);
 
 	vec3 albedo;
 	float metallic;
@@ -150,7 +165,7 @@ void main() {
 
 		float dist		  = length(ubo.lightPos[i].xyz - position);
 		float attenuation = 1.0 / (dist * dist);
-		vec3 radiance     = lightColor * attenuation;
+		vec3 radiance     = lightColor * attenuation * ubo.lightPos[i].w;
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G   = GeometrySmith(N, V, L, roughness);
@@ -170,5 +185,5 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	outColor = vec4(color, 1.0f); // SRGBtoLINEAR(vec4(color, 1.0f));
+	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
 }

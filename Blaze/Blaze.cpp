@@ -130,8 +130,7 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		auto model = loadModel(renderer, "assets/orientation_test/OrientationTest.gltf");
-		model.get_root()->scale = glm::vec3(0.1f);
+		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
 
 		// Run
 		bool onetime = true;
@@ -154,6 +153,9 @@ namespace blaze
 				}
 				glm::vec3 cameraPos(0.f);
 				float cameraSpeed = 1.f * static_cast<float>(deltaTime); // adjust accordingly
+				if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+					cameraSpeed *= 5.0f;
+
 				if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 					cameraPos += cameraSpeed * cameraFront;
 				if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -165,7 +167,7 @@ namespace blaze
 				cam.moveBy(cameraPos);
 			}
 			cam.lookTo(cameraFront);
-			cam.setLight(0, cam.get_position(), 1.0f);
+			cam.setLight(0, cam.get_position(), 0.9f);
 
 			try
 			{

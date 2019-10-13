@@ -17,7 +17,6 @@ namespace blaze
 	{
 		alignas(16) glm::vec3 position;
 		alignas(16) glm::vec3 normal;
-		alignas(16) glm::vec3 tangent;
 		alignas(16) glm::vec2 texCoord0;
 		alignas(16) glm::vec2 texCoord1;
 
@@ -31,9 +30,9 @@ namespace blaze
 			return bindingDesc;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions()
+		static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions()
 		{
-			std::array<VkVertexInputAttributeDescription, 5> attributeDesc = {};
+			std::array<VkVertexInputAttributeDescription, 4> attributeDesc = {};
 
 			attributeDesc[0].binding = 0;
 			attributeDesc[0].location = 0;
@@ -47,18 +46,13 @@ namespace blaze
 
 			attributeDesc[2].binding = 0;
 			attributeDesc[2].location = 2;
-			attributeDesc[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDesc[2].offset = offsetof(Vertex, tangent);
+			attributeDesc[2].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDesc[2].offset = offsetof(Vertex, texCoord0);
 
 			attributeDesc[3].binding = 0;
 			attributeDesc[3].location = 3;
 			attributeDesc[3].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDesc[3].offset = offsetof(Vertex, texCoord0);
-
-			attributeDesc[4].binding = 0;
-			attributeDesc[4].location = 4;
-			attributeDesc[4].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDesc[4].offset = offsetof(Vertex, texCoord1);
+			attributeDesc[3].offset = offsetof(Vertex, texCoord1);
 
 			return attributeDesc;
 		}
@@ -69,8 +63,8 @@ namespace blaze
 		alignas(16) glm::mat4 view;
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 viewPos;
+		int numLights;
 		alignas(16) glm::vec4 lightPos[16];
-		alignas(16) int numLights;
 	};
 
 	struct MaterialPushConstantBlock

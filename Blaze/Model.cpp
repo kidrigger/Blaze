@@ -283,7 +283,6 @@ namespace blaze {
 				{
 					float* posBuffer = nullptr;
 					float* normBuffer = nullptr;
-					float* tanBuffer = nullptr;
 					float* tex0Buffer = nullptr;
 					float* tex1Buffer = nullptr;
 					float* joint0Buffer = nullptr;
@@ -312,16 +311,6 @@ namespace blaze {
 							const auto& bufferView = model.bufferViews[accessor.bufferView];
 
 							normBuffer = reinterpret_cast<float*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
-						}
-
-						const auto& tanAccessorIterator = primitive.attributes.find(TANGENT);
-						bool hasTanAccessor = (tanAccessorIterator != primitive.attributes.end());
-						if (hasTanAccessor)
-						{
-							const auto& accessor = model.accessors[tanAccessorIterator->second];
-							const auto& bufferView = model.bufferViews[accessor.bufferView];
-
-							tanBuffer = reinterpret_cast<float*>(&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
 						}
 
 						const auto& tex0AccessorIterator = primitive.attributes.find(TEXCOORD_0);
@@ -400,7 +389,6 @@ namespace blaze {
 						vertexBuffer.push_back({
 							glm::make_vec3(&posBuffer[3 * i]),
 							glm::normalize(normBuffer ? glm::make_vec3(&normBuffer[3 * i]) : glm::vec3(0.0f, 0.0f, 1.0f)),
-							glm::normalize(tanBuffer ? glm::make_vec3(&tanBuffer[3 * i]) : glm::vec3(1.0f, 0.0f, 0.0f)),
 							tex0Buffer ? glm::make_vec2(&tex0Buffer[2 * i]) : glm::vec2(0.0f),
 							tex1Buffer ? glm::make_vec3(&tex1Buffer[2 * i]) : glm::vec2(0.0f)});
 					}
