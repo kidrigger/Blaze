@@ -216,11 +216,11 @@ namespace blaze {
 
 			materials.emplace_back(
 				pushConstantBlock,
-				TextureImage{ renderer.get_context(), diffuseImageData, true },
-				TextureImage{ renderer.get_context(), normalImageData, true },
-				TextureImage{ renderer.get_context(), metallicRoughnessImageData, true },
-				TextureImage{ renderer.get_context(), occlusionImageData, true },
-				TextureImage{ renderer.get_context(), emissiveImageData, true });
+				Texture2D{ renderer.get_context(), diffuseImageData, true },
+				Texture2D{ renderer.get_context(), normalImageData, true },
+				Texture2D{ renderer.get_context(), metallicRoughnessImageData, true },
+				Texture2D{ renderer.get_context(), occlusionImageData, true },
+				Texture2D{ renderer.get_context(), emissiveImageData, true });
 
 			if (diffuseImageData.data != imgData.data)
 			{
@@ -259,11 +259,11 @@ namespace blaze {
 
 			materials.emplace_back(
 				pushConstantBlock,
-				TextureImage{ renderer.get_context(), imgData },
-				TextureImage{ renderer.get_context(), imgData },
-				TextureImage{ renderer.get_context(), imgData },
-				TextureImage{ renderer.get_context(), imgData },
-				TextureImage{ renderer.get_context(), imgData });
+				Texture2D{ renderer.get_context(), imgData },
+				Texture2D{ renderer.get_context(), imgData },
+				Texture2D{ renderer.get_context(), imgData },
+				Texture2D{ renderer.get_context(), imgData },
+				Texture2D{ renderer.get_context(), imgData });
 			delete[] data;
 		}
 

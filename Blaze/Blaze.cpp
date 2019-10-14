@@ -101,14 +101,15 @@ namespace blaze
 		GLFWwindow* window = nullptr;
 		Renderer renderer;
 		IndexedVertexBuffer<Vertex> vertexBuffer;
-		TextureImage image;
+		Texture2D image;
 
-		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), 4.0f / 3.0f, 1.0f, 1000.0f);
-		cam.addLight(glm::vec3{ -8.0f, 1.0f, 0.0f }, 1.0f);
-		cam.addLight(glm::vec3{ -4.0f, 1.0f, 0.0f }, 1.0f);
-		cam.addLight(glm::vec3{ 0.0f, 1.0f, 0.0f }, 1.0f);
-		cam.addLight(glm::vec3{ 4.0f, 1.0f, 0.0f }, 1.0f);
-		cam.addLight(glm::vec3{ 8.0f, 1.0f, 0.0f }, 1.0f);
+		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 1000.0f);
+		// cam.addLight(glm::vec3{ -8.0f, 2.0f, 0.0f }, 1.0f);
+		// cam.addLight(glm::vec3{ -4.0f, 2.0f, 0.0f }, 1.0f);
+		// cam.addLight(glm::vec3{ 0.0f, 2.0f, 0.0f }, 1.0f);
+		// cam.addLight(glm::vec3{ 4.0f, 2.0f, 0.0f }, 1.0f);
+		// cam.addLight(glm::vec3{ 8.0f, 2.0f, 0.0f }, 1.0f);
+		cam.addLight(glm::vec3(0.0f), 1.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -134,7 +135,7 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		auto model = loadModel(renderer, "assets/sponza/Sponza.gltf");
+		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
 
 		// Run
 		bool onetime = true;
@@ -171,6 +172,12 @@ namespace blaze
 				cam.moveBy(cameraPos);
 			}
 			cam.lookTo(cameraFront);
+			cam.setLight(0, cam.get_position(), 1.0f);
+			// cam.setLight(0, glm::vec3{ -8.0f, 2.0f + 0.5f * sin(3*elapsed), 0.5f * cos(3 * elapsed) }, 1.0f);
+			// cam.setLight(1, glm::vec3{ -4.0f, 2.0f + 0.5f * cos(3 * elapsed + 4), 0.5f * sin(3 * elapsed + 4) }, 1.0f);
+			// cam.setLight(2, glm::vec3{ 0.0f, 2.0f + 0.5f * sin(3 * elapsed + 3.14), 0.5f * cos(3 * elapsed + 3.14) }, 1.0f);
+			// cam.setLight(3, glm::vec3{ 4.0f, 2.0f + 0.5f * sin(3 * elapsed + 1.4), 0.5f * cos(3 * elapsed + 1.4) }, 1.0f);
+			// cam.setLight(4, glm::vec3{ 8.0f, 2.0f + 0.5f * cos(3 * elapsed), 0.5f * sin(3 * elapsed) }, 1.0f);
 
 			try
 			{

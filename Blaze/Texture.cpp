@@ -3,7 +3,7 @@
 
 namespace blaze {
 
-	[[nodiscard]] TextureImage loadImage(const Context& context, const std::string& name)
+	[[nodiscard]] Texture2D loadImage(const Context& context, const std::string& name)
 	{
 		ImageData image;
 		int width, height, numChannels;
@@ -18,7 +18,7 @@ namespace blaze {
 			throw std::runtime_error("Image " + name + " could not be loaded.");
 		}
 
-		auto&& ti = TextureImage(context, image);
+		auto&& ti = Texture2D(context, image);
 		stbi_image_free(image.data);
 
 		return std::move(ti);

@@ -18,7 +18,7 @@ namespace blaze
 		uint32_t size{ 0 };
 	};
 
-	class TextureImage
+	class Texture2D
 	{
 	private:
 		util::Managed<ImageObject> image;
@@ -30,11 +30,11 @@ namespace blaze
 		uint32_t miplevels{ 1 };
 		bool is_valid{ false };
 	public:
-		TextureImage() noexcept
+		Texture2D() noexcept
 		{
 		}
 
-		TextureImage(const Context& context, const ImageData& image_data, bool mipmapped = false)
+		Texture2D(const Context& context, const ImageData& image_data, bool mipmapped = false)
 			: width(image_data.width),
 			height(image_data.height),
 			is_valid(false)
@@ -190,7 +190,7 @@ namespace blaze
 			is_valid = true;
 		}
 
-		TextureImage(TextureImage&& other) noexcept
+		Texture2D(Texture2D&& other) noexcept
 			: image(std::move(other.image)),
 			imageView(std::move(other.imageView)),
 			imageSampler(std::move(other.imageSampler)),
@@ -201,7 +201,7 @@ namespace blaze
 		{
 		}
 
-		TextureImage& operator=(TextureImage&& other) noexcept
+		Texture2D& operator=(Texture2D&& other) noexcept
 		{
 			if (this == &other)
 			{
@@ -217,8 +217,8 @@ namespace blaze
 			return *this;
 		}
 
-		TextureImage(const TextureImage& other) = delete;
-		TextureImage& operator=(const TextureImage& other) = delete;
+		Texture2D(const Texture2D& other) = delete;
+		Texture2D& operator=(const Texture2D& other) = delete;
 
 		bool valid() const { return is_valid; }
 
@@ -259,5 +259,5 @@ namespace blaze
 		}
 	};
 
-	[[nodiscard]] TextureImage loadImage(const Context& context, const std::string& name);
+	[[nodiscard]] Texture2D loadImage(const Context& context, const std::string& name);
 }

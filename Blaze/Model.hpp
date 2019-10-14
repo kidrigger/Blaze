@@ -18,16 +18,16 @@ namespace blaze
 {
 	class Material
 	{
-		TextureImage diffuse;
-		TextureImage metallicRoughness;
-		TextureImage normal;
-		TextureImage occlusion;
-		TextureImage emissive;
+		Texture2D diffuse;
+		Texture2D metallicRoughness;
+		Texture2D normal;
+		Texture2D occlusion;
+		Texture2D emissive;
 		MaterialPushConstantBlock pushConstantBlock;
 		util::Managed<VkDescriptorSet> descriptorSet;
 
 	public:
-		Material(MaterialPushConstantBlock pushBlock, TextureImage&& diff, TextureImage&& norm, TextureImage&& metal, TextureImage&& ao, TextureImage&& em)
+		Material(MaterialPushConstantBlock pushBlock, Texture2D&& diff, Texture2D&& norm, Texture2D&& metal, Texture2D&& ao, Texture2D&& em)
 			: pushConstantBlock(pushBlock),
 			diffuse(std::move(diff)),
 			metallicRoughness(std::move(metal)),
