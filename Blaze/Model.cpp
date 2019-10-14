@@ -216,11 +216,11 @@ namespace blaze {
 
 			materials.emplace_back(
 				pushConstantBlock,
-				TextureImage{ renderer.get_context(), diffuseImageData },
-				TextureImage{ renderer.get_context(), normalImageData },
-				TextureImage{ renderer.get_context(), metallicRoughnessImageData },
-				TextureImage{ renderer.get_context(), occlusionImageData },
-				TextureImage{ renderer.get_context(), emissiveImageData });
+				TextureImage{ renderer.get_context(), diffuseImageData, true },
+				TextureImage{ renderer.get_context(), normalImageData, true },
+				TextureImage{ renderer.get_context(), metallicRoughnessImageData, true },
+				TextureImage{ renderer.get_context(), occlusionImageData, true },
+				TextureImage{ renderer.get_context(), emissiveImageData, true });
 
 			if (diffuseImageData.data != imgData.data)
 			{

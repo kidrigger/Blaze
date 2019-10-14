@@ -181,7 +181,7 @@ namespace blaze
 		std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
 		for (size_t i = 0; i < swapchainImages.size(); i++)
 		{
-			swapchainImageViews[i] = util::createImageView(context.get_device(), swapchainImages[i], swapchainFormat.get(), VK_IMAGE_ASPECT_COLOR_BIT);
+			swapchainImageViews[i] = util::createImageView(context.get_device(), swapchainImages[i], swapchainFormat.get(), VK_IMAGE_ASPECT_COLOR_BIT, 1);
 		}
 		return swapchainImageViews;
 	}
@@ -686,7 +686,7 @@ namespace blaze
 	ImageObject Renderer::createDepthBuffer() const
 	{
 		auto format = VK_FORMAT_D32_SFLOAT;
-		ImageObject obj = context.createImage(swapchainExtent.get().width, swapchainExtent.get().height, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+		ImageObject obj = context.createImage(swapchainExtent.get().width, swapchainExtent.get().height, 1, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
 		VkCommandBuffer commandBuffer = context.startTransferCommands();
 

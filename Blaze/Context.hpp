@@ -157,7 +157,7 @@ namespace blaze
 			return std::make_tuple(buffer, allocation);
 		}
 
-		ImageObject createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const
+		ImageObject createImage(uint32_t width, uint32_t height, uint32_t miplevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const
 		{
 			VkImageCreateInfo imageInfo = {};
 			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -165,7 +165,7 @@ namespace blaze
 			imageInfo.extent.width = width;
 			imageInfo.extent.height = height;
 			imageInfo.extent.depth = 1;
-			imageInfo.mipLevels = 1;
+			imageInfo.mipLevels = miplevels;
 			imageInfo.arrayLayers = 1;
 			imageInfo.format = format;
 			imageInfo.tiling = tiling;

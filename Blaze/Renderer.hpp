@@ -103,7 +103,7 @@ namespace blaze
 				swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
 				depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
-				depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+				depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
@@ -276,7 +276,7 @@ namespace blaze
 			swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
 			depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
-			depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 
 			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 

@@ -4,6 +4,8 @@
 #include <stb_image.h>
 #include "Context.hpp"
 #include "util/createFunctions.hpp"
+#include <algorithm>
+#include <cmath>
 
 namespace blaze
 {
@@ -25,13 +27,14 @@ namespace blaze
 		uint32_t width{ 0 };
 		uint32_t height{ 0 };
 		VkDescriptorImageInfo imageInfo{};
+		uint32_t miplevels{ 1 };
 		bool is_valid{ false };
 	public:
 		TextureImage() noexcept
 		{
 		}
 
-		TextureImage(const Context& context, const ImageData& image_data)
+		TextureImage(const Context& context, const ImageData& image_data, bool mipmapped = false)
 			: width(image_data.width),
 			height(image_data.height),
 			is_valid(false)
@@ -39,7 +42,14 @@ namespace blaze
 			if (!image_data.data) return;
 
 			using namespace util;
+			using std::max;
+
 			VmaAllocator allocator = context.get_allocator();
+
+			if (mipmapped)
+			{
+				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
+			}
 
 			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
@@ -50,7 +60,7 @@ namespace blaze
 			memcpy(bufferdata, image_data.data, image_data.size);
 			vmaUnmapMemory(allocator, stagingAlloc);
 
-			image = Managed(context.createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+			image = Managed(context.createImage(width, height, miplevels, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 			try
 			{
@@ -69,7 +79,7 @@ namespace blaze
 				barrier.image = image.get().image;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = 1;
+				barrier.subresourceRange.levelCount = miplevels;
 				barrier.subresourceRange.baseArrayLayer = 0;
 				barrier.subresourceRange.layerCount = 1;
 				barrier.srcAccessMask = 0;
@@ -92,11 +102,76 @@ namespace blaze
 				vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 				barrier.oldLayout = barrier.newLayout;
-				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				srcStage = dstStage;
 				dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 
 				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+				int32_t mipwidth = static_cast<int32_t>(width);
+				int32_t mipheight = static_cast<int32_t>(height);
+				barrier.subresourceRange.levelCount = 1;
+
+				for (uint32_t i = 1; i < miplevels; i++)
+				{
+					barrier.subresourceRange.baseMipLevel = i - 1;
+					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+					vkCmdPipelineBarrier(commandBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier);
+
+					VkImageBlit blit = {};
+					blit.srcOffsets[0] = { 0, 0, 0 };
+					blit.srcOffsets[1] = { mipwidth, mipheight, 1 };
+					blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					blit.srcSubresource.mipLevel = i - 1;
+					blit.srcSubresource.baseArrayLayer = 0;
+					blit.srcSubresource.layerCount = 1;
+					blit.dstOffsets[0] = { 0, 0, 0 };
+					blit.dstOffsets[1] = { mipwidth > 1 ? mipwidth / 2 : 1, mipheight > 1 ? mipheight / 2 : 1, 1 };
+					blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					blit.dstSubresource.mipLevel = i;
+					blit.dstSubresource.baseArrayLayer = 0;
+					blit.dstSubresource.layerCount = 1;
+
+					vkCmdBlitImage(commandBuffer,
+						image.get().image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						1, &blit,
+						VK_FILTER_LINEAR);
+
+					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+					vkCmdPipelineBarrier(commandBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier);
+					
+					mipwidth = max(mipwidth / 2, 1);
+					mipheight = max(mipheight / 2, 1);
+				}
+
+				barrier.subresourceRange.baseMipLevel = miplevels - 1;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+				vkCmdPipelineBarrier(commandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
 
 				context.endTransferCommands(commandBuffer);
 			}
@@ -105,8 +180,8 @@ namespace blaze
 				std::cerr << e.what() << std::endl;
 			}
 
-			imageView = Managed(createImageView(context.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-			imageSampler = Managed(createSampler(context.get_device()), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			imageView = Managed(createImageView(context.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 			imageInfo.imageView = imageView.get();
 			imageInfo.sampler = imageSampler.get();
@@ -153,7 +228,7 @@ namespace blaze
 		const VkDescriptorImageInfo& get_imageInfo() const { return imageInfo; }
 
 	private:
-		VkSampler createSampler(VkDevice device) const
+		VkSampler createSampler(VkDevice device, uint32_t miplevels) const
 		{
 			VkSamplerCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -170,8 +245,8 @@ namespace blaze
 			createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.mipLodBias = 0.0f;
-			createInfo.minLod = 0.0f;
-			createInfo.maxLod = 0.0f;
+			createInfo.minLod = 1.0f;
+			createInfo.maxLod = static_cast<float>(miplevels);
 
 			VkSampler sampler;
 			auto result = vkCreateSampler(device, &createInfo, nullptr, &sampler);

@@ -17,9 +17,7 @@ namespace blaze::util
 
 	VkFence createFence(VkDevice device);
 
-	std::tuple<VkBuffer, VkDeviceMemory> createBuffer(VkDevice device, VkPhysicalDevice physicalDevice, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect);
+	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t miplevels);
 
 	VkDescriptorPool createDescriptorPool(VkDevice device, std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 }
