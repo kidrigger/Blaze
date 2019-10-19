@@ -27,6 +27,8 @@ layout(set = 1, binding = 2) uniform sampler2D normalImage;
 layout(set = 1, binding = 3) uniform sampler2D occlusionImage;
 layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
 
+layout(set = 2, binding = 0) uniform samplerCube skybox;
+
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
 	vec4 emissiveColorFactor;
@@ -185,5 +187,5 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
+	outColor = SRGBtoLINEAR(vec4(texture(skybox, N).rgb, 1.0f));
 }

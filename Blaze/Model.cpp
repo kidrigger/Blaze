@@ -76,7 +76,7 @@ namespace blaze {
 				}
 			};
 
-			ImageData imgData;
+			ImageData2D imgData;
 			uint32_t* data = new uint32_t[256 * 256];
 			memset(data, 0xFF00FFFF, 256 * 256);
 			imgData.data = reinterpret_cast<uint8_t*>(data);
@@ -86,11 +86,11 @@ namespace blaze {
 			imgData.numChannels = 4;
 
 			MaterialPushConstantBlock pushConstantBlock = {};
-			ImageData diffuseImageData = imgData;
-			ImageData normalImageData = imgData;
-			ImageData metallicRoughnessImageData = imgData;
-			ImageData occlusionImageData = imgData;
-			ImageData emissiveImageData = imgData;
+			ImageData2D diffuseImageData = imgData;
+			ImageData2D normalImageData = imgData;
+			ImageData2D metallicRoughnessImageData = imgData;
+			ImageData2D occlusionImageData = imgData;
+			ImageData2D emissiveImageData = imgData;
 
 			{
 				pushConstantBlock.baseColorFactor = glm::make_vec4(material.pbrMetallicRoughness.baseColorFactor.data());
@@ -246,7 +246,7 @@ namespace blaze {
 		}
 		// default material
 		{
-			ImageData imgData;
+			ImageData2D imgData;
 			uint32_t* data = new uint32_t[256 * 256];
 			memset(data, 0xFF00FFFF, 256 * 256);
 			imgData.data = reinterpret_cast<uint8_t*>(data);

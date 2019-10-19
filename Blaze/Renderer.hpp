@@ -43,6 +43,7 @@ namespace blaze
 		util::Managed<VkDescriptorPool> descriptorPool;
 		util::UnmanagedVector<VkDescriptorSet> descriptorSets;
 
+		util::Managed<VkDescriptorSetLayout> skyboxDescriptorSetLayout;
 		util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
 
 		std::vector<UniformBuffer<CameraUniformBufferObject>> uniformBuffers;
@@ -103,12 +104,13 @@ namespace blaze
 				swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
 				depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
-				depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+				depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, VK_IMAGE_VIEW_TYPE_2D, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
 				uniformBuffers = createUniformBuffers(cameraUBO);
 				uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+				skyboxDescriptorSetLayout = Managed(createSkyboxDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				materialDescriptorSetLayout = Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 				descriptorSets = createDescriptorSets();
@@ -156,6 +158,7 @@ namespace blaze
 			depthBufferView(std::move(other.depthBufferView)),
 			renderPass(std::move(other.renderPass)),
 			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
+			skyboxDescriptorSetLayout(std::move(other.skyboxDescriptorSetLayout)),
 			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
 			descriptorPool(std::move(other.descriptorPool)),
 			descriptorSets(std::move(other.descriptorSets)),
@@ -191,6 +194,7 @@ namespace blaze
 			depthBufferView = std::move(other.depthBufferView);
 			renderPass = std::move(other.renderPass);
 			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
+			skyboxDescriptorSetLayout = std::move(other.skyboxDescriptorSetLayout);
 			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
 			descriptorPool = std::move(other.descriptorPool);
 			descriptorSets = std::move(other.descriptorSets);
@@ -227,6 +231,7 @@ namespace blaze
 		const VkCommandBuffer& get_commandBuffer(size_t index) const { return commandBuffers[index]; }
 		VkDescriptorSetLayout get_uboLayout() const { return uboDescriptorSetLayout.get(); }
 		VkDescriptorSetLayout get_materialLayout() const { return materialDescriptorSetLayout.get(); }
+		VkDescriptorSetLayout get_skyboxLayout() const { return skyboxDescriptorSetLayout.get(); }
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
@@ -276,7 +281,7 @@ namespace blaze
 			swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
 			depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
-			depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, VK_IMAGE_VIEW_TYPE_2D, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 
 			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
@@ -302,6 +307,7 @@ namespace blaze
 		std::vector<VkImageView> createSwapchainImageViews() const;
 		VkRenderPass createRenderPass() const;
 		VkDescriptorSetLayout createUBODescriptorSetLayout() const;
+		VkDescriptorSetLayout createSkyboxDescriptorSetLayout() const;
 		VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 		VkDescriptorPool createDescriptorPool() const;
 		std::vector<VkDescriptorSet> createDescriptorSets() const;

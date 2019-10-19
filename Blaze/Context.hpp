@@ -188,6 +188,38 @@ namespace blaze
 			return ImageObject{ image, allocation, format };
 		}
 
+		ImageObject createImageCube(uint32_t width, uint32_t height, uint32_t miplevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const
+		{
+			VkImageCreateInfo imageInfo = {};
+			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+			imageInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageInfo.extent.width = width;
+			imageInfo.extent.height = height;
+			imageInfo.extent.depth = 1;
+			imageInfo.mipLevels = miplevels;
+			imageInfo.arrayLayers = 6;
+			imageInfo.format = format;
+			imageInfo.tiling = tiling;
+			imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageInfo.usage = vulkanUsage;
+			imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = vmaUsage;
+
+			VkImage image;
+			VmaAllocation allocation;
+			auto result = vmaCreateImage(allocator.get(), &imageInfo, &allocInfo, &image, &allocation, nullptr);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Buffer could not be allocated");
+			}
+
+			return ImageObject{ image, allocation, format };
+		}
+
 		VkCommandBuffer startTransferCommands() const;
 		void endTransferCommands(VkCommandBuffer commandBuffer) const;
 

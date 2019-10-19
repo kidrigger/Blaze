@@ -9,7 +9,7 @@
 
 namespace blaze
 {
-	struct ImageData
+	struct ImageData2D
 	{
 		uint8_t* data{ nullptr };
 		uint32_t width{ 0 };
@@ -34,7 +34,7 @@ namespace blaze
 		{
 		}
 
-		Texture2D(const Context& context, const ImageData& image_data, bool mipmapped = false)
+		Texture2D(const Context& context, const ImageData2D& image_data, bool mipmapped = false)
 			: width(image_data.width),
 			height(image_data.height),
 			is_valid(false)
@@ -108,6 +108,7 @@ namespace blaze
 
 				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
+				// Mipmapping
 				int32_t mipwidth = static_cast<int32_t>(width);
 				int32_t mipheight = static_cast<int32_t>(height);
 				barrier.subresourceRange.levelCount = 1;
@@ -180,7 +181,7 @@ namespace blaze
 				std::cerr << e.what() << std::endl;
 			}
 
-			imageView = Managed(createImageView(context.get_device(), get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 			imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 			imageInfo.imageView = imageView.get();

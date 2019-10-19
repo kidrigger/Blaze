@@ -1,11 +1,11 @@
 
-#include "Texture.hpp"
+#include "Texture2D.hpp"
 
 namespace blaze {
 
 	[[nodiscard]] Texture2D loadImage(const Context& context, const std::string& name)
 	{
-		ImageData image;
+		ImageData2D image;
 		int width, height, numChannels;
 		image.data = stbi_load(name.c_str(), &width, &height, &numChannels, STBI_rgb_alpha);
 		image.width = width;

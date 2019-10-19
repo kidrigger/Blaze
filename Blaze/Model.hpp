@@ -4,7 +4,7 @@
 #include <vector>
 #include "DataTypes.hpp"
 #include "VertexBuffer.hpp"
-#include "Texture.hpp"
+#include "Texture2D.hpp"
 #include "util/Managed.hpp"
 #include "Renderer.hpp"
 

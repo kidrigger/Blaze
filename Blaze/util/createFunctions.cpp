@@ -48,13 +48,13 @@ namespace blaze::util
 		throw std::runtime_error("Fence creation failed with " + std::to_string(result));
 	}
 
-	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t miplevels)
+	VkImageView createImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t miplevels)
 	{
 		VkImageView view;
 		VkImageViewCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		createInfo.image = image;
-		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.viewType = viewType;
 		createInfo.format = format;
 		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -64,7 +64,14 @@ namespace blaze::util
 		createInfo.subresourceRange.baseMipLevel = 0;
 		createInfo.subresourceRange.levelCount = miplevels;
 		createInfo.subresourceRange.baseArrayLayer = 0;
-		createInfo.subresourceRange.layerCount = 1;
+		if (viewType == VK_IMAGE_VIEW_TYPE_CUBE)
+		{
+			createInfo.subresourceRange.layerCount = 6;
+		}
+		else
+		{
+			createInfo.subresourceRange.layerCount = 1;
+		}
 		auto result = vkCreateImageView(device, &createInfo, nullptr, &view);
 		if (result != VK_SUCCESS)
 		{

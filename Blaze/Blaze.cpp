@@ -12,7 +12,8 @@
 #include "Renderer.hpp"
 #include "Datatypes.hpp"
 #include "VertexBuffer.hpp"
-#include "Texture.hpp"
+#include "Texture2D.hpp"
+#include "TextureCube.hpp"
 #include "Model.hpp"
 #include "Camera.hpp"
 
@@ -135,7 +136,61 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
+		// fbudrl
+		string skybox_dir = "assets/Environment1.cubemap/";
+		vector<string> skybox_faces{ "negz.bmp", "posz.bmp", "posy.bmp", "negy.bmp", "negx.bmp", "posx.bmp" };
+		for (auto& face : skybox_faces)
+		{
+			face = skybox_dir + face;
+		}
+
+		auto skybox = loadImageCube(renderer.get_context(), skybox_faces);
+
+		// Hello my old code
+		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureCube& texture, uint32_t binding)
+		{
+			VkDescriptorSetAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = pool;
+			allocInfo.descriptorSetCount = 1;
+			allocInfo.pSetLayouts = &layout;
+
+			VkDescriptorSet descriptorSet;
+			auto result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+			}
+
+			VkDescriptorImageInfo info = {};
+			info.imageView = texture.get_imageView();
+			info.sampler = texture.get_imageSampler();
+			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			write.descriptorCount = 1;
+			write.dstSet = descriptorSet;
+			write.dstBinding = 0;
+			write.dstArrayElement = 0;
+			write.pImageInfo = &info;
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+			return descriptorSet;
+		};
+
+		VkDescriptorPoolSize poolSize = {};
+		poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSize.descriptorCount = 1;
+		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
+		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_skyboxLayout(), dsPool.get(), skybox, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
+
+
+		auto model = loadModel(renderer, "assets/boombox2/BoomBoxWithAxes.gltf");
+		model.get_root()->scale = { 101.0f };
 
 		// Run
 		bool onetime = true;
@@ -187,6 +242,7 @@ namespace blaze
 				if (onetime) 
 				{
 					// renderer.submit(renderCommand);
+					renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
 					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
 					onetime = false;
 				}
