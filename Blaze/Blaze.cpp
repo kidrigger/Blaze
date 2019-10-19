@@ -101,7 +101,7 @@ namespace blaze
 		// Variables
 		GLFWwindow* window = nullptr;
 		Renderer renderer;
-		IndexedVertexBuffer<Vertex> vertexBuffer;
+		IndexedVertexBuffer<Vertex> vbo;
 		Texture2D image;
 
 		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 1000.0f);
@@ -147,6 +147,32 @@ namespace blaze
 		auto skybox = loadImageCube(renderer.get_context(), skybox_faces);
 
 		// Hello my old code
+		vector<Vertex> vertices = {
+			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}, {1.0f, 1.0f}},
+			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}, {1.0f, 0.0f}},
+			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {0.0f, 0.0f}},
+			{{-0.5f, 0.5f, -0.5f}, {0.2f, 1.0f, 0.2f}, {0.0f, 1.0f}},
+			{{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 1.0f}, {0.0f, 0.0f}},
+			{{0.5f, -0.5f, 0.5f}, {1.0f, 0.2f, 1.0f}, {1.0f, 0.0f}},
+			{{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+			{{-0.5f, 0.5f, 0.5f}, {0.2f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+		};
+		vector<uint32_t> indices = {
+			0, 1, 2,
+			0, 2, 3,
+			4, 5, 6,
+			4, 6, 7,
+			1, 0, 6,
+			1, 6, 5,
+			7, 6, 0,
+			7, 0, 3,
+			7, 3, 2,
+			7, 2, 4,
+			4, 2, 1,
+			4, 1, 5
+		};
+		vbo = IndexedVertexBuffer(renderer.get_context(), vertices, indices);
+
 		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureCube& texture, uint32_t binding)
 		{
 			VkDescriptorSetAllocateInfo allocInfo = {};
@@ -190,7 +216,16 @@ namespace blaze
 
 
 		auto model = loadModel(renderer, "assets/boombox2/BoomBoxWithAxes.gltf");
-		model.get_root()->scale = { 101.0f };
+		model.get_root()->scale = { 100.0f };
+
+		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay) 
+		{
+			VkBuffer vbufs[] = { vbo.get_vertexBuffer() };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
+			vkCmdBindIndexBuffer(buf, vbo.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(buf, vbo.get_indexCount(), 1, 0, 0, 0); 
+		});
 
 		// Run
 		bool onetime = true;

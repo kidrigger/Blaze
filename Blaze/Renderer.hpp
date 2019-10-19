@@ -51,6 +51,7 @@ namespace blaze
 
 		util::Managed<VkPipelineLayout> graphicsPipelineLayout;
 		util::Managed<VkPipeline> graphicsPipeline;
+		util::Managed<VkPipeline> skyboxPipeline;
 
 		util::ManagedVector<VkFramebuffer> framebuffers;
 		util::ManagedVector<VkCommandBuffer, false> commandBuffers;
@@ -60,6 +61,7 @@ namespace blaze
 		util::ManagedVector<VkFence> inFlightFences;
 
 		std::vector<RenderCommand> renderCommands;
+		RenderCommand skyboxCommand;
 		std::vector<bool> commandBufferDirty;
 
 		util::Managed<ImageObject> depthBuffer;
@@ -83,6 +85,8 @@ namespace blaze
 		{
 			using namespace std;
 			using namespace util;
+
+			skyboxCommand = [](VkCommandBuffer cb, VkPipelineLayout lay) {};
 
 			glfwSetWindowUserPointer(window, this);
 			glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height)
@@ -116,9 +120,10 @@ namespace blaze
 				descriptorSets = createDescriptorSets();
 
 				{
-					auto [gPipelineLayout, gPipeline] = createGraphicsPipeline();
+					auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
 					graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
 					graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+					skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
 				}
 
 				framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
@@ -166,11 +171,13 @@ namespace blaze
 			cameraUBO(other.cameraUBO),
 			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
 			graphicsPipeline(std::move(other.graphicsPipeline)),
+			skyboxPipeline(std::move(other.skyboxPipeline)),
 			framebuffers(std::move(other.framebuffers)),
 			commandBuffers(std::move(other.commandBuffers)),
 			imageAvailableSem(std::move(other.imageAvailableSem)),
 			renderFinishedSem(std::move(other.renderFinishedSem)),
 			inFlightFences(std::move(other.inFlightFences)),
+			skyboxCommand(std::move(other.skyboxCommand)),
 			renderCommands(std::move(other.renderCommands)),
 			commandBufferDirty(std::move(other.commandBufferDirty))
 		{
@@ -202,11 +209,13 @@ namespace blaze
 			cameraUBO = other.cameraUBO;
 			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
 			graphicsPipeline = std::move(other.graphicsPipeline);
+			skyboxPipeline = std::move(other.skyboxPipeline);
 			framebuffers = std::move(other.framebuffers);
 			commandBuffers = std::move(other.commandBuffers);
 			imageAvailableSem = std::move(other.imageAvailableSem);
 			renderFinishedSem = std::move(other.renderFinishedSem);
 			inFlightFences = std::move(other.inFlightFences);
+			skyboxCommand = std::move(other.skyboxCommand);
 			renderCommands = std::move(other.renderCommands);
 			commandBufferDirty = std::move(other.commandBufferDirty);
 			return *this;
@@ -251,6 +260,12 @@ namespace blaze
 			}
 		}
 
+		template <class RNDRCMD>
+		void set_skyboxCommand(const RNDRCMD& cmd)
+		{
+			skyboxCommand = cmd;
+		}
+
 		void set_cameraUBO(const CameraUniformBufferObject& ubo)
 		{
 			cameraUBO = ubo;
@@ -290,9 +305,10 @@ namespace blaze
 			descriptorSets = createDescriptorSets();
 
 			{
-				auto [gPipelineLayout, gPipeline] = createGraphicsPipeline();
+				auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
 				graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
 				graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+				skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
 			}
 
 			framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
@@ -312,7 +328,7 @@ namespace blaze
 		VkDescriptorPool createDescriptorPool() const;
 		std::vector<VkDescriptorSet> createDescriptorSets() const;
 		std::vector<UniformBuffer<CameraUniformBufferObject>> createUniformBuffers(const CameraUniformBufferObject& ubo) const;
-		std::tuple<VkPipelineLayout, VkPipeline> createGraphicsPipeline() const;
+		std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
 		std::vector<VkFramebuffer> createFramebuffers() const;
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
 		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const;

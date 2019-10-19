@@ -401,10 +401,9 @@ namespace blaze
 		return std::move(ubos);
 	}
 
-	std::tuple<VkPipelineLayout, VkPipeline> Renderer::createGraphicsPipeline() const
+	std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> Renderer::createGraphicsPipeline() const
 	{
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
 		auto vertexShaderCode = util::loadBinaryFile("shaders/vShader.vert.spv");
 		auto fragmentShaderCode = util::loadBinaryFile("shaders/fShader.frag.spv");
@@ -425,6 +424,20 @@ namespace blaze
 		fragmentShaderStageCreateInfo.pName = "main";
 
 		std::array<VkPipelineShaderStageCreateInfo, 2> shaderStagesCreateInfo = {
+			vertexShaderStageCreateInfo,
+			fragmentShaderStageCreateInfo
+		};
+
+		vertexShaderCode = util::loadBinaryFile("shaders/vSkybox.vert.spv");
+		fragmentShaderCode = util::loadBinaryFile("shaders/fSkybox.frag.spv");
+
+		auto vertexSkyboxModule = util::Managed(util::createShaderModule(context.get_device(), vertexShaderCode), [dev = context.get_device()](VkShaderModule& sm) { vkDestroyShaderModule(dev, sm, nullptr); });
+		auto fragmentSkyboxModule = util::Managed(util::createShaderModule(context.get_device(), fragmentShaderCode), [dev = context.get_device()](VkShaderModule& sm) { vkDestroyShaderModule(dev, sm, nullptr); });
+
+		vertexShaderStageCreateInfo.module = vertexSkyboxModule.get();
+		fragmentShaderStageCreateInfo.module = fragmentSkyboxModule.get();
+
+		std::array<VkPipelineShaderStageCreateInfo, 2> skyboxShaderStagesCreateInfo = {
 			vertexShaderStageCreateInfo,
 			fragmentShaderStageCreateInfo
 		};
@@ -563,13 +576,28 @@ namespace blaze
 		pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineCreateInfo.basePipelineIndex = -1;
 
+		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 		result = vkCreateGraphicsPipelines(context.get_device(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &graphicsPipeline);
 		if (result != VK_SUCCESS)
 		{
 			throw std::runtime_error("Graphics Pipeline creation failed with " + std::to_string(result));
 		}
 
-		return std::make_tuple(pipelineLayout, graphicsPipeline);
+		pipelineCreateInfo.stageCount = static_cast<uint32_t>(skyboxShaderStagesCreateInfo.size());
+		pipelineCreateInfo.pStages = skyboxShaderStagesCreateInfo.data();
+		depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
+		depthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		depthStencilStateCreateInfo.depthWriteEnable = VK_FALSE;
+		rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+
+		VkPipeline skyboxPipeline = VK_NULL_HANDLE;
+		result = vkCreateGraphicsPipelines(context.get_device(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &skyboxPipeline);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Skybox Pipeline creation failed with " + std::to_string(result));
+		}
+
+		return std::make_tuple(pipelineLayout, graphicsPipeline, skyboxPipeline);
 	}
 
 	std::vector<VkFramebuffer> Renderer::createFramebuffers() const
@@ -670,6 +698,9 @@ namespace blaze
 			{
 				cmd(commandBuffers[frame], graphicsPipelineLayout.get());
 			}
+
+			vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline.get());
+			skyboxCommand(commandBuffers[frame], graphicsPipelineLayout.get());
 
 			vkCmdEndRenderPass(commandBuffers[frame]);
 

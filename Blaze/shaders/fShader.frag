@@ -187,5 +187,5 @@ void main() {
 
 	vec3 ambient = vec3(0.03f) * albedo * ao;
 	vec3 color	 = ambient + L0 + emission;
-	outColor = SRGBtoLINEAR(vec4(texture(skybox, N).rgb, 1.0f));
+	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
 }
