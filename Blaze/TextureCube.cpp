@@ -3,13 +3,13 @@
 
 namespace blaze {
 
-	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_fbudrl)
+	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_lrudfb, bool mipmapped)
 	{
 		ImageDataCube image;
 		int width, height, numChannels;
 
 		int layer = 0;
-		for (const auto& name : names_fbudrl)
+		for (const auto& name : names_lrudfb)
 		{
 			image.data[layer] = stbi_load(name.c_str(), &width, &height, &numChannels, STBI_rgb_alpha);
 
@@ -26,7 +26,7 @@ namespace blaze {
 		image.layerSize = 4 * width * height;
 		image.size = 6 * image.layerSize;
 
-		auto&& ti = TextureCube(context, image);
+		auto&& ti = TextureCube(context, image, mipmapped);
 
 		for (int i = 0; i < 6; i++)
 		{

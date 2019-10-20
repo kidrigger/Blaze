@@ -246,7 +246,7 @@ namespace blaze
 			createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.mipLodBias = 0.0f;
-			createInfo.minLod = 1.0f;
+			createInfo.minLod = 0.0f;
 			createInfo.maxLod = static_cast<float>(miplevels);
 
 			VkSampler sampler;

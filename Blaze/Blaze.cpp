@@ -138,13 +138,13 @@ namespace blaze
 
 		// fbudrl
 		string skybox_dir = "assets/Environment1.cubemap/";
-		vector<string> skybox_faces{ "negz.bmp", "posz.bmp", "posy.bmp", "negy.bmp", "negx.bmp", "posx.bmp" };
+		vector<string> skybox_faces{ "negx.bmp", "posx.bmp", "posy.bmp", "negy.bmp", "posz.bmp", "negz.bmp" };
 		for (auto& face : skybox_faces)
 		{
 			face = skybox_dir + face;
 		}
 
-		auto skybox = loadImageCube(renderer.get_context(), skybox_faces);
+		auto skybox = loadImageCube(renderer.get_context(), skybox_faces, true);
 
 		// Hello my old code
 		vector<Vertex> vertices = {

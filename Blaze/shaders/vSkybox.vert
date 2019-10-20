@@ -26,7 +26,7 @@ layout(location = 3) out vec2 texCoords1;
 layout(location = 4) out vec3 color;
 
 void main() {
-	vec4 pos = ubo.projection * ubo.view * vec4(inPosition + ubo.viewPos, 1.0);
+	vec4 pos = ubo.projection * ubo.view * vec4(inPosition * 0.1f + ubo.viewPos, 1.0);
 	gl_Position = pos.xyww;
 	outPosition = inPosition;
 }

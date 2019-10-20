@@ -35,7 +35,7 @@ namespace blaze
 		{
 		}
 
-		TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = false)
+		TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true)
 			: width(image_data.width),
 			height(image_data.height),
 			is_valid(false)
@@ -97,7 +97,6 @@ namespace blaze
 
 				for (int face = 0; face < 6; face++)
 				{
-
 					VkBufferImageCopy region = {};
 					region.bufferOffset = face * image_data.layerSize;
 					region.bufferRowLength = 0;
@@ -262,7 +261,7 @@ namespace blaze
 			createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.mipLodBias = 0.0f;
-			createInfo.minLod = 1.0f;
+			createInfo.minLod = 0.0f;
 			createInfo.maxLod = static_cast<float>(miplevels);
 
 			VkSampler sampler;
@@ -276,5 +275,5 @@ namespace blaze
 		}
 	};
 
-	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_fbudrl);
+	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_fbudrl, bool mipmapped = true);
 }
