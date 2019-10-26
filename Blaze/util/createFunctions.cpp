@@ -96,5 +96,23 @@ namespace blaze::util
 			throw std::runtime_error("Descriptor pool creation failed with " + std::to_string(result));
 		}
 		return pool;
-	};
+	}
+
+	VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding>& layoutBindings)
+	{
+		VkDescriptorSetLayout descriptorSetLayout;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+		layoutInfo.pBindings = layoutBindings.data();
+
+		auto result = vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw new std::runtime_error("loadImageCube::DescriptorSet layout creation failed with " + std::to_string(result));
+		}
+
+		return descriptorSetLayout;
+	}
 }

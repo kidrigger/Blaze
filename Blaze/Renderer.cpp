@@ -255,81 +255,51 @@ namespace blaze
 
 	VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
 	{
-		VkDescriptorSetLayout descriptorSetLayout;
+		std::vector<VkDescriptorSetLayoutBinding> uboLayoutBindings = {
+			{
+				0,
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				1,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				nullptr
+			}
+		};
 
-		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-		uboLayoutBinding.binding = 0;
-		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		uboLayoutBinding.pImmutableSamplers = nullptr;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = &uboLayoutBinding;
-
-		auto result = vkCreateDescriptorSetLayout(context.get_device(), &layoutInfo, nullptr, &descriptorSetLayout);
-		if (result != VK_SUCCESS)
-		{
-			throw new std::runtime_error("DescriptorSet layout creation failed with " + std::to_string(result));
-		}
-
-		return descriptorSetLayout;
+		return util::createDescriptorSetLayout(context.get_device(), uboLayoutBindings);
 	}
 
 	VkDescriptorSetLayout Renderer::createSkyboxDescriptorSetLayout() const
 	{
-		VkDescriptorSetLayout descriptorSetLayout;
+		std::vector<VkDescriptorSetLayoutBinding> skyboxLayoutBindings = {
+			{
+				0, 
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+				1,
+				VK_SHADER_STAGE_FRAGMENT_BIT, 
+				nullptr
+			}
+		};
 
-		VkDescriptorSetLayoutBinding skyboxLayoutBinding = {};
-		skyboxLayoutBinding.binding = 0;
-		skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		skyboxLayoutBinding.descriptorCount = 1;
-		skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		skyboxLayoutBinding.pImmutableSamplers = nullptr;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = &skyboxLayoutBinding;
-
-		auto result = vkCreateDescriptorSetLayout(context.get_device(), &layoutInfo, nullptr, &descriptorSetLayout);
-		if (result != VK_SUCCESS)
-		{
-			throw new std::runtime_error("DescriptorSet layout creation failed with " + std::to_string(result));
-		}
-
-		return descriptorSetLayout;
+		return util::createDescriptorSetLayout(context.get_device(), skyboxLayoutBindings);
 	}
 
 	VkDescriptorSetLayout Renderer::createMaterialDescriptorSetLayout() const
 	{
-		VkDescriptorSetLayout descriptorSetLayout;
+		std::vector<VkDescriptorSetLayoutBinding> samplerLayoutBindings;
 
-		std::array<VkDescriptorSetLayoutBinding, 5> samplerLayoutBindings;
-		uint32_t bindingLocation = 0;
-		for (auto& layoutBinding : samplerLayoutBindings)
+		VkDescriptorSetLayoutBinding layoutBinding = {};
+		layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		layoutBinding.descriptorCount = 1;
+		layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		layoutBinding.pImmutableSamplers = nullptr;
+
+		for (uint32_t bindingLocation = 0; bindingLocation < 5; bindingLocation++)
 		{
-			layoutBinding.binding = bindingLocation++;
-			layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			layoutBinding.descriptorCount = 1;
-			layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			layoutBinding.pImmutableSamplers = nullptr;
+			layoutBinding.binding = bindingLocation;
+			samplerLayoutBindings.push_back(layoutBinding);
 		}
 
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(samplerLayoutBindings.size());
-		layoutInfo.pBindings = samplerLayoutBindings.data();
-
-		auto result = vkCreateDescriptorSetLayout(get_device(), &layoutInfo, nullptr, &descriptorSetLayout);
-		if (result != VK_SUCCESS)
-		{
-			throw new std::runtime_error("DescriptorSet layout creation failed with " + std::to_string(result));
-		}
-
-		return descriptorSetLayout;
+		return util::createDescriptorSetLayout(context.get_device(), samplerLayoutBindings);
 	};
 
 	VkDescriptorPool Renderer::createDescriptorPool() const
