@@ -17,6 +17,11 @@ namespace blaze
 		uint32_t numChannels{ 0 };
 		uint32_t layerSize{ 0 };
 		uint32_t size{ 0 };
+		VkFormat format{ VK_FORMAT_R8G8B8A8_UNORM };
+		VkImageUsageFlags usage{ VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+		VkImageLayout layout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+		VkAccessFlags access{ VK_ACCESS_SHADER_READ_BIT };
+		VkImageAspectFlags aspect{ VK_IMAGE_ASPECT_COLOR_BIT };
 	};
 
 	class TextureCube
@@ -27,6 +32,11 @@ namespace blaze
 		util::Managed<VkSampler> imageSampler;
 		uint32_t width{ 0 };
 		uint32_t height{ 0 };
+		VkFormat format{ VK_FORMAT_R8G8B8A8_UNORM };
+		VkImageUsageFlags usage{ VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+		VkImageLayout layout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+		VkAccessFlags access{ VK_ACCESS_SHADER_READ_BIT };
+		VkImageAspectFlags aspect{ VK_IMAGE_ASPECT_COLOR_BIT };
 		VkDescriptorImageInfo imageInfo{};
 		uint32_t miplevels{ 1 };
 		bool is_valid{ false };
@@ -38,21 +48,62 @@ namespace blaze
 		TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true)
 			: width(image_data.width),
 			height(image_data.height),
+			format(image_data.format),
+			layout(image_data.layout),
+			usage(image_data.usage),
+			access(image_data.access),
+			aspect(image_data.aspect),
 			is_valid(false)
 		{
-			if (!image_data.data) return;
 
 			using namespace util;
 			using std::max;
 
 			VmaAllocator allocator = context.get_allocator();
 
+			if (!image_data.data[0] || !image_data.data[1] || !image_data.data[2] || !image_data.data[3] || !image_data.data[4] || !image_data.data[5])
+			{
+				image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+
+				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
+
+				VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+				VkImageMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.newLayout = layout;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+				barrier.image = image.get().image;
+				barrier.subresourceRange.aspectMask = aspect;
+				barrier.subresourceRange.baseMipLevel = 0;
+				barrier.subresourceRange.levelCount = miplevels;
+				barrier.subresourceRange.baseArrayLayer = 0;
+				barrier.subresourceRange.layerCount = 6;
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = 0;
+
+				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+				context.flushCommandBuffer(commandBuffer);
+
+				imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+				imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+
+				imageInfo.imageView = imageView.get();
+				imageInfo.sampler = imageSampler.get();
+				imageInfo.imageLayout = layout; 
+				return;
+			}
+
 			if (mipmapped)
 			{
 				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
 			}
 
-			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 			auto stagingBufferRAII = Managed<BufferObject>({ stagingBuffer, stagingAlloc }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
 
@@ -67,11 +118,11 @@ namespace blaze
 			}
 			vmaUnmapMemory(allocator, stagingAlloc);
 
-			image = Managed(context.createImageCube(width, height, miplevels, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+			image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 			try
 			{
-				VkCommandBuffer commandBuffer = context.startTransferCommands();
+				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
 
 				VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 				VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -84,7 +135,7 @@ namespace blaze
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				barrier.image = image.get().image;
-				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrier.subresourceRange.aspectMask = aspect;
 				barrier.subresourceRange.baseMipLevel = 0;
 				barrier.subresourceRange.levelCount = miplevels;
 				barrier.subresourceRange.baseArrayLayer = 0;
@@ -101,7 +152,7 @@ namespace blaze
 					region.bufferOffset = face * image_data.layerSize;
 					region.bufferRowLength = 0;
 					region.bufferImageHeight = 0;
-					region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					region.imageSubresource.aspectMask = aspect;
 					region.imageSubresource.mipLevel = 0;
 					region.imageSubresource.baseArrayLayer = face;
 					region.imageSubresource.layerCount = 1;
@@ -144,13 +195,13 @@ namespace blaze
 						VkImageBlit blit = {};
 						blit.srcOffsets[0] = { 0, 0, 0 };
 						blit.srcOffsets[1] = { mipwidth, mipheight, 1 };
-						blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						blit.srcSubresource.aspectMask = aspect;
 						blit.srcSubresource.mipLevel = i - 1;
 						blit.srcSubresource.baseArrayLayer = face;
 						blit.srcSubresource.layerCount = 1;
 						blit.dstOffsets[0] = { 0, 0, 0 };
 						blit.dstOffsets[1] = { mipwidth > 1 ? mipwidth / 2 : 1, mipheight > 1 ? mipheight / 2 : 1, 1 };
-						blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						blit.dstSubresource.aspectMask = aspect;
 						blit.dstSubresource.mipLevel = i;
 						blit.dstSubresource.baseArrayLayer = face;
 						blit.dstSubresource.layerCount = 1;
@@ -162,9 +213,9 @@ namespace blaze
 							VK_FILTER_LINEAR);
 
 						barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-						barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						barrier.newLayout = layout;
 						barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-						barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+						barrier.dstAccessMask = access;
 
 						vkCmdPipelineBarrier(commandBuffer,
 							VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
@@ -178,9 +229,9 @@ namespace blaze
 
 					barrier.subresourceRange.baseMipLevel = miplevels - 1;
 					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					barrier.newLayout = layout;
 					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					barrier.dstAccessMask = access;
 
 					vkCmdPipelineBarrier(commandBuffer,
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
@@ -189,19 +240,19 @@ namespace blaze
 						1, &barrier);
 				}
 
-				context.endTransferCommands(commandBuffer);
+				context.flushCommandBuffer(commandBuffer);
 			}
 			catch (std::exception& e)
 			{
 				std::cerr << e.what() << std::endl;
 			}
 
-			imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 			imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 			imageInfo.imageView = imageView.get();
 			imageInfo.sampler = imageSampler.get();
-			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageLayout = layout;
 
 			is_valid = true;
 		}
@@ -213,6 +264,11 @@ namespace blaze
 			imageInfo(std::move(other.imageInfo)),
 			width(other.width),
 			height(other.height),
+			format(other.format),
+			layout(other.layout),
+			usage(other.usage),
+			access(other.access),
+			aspect(other.aspect),
 			is_valid(other.is_valid)
 		{
 		}
@@ -227,8 +283,13 @@ namespace blaze
 			imageView = std::move(other.imageView);
 			imageSampler = std::move(other.imageSampler);
 			imageInfo = std::move(other.imageInfo);
-			width = other.width;
-			height = other.height;
+			width	 = other.width;
+			height	 = other.height;
+			format	 = other.format;
+			layout	 = other.layout;
+			usage	 = other.usage;
+			access	 = other.access;
+			aspect	 = other.aspect;
 			is_valid = other.is_valid;
 			return *this;
 		}
@@ -238,10 +299,51 @@ namespace blaze
 
 		bool valid() const { return is_valid; }
 
-		VkImage get_image() const { return image.get().image; }
-		VkImageView get_imageView() const { return imageView.get(); }
-		VkSampler get_imageSampler() const { return imageSampler.get(); }
+		const VkImage& get_image() const { return image.get().image; }
+		const VkImageView& get_imageView() const { return imageView.get(); }
+		const VkSampler& get_imageSampler() const { return imageSampler.get(); }
 		const VkDescriptorImageInfo& get_imageInfo() const { return imageInfo; }
+		const VkFormat& get_format() const { return format; }
+		const VkImageUsageFlags& get_usage() const { return usage; }
+		const VkImageLayout& get_layout() const { return layout; }
+		const VkAccessFlags& get_access() const { return access; }
+		const VkImageAspectFlags& get_aspect() const { return aspect; }
+
+		void transferLayout(VkCommandBuffer cmdbuffer,
+			VkImageLayout newImageLayout,
+			VkAccessFlags srcAccess = 0,
+			VkAccessFlags dstAccess = 0,
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
+		{
+			auto currentLayout = layout;
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.oldLayout = currentLayout;
+			barrier.newLayout = newImageLayout;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+			barrier.image = image.get().image;
+			barrier.subresourceRange.aspectMask = aspect;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = miplevels;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 6;
+			barrier.srcAccessMask = srcAccess;
+			barrier.dstAccessMask = dstAccess;
+
+			vkCmdPipelineBarrier(cmdbuffer,
+				srcStageMask, dstStageMask, 
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			layout = newImageLayout;
+			imageInfo.imageLayout = newImageLayout;
+		}
 
 	private:
 		VkSampler createSampler(VkDevice device, uint32_t miplevels) const

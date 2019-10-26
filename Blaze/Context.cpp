@@ -198,7 +198,7 @@ namespace blaze
 		return alloc;
 	};
 
-	VkCommandBuffer Context::startTransferCommands() const
+	VkCommandBuffer Context::startCommandBufferRecord() const
 	{
 		VkCommandBuffer commandBuffer;
 		VkCommandBufferAllocateInfo allocInfo = {};
@@ -225,7 +225,7 @@ namespace blaze
 		return commandBuffer;
 	}
 
-	void Context::endTransferCommands(VkCommandBuffer commandBuffer) const
+	void Context::flushCommandBuffer(VkCommandBuffer commandBuffer) const
 	{
 		auto result = vkEndCommandBuffer(commandBuffer);
 		if (result != VK_SUCCESS)

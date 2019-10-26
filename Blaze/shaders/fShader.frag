@@ -43,7 +43,7 @@ layout(push_constant) uniform MaterialData {
 
 layout(location = 0) out vec4 outColor;
 
-const float PI = 3.14159265359f;
+const float PI = 3.1415926535897932384626433832795f;
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
 {

@@ -220,8 +220,8 @@ namespace blaze
 			return ImageObject{ image, allocation, format };
 		}
 
-		VkCommandBuffer startTransferCommands() const;
-		void endTransferCommands(VkCommandBuffer commandBuffer) const;
+		VkCommandBuffer startCommandBufferRecord() const;
+		void flushCommandBuffer(VkCommandBuffer commandBuffer) const;
 
 	private:
 

@@ -6,6 +6,8 @@
 #include "Context.hpp"
 #include "Datatypes.hpp"
 #include "UniformBuffer.hpp"
+#include "TextureCube.hpp"
+#include "Texture2D.hpp"
 
 #include <map>
 #include <vector>
@@ -68,6 +70,14 @@ namespace blaze
 		util::Managed<VkImageView> depthBufferView;
 
 		uint32_t currentFrame{ 0 };
+
+		// Felt cute, may refactor later.
+		struct EnvironmentMaps
+		{
+			TextureCube IrradianceMap;
+			TextureCube PreFilteredMap;
+			Texture2D	LutBrdf2D;
+		} environmentMaps;
 
 	public:
 		Renderer() noexcept
@@ -179,7 +189,8 @@ namespace blaze
 			inFlightFences(std::move(other.inFlightFences)),
 			skyboxCommand(std::move(other.skyboxCommand)),
 			renderCommands(std::move(other.renderCommands)),
-			commandBufferDirty(std::move(other.commandBufferDirty))
+			commandBufferDirty(std::move(other.commandBufferDirty)),
+			environmentMaps(std::move(other.environmentMaps))
 		{
 		}
 
@@ -218,6 +229,7 @@ namespace blaze
 			skyboxCommand = std::move(other.skyboxCommand);
 			renderCommands = std::move(other.renderCommands);
 			commandBufferDirty = std::move(other.commandBufferDirty);
+			environmentMaps = std::move(other.environmentMaps);
 			return *this;
 		}
 
@@ -225,6 +237,8 @@ namespace blaze
 		Renderer& operator=(const Renderer& other) = delete;
 
 		void renderFrame();
+
+		TextureCube createIrradianceCube(VkDescriptorSet environment) const;
 
 		std::pair<uint32_t, uint32_t> get_dimensions() const { return getWindowSize(); }
 		VkSwapchainKHR get_swapchain() const { return swapchain.get(); }

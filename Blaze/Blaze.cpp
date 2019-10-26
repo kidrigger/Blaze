@@ -16,6 +16,7 @@
 #include "TextureCube.hpp"
 #include "Model.hpp"
 #include "Camera.hpp"
+#include "Primitives.hpp"
 
 #include <optional>
 #include <vector>
@@ -136,7 +137,6 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		// fbudrl
 		string skybox_dir = "assets/Environment1.cubemap/";
 		vector<string> skybox_faces{ "negx.bmp", "posx.bmp", "posy.bmp", "negy.bmp", "posz.bmp", "negz.bmp" };
 		for (auto& face : skybox_faces)
@@ -145,33 +145,7 @@ namespace blaze
 		}
 
 		auto skybox = loadImageCube(renderer.get_context(), skybox_faces, true);
-
-		// Hello my old code
-		vector<Vertex> vertices = {
-			{{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.2f}, {1.0f, 1.0f}},
-			{{0.5f, -0.5f, -0.5f}, {1.0f, 0.2f, 0.2f}, {1.0f, 0.0f}},
-			{{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {0.0f, 0.0f}},
-			{{-0.5f, 0.5f, -0.5f}, {0.2f, 1.0f, 0.2f}, {0.0f, 1.0f}},
-			{{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 1.0f}, {0.0f, 0.0f}},
-			{{0.5f, -0.5f, 0.5f}, {1.0f, 0.2f, 1.0f}, {1.0f, 0.0f}},
-			{{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-			{{-0.5f, 0.5f, 0.5f}, {0.2f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-		};
-		vector<uint32_t> indices = {
-			0, 1, 2,
-			0, 2, 3,
-			4, 5, 6,
-			4, 6, 7,
-			1, 0, 6,
-			1, 6, 5,
-			7, 6, 0,
-			7, 0, 3,
-			7, 3, 2,
-			7, 2, 4,
-			4, 2, 1,
-			4, 1, 5
-		};
-		vbo = IndexedVertexBuffer(renderer.get_context(), vertices, indices);
+		vbo = getUVCube(renderer.get_context());
 
 		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureCube& texture, uint32_t binding)
 		{
@@ -211,8 +185,11 @@ namespace blaze
 		poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		poolSize.descriptorCount = 1;
 		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
-		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 2), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_skyboxLayout(), dsPool.get(), skybox, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
+
+		auto irradMap = renderer.createIrradianceCube(ds.get());
+		Managed<VkDescriptorSet> dsIrrad = Managed(createDescriptorSet(renderer.get_skyboxLayout(), dsPool.get(), irradMap, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
 
 
 		auto model = loadModel(renderer, "assets/boombox2/BoomBoxWithAxes.gltf");
@@ -276,8 +253,10 @@ namespace blaze
 				renderer.renderFrame();
 				if (onetime) 
 				{
+					// Skybox rendered outsidewise
 					// renderer.submit(renderCommand);
-					renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
+					// renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
+					renderer.submit([&dsIrrad](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &dsIrrad.get(), 0, nullptr); });
 					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
 					onetime = false;
 				}

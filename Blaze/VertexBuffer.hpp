@@ -45,7 +45,7 @@ namespace blaze
 
 			try
 			{
-				VkCommandBuffer commandBuffer = context.startTransferCommands();
+				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
 
 				VkBufferCopy copyRegion = {};
 				copyRegion.srcOffset = 0;
@@ -53,7 +53,7 @@ namespace blaze
 				copyRegion.size = size;
 				vkCmdCopyBuffer(commandBuffer, stagingBuffer, finalBuffer, 1, &copyRegion);
 
-				context.endTransferCommands(commandBuffer);
+				context.flushCommandBuffer(commandBuffer);
 			}
 			catch (std::exception& e)
 			{
@@ -149,7 +149,7 @@ namespace blaze
 
 			try
 			{
-				VkCommandBuffer commandBuffer = context.startTransferCommands();
+				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
 
 				VkBufferCopy copyRegion = {};
 				copyRegion.srcOffset = 0;
@@ -161,7 +161,7 @@ namespace blaze
 				copyRegion.size = indexSize;
 				vkCmdCopyBuffer(commandBuffer, stagingIndexBuffer, finalIndexBuffer, 1, &copyRegion);
 
-				context.endTransferCommands(commandBuffer);
+				context.flushCommandBuffer(commandBuffer);
 			}
 			catch (std::exception& e)
 			{
