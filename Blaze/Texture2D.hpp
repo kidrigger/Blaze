@@ -22,6 +22,7 @@ namespace blaze
 		VkAccessFlags access{ VK_ACCESS_SHADER_READ_BIT };
 		VkImageAspectFlags aspect{ VK_IMAGE_ASPECT_COLOR_BIT };
 		VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
+		VkSamplerAddressMode samplerAddressMode{ VK_SAMPLER_ADDRESS_MODE_REPEAT };
 	};
 
 	class Texture2D
@@ -62,6 +63,11 @@ namespace blaze
 
 			VmaAllocator allocator = context.get_allocator();
 
+			if (mipmapped)
+			{
+				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
+			}
+
 			if (!image_data.data)
 			{
 				image = Managed(context.createImage(width, height, miplevels, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
@@ -91,7 +97,7 @@ namespace blaze
 				context.flushCommandBuffer(commandBuffer);
 
 				imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-				imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+				imageSampler = Managed(createSampler(context.get_device(), miplevels, image_data.samplerAddressMode), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 				imageInfo.imageView = imageView.get();
 				imageInfo.sampler = imageSampler.get();
@@ -99,11 +105,6 @@ namespace blaze
 
 				is_valid = true;
 				return;
-			}
-
-			if (mipmapped)
-			{
-				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
 			}
 
 			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
@@ -237,7 +238,7 @@ namespace blaze
 			}
 
 			imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-			imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			imageSampler = Managed(createSampler(context.get_device(), miplevels, image_data.samplerAddressMode), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 			imageInfo.imageView = imageView.get();
 			imageInfo.sampler = imageSampler.get();
@@ -259,6 +260,7 @@ namespace blaze
 			access(other.access),
 			aspect(other.aspect),
 			tiling(other.tiling),
+			miplevels(other.miplevels),
 			is_valid(other.is_valid)
 		{
 		}
@@ -281,6 +283,7 @@ namespace blaze
 			access	 = other.access;
 			aspect	 = other.aspect;
 			tiling	 = other.tiling;
+			miplevels = other.miplevels;
 			is_valid = other.is_valid;
 			return *this;
 		}
@@ -299,6 +302,7 @@ namespace blaze
 		const VkImageLayout& get_layout() const { return layout; }
 		const VkAccessFlags& get_access() const { return access; }
 		const VkImageAspectFlags& get_aspect() const { return aspect; }
+		uint32_t get_miplevels() const { return miplevels; }
 
 
 		void transferLayout(VkCommandBuffer cmdbuffer,
@@ -338,15 +342,15 @@ namespace blaze
 		}
 
 	private:
-		VkSampler createSampler(VkDevice device, uint32_t miplevels) const
+		VkSampler createSampler(VkDevice device, uint32_t miplevels, VkSamplerAddressMode addressMode) const
 		{
 			VkSamplerCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.minFilter = VK_FILTER_LINEAR;
-			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeU = addressMode;
+			createInfo.addressModeV = addressMode;
+			createInfo.addressModeW = addressMode;
 			createInfo.anisotropyEnable = VK_TRUE;
 			createInfo.maxAnisotropy = 16;
 			createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;

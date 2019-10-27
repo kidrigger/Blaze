@@ -28,6 +28,9 @@ layout(set = 1, binding = 3) uniform sampler2D occlusionImage;
 layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
 
 layout(set = 2, binding = 0) uniform samplerCube skybox;
+layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
+layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
+layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -61,5 +64,5 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 }
 
 void main() {
-	outColor = SRGBtoLINEAR(texture(skybox, position));
+	outColor = SRGBtoLINEAR(textureLod(skybox, position, 3));
 }

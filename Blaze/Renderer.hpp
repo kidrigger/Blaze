@@ -239,6 +239,8 @@ namespace blaze
 		void renderFrame();
 
 		TextureCube createIrradianceCube(VkDescriptorSet environment) const;
+		TextureCube createPrefilteredCube(VkDescriptorSet environment) const;
+		Texture2D	createBrdfLut() const;
 
 		std::pair<uint32_t, uint32_t> get_dimensions() const { return getWindowSize(); }
 		VkSwapchainKHR get_swapchain() const { return swapchain.get(); }

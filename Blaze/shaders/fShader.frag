@@ -29,6 +29,8 @@ layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
 
 layout(set = 2, binding = 0) uniform samplerCube skybox;
 layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
+layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
+layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -94,8 +96,8 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-    float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
+    float r = roughness;
+    float k = (r * r) / 2.0;
 
     float num   = NdotV;
     float denom = NdotV * (1.0 - k) + k;
@@ -113,8 +115,8 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-	return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+	return F0 + max(vec3(1.0f - roughness), F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
 void main() {
@@ -172,7 +174,7 @@ void main() {
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G   = GeometrySmith(N, V, L, roughness);
-		vec3 F  = fresnelSchlick(max(dot(H, V), 0.0f), F0);
+		vec3 F  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
 
 		vec3 ks = F;
 		vec3 kd = vec3(1.0f) - ks;
@@ -185,13 +187,22 @@ void main() {
 		float NdotL = max(dot(N, L), 0.0f);
 		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
 	}
+
+	vec3 R = reflect(-V, N);   
+
+    const float MAX_REFLECTION_LOD = 10.0f;
+    vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+
+	vec3 F        = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+	vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 	
-	vec3 ks = fresnelSchlick(max(dot(N, V), 0.0), F0);
+	vec3 ks = F;
 	vec3 kd = vec3(1.0f) - ks;
 	kd *= 1.0f - metallic;
 	vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
-	vec3 ambient = kd * diffuse * ao;
+	vec3 ambient = (kd * diffuse + specular) * ao;
 	vec3 color	 = ambient + L0 + emission;
 	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
 }

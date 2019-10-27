@@ -197,8 +197,14 @@ namespace blaze
 		auto irradMap = renderer.createIrradianceCube(ds.get());
 		writeToDescriptor(ds.get(), { {1, irradMap.get_imageInfo()} });
 
-		auto model = loadModel(renderer, "assets/boombox2/BoomBoxWithAxes.gltf");
-		model.get_root()->scale = { 100.0f };
+		auto prefilt = renderer.createPrefilteredCube(ds.get());
+		writeToDescriptor(ds.get(), { {2, prefilt.get_imageInfo()} });
+
+		auto brdfLut = renderer.createBrdfLut();
+		writeToDescriptor(ds.get(), { {3, brdfLut.get_imageInfo()} });
+
+		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
+		// model.get_root()->scale = { 100.0f };
 
 		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay) 
 		{
@@ -216,6 +222,8 @@ namespace blaze
 		double deltaTime = 0.0;
 		int intermittence = 0;
 		double elapsed = 0.0;
+
+		auto rect = getUVRect(renderer.get_context());
 
 		while (!glfwWindowShouldClose(window))
 		{

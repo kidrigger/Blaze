@@ -61,6 +61,11 @@ namespace blaze
 
 			VmaAllocator allocator = context.get_allocator();
 
+			if (mipmapped)
+			{
+				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
+			}
+
 			if (!image_data.data[0] || !image_data.data[1] || !image_data.data[2] || !image_data.data[3] || !image_data.data[4] || !image_data.data[5])
 			{
 				image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
@@ -96,11 +101,6 @@ namespace blaze
 				imageInfo.sampler = imageSampler.get();
 				imageInfo.imageLayout = layout; 
 				return;
-			}
-
-			if (mipmapped)
-			{
-				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
 			}
 
 			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
@@ -269,6 +269,7 @@ namespace blaze
 			usage(other.usage),
 			access(other.access),
 			aspect(other.aspect),
+			miplevels(other.miplevels),
 			is_valid(other.is_valid)
 		{
 		}
@@ -290,6 +291,7 @@ namespace blaze
 			usage	 = other.usage;
 			access	 = other.access;
 			aspect	 = other.aspect;
+			miplevels = other.miplevels;
 			is_valid = other.is_valid;
 			return *this;
 		}
@@ -308,6 +310,7 @@ namespace blaze
 		const VkImageLayout& get_layout() const { return layout; }
 		const VkAccessFlags& get_access() const { return access; }
 		const VkImageAspectFlags& get_aspect() const { return aspect; }
+		uint32_t get_miplevels() const { return miplevels; }
 
 		void transferLayout(VkCommandBuffer cmdbuffer,
 			VkImageLayout newImageLayout,
