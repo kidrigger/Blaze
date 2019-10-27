@@ -21,6 +21,7 @@ namespace blaze
 		VkImageLayout layout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		VkAccessFlags access{ VK_ACCESS_SHADER_READ_BIT };
 		VkImageAspectFlags aspect{ VK_IMAGE_ASPECT_COLOR_BIT };
+		VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
 	};
 
 	class Texture2D
@@ -36,6 +37,7 @@ namespace blaze
 		VkImageLayout layout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		VkAccessFlags access{ VK_ACCESS_SHADER_READ_BIT };
 		VkImageAspectFlags aspect{ VK_IMAGE_ASPECT_COLOR_BIT };
+		VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
 		VkDescriptorImageInfo imageInfo{};
 		uint32_t miplevels{ 1 };
 		bool is_valid{ false };
@@ -52,6 +54,7 @@ namespace blaze
 			usage(image_data.usage),
 			access(image_data.access),
 			aspect(image_data.aspect),
+			tiling(image_data.tiling),
 			is_valid(false)
 		{
 			using namespace util;
@@ -61,7 +64,7 @@ namespace blaze
 
 			if (!image_data.data)
 			{
-				image = Managed(context.createImage(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+				image = Managed(context.createImage(width, height, miplevels, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
 
@@ -255,6 +258,7 @@ namespace blaze
 			usage(other.usage),
 			access(other.access),
 			aspect(other.aspect),
+			tiling(other.tiling),
 			is_valid(other.is_valid)
 		{
 		}
@@ -276,6 +280,7 @@ namespace blaze
 			usage	 = other.usage;
 			access	 = other.access;
 			aspect	 = other.aspect;
+			tiling	 = other.tiling;
 			is_valid = other.is_valid;
 			return *this;
 		}

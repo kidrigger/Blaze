@@ -111,7 +111,7 @@ namespace blaze
 		// cam.addLight(glm::vec3{ 0.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ 4.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ 8.0f, 2.0f, 0.0f }, 1.0f);
-		cam.addLight(glm::vec3(0.0f), 1.0f);
+		// cam.addLight(glm::vec3(0.0f), 1.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -137,17 +137,19 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		string skybox_dir = "assets/Environment1.cubemap/";
+		/*string skybox_dir = "assets/Environment1.cubemap/";
 		vector<string> skybox_faces{ "negx.bmp", "posx.bmp", "posy.bmp", "negy.bmp", "posz.bmp", "negz.bmp" };
 		for (auto& face : skybox_faces)
 		{
 			face = skybox_dir + face;
-		}
+		}*/
+
+		string skybox_faces = "assets/Walk_Of_Fame/Mans_Outside_2k.hdr";
 
 		auto skybox = loadImageCube(renderer.get_context(), skybox_faces, true);
 		vbo = getUVCube(renderer.get_context());
 
-		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool, const TextureCube& texture, uint32_t binding)
+		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool)
 		{
 			VkDescriptorSetAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -162,23 +164,26 @@ namespace blaze
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 			}
 
-			VkDescriptorImageInfo info = {};
-			info.imageView = texture.get_imageView();
-			info.sampler = texture.get_imageSampler();
-			info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-			VkWriteDescriptorSet write = {};
-			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			write.descriptorCount = 1;
-			write.dstSet = descriptorSet;
-			write.dstBinding = 0;
-			write.dstArrayElement = 0;
-			write.pImageInfo = &info;
-
-			vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-
 			return descriptorSet;
+		};
+
+		auto writeToDescriptor = [device = renderer.get_device()](VkDescriptorSet descriptorSet, const vector<pair<uint32_t, VkDescriptorImageInfo>>& images)
+		{
+			vector<VkWriteDescriptorSet> writes;
+			for (auto& image : images)
+			{
+				VkWriteDescriptorSet write = {};
+				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				write.descriptorCount = 1;
+				write.dstSet = descriptorSet;
+				write.dstBinding = image.first;
+				write.dstArrayElement = 0;
+				write.pImageInfo = &image.second;
+				writes.push_back(write);
+			}
+
+			vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 		};
 
 		VkDescriptorPoolSize poolSize = {};
@@ -186,11 +191,11 @@ namespace blaze
 		poolSize.descriptorCount = 1;
 		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
 		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 2), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_skyboxLayout(), dsPool.get(), skybox, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
+		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_environmentLayout(), dsPool.get()), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
+		writeToDescriptor(ds.get(), { {0, skybox.get_imageInfo()} });
 
 		auto irradMap = renderer.createIrradianceCube(ds.get());
-		Managed<VkDescriptorSet> dsIrrad = Managed(createDescriptorSet(renderer.get_skyboxLayout(), dsPool.get(), irradMap, 1), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
-
+		writeToDescriptor(ds.get(), { {1, irradMap.get_imageInfo()} });
 
 		auto model = loadModel(renderer, "assets/boombox2/BoomBoxWithAxes.gltf");
 		model.get_root()->scale = { 100.0f };
@@ -239,7 +244,7 @@ namespace blaze
 				cam.moveBy(cameraPos);
 			}
 			cam.lookTo(cameraFront);
-			cam.setLight(0, cam.get_position(), 1.0f);
+			// cam.setLight(0, cam.get_position(), 1.0f);
 			// cam.setLight(0, glm::vec3{ -8.0f, 2.0f + 0.5f * sin(3*elapsed), 0.5f * cos(3 * elapsed) }, 1.0f);
 			// cam.setLight(1, glm::vec3{ -4.0f, 2.0f + 0.5f * cos(3 * elapsed + 4), 0.5f * sin(3 * elapsed + 4) }, 1.0f);
 			// cam.setLight(2, glm::vec3{ 0.0f, 2.0f + 0.5f * sin(3 * elapsed + 3.14), 0.5f * cos(3 * elapsed + 3.14) }, 1.0f);
@@ -255,8 +260,7 @@ namespace blaze
 				{
 					// Skybox rendered outsidewise
 					// renderer.submit(renderCommand);
-					// renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
-					renderer.submit([&dsIrrad](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &dsIrrad.get(), 0, nullptr); });
+					renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
 					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
 					onetime = false;
 				}

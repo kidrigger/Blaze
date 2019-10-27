@@ -45,7 +45,7 @@ namespace blaze
 		util::Managed<VkDescriptorPool> descriptorPool;
 		util::UnmanagedVector<VkDescriptorSet> descriptorSets;
 
-		util::Managed<VkDescriptorSetLayout> skyboxDescriptorSetLayout;
+		util::Managed<VkDescriptorSetLayout> environmentDescriptorSetLayout;
 		util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
 
 		std::vector<UniformBuffer<CameraUniformBufferObject>> uniformBuffers;
@@ -124,7 +124,7 @@ namespace blaze
 
 				uniformBuffers = createUniformBuffers(cameraUBO);
 				uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
-				skyboxDescriptorSetLayout = Managed(createSkyboxDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+				environmentDescriptorSetLayout = Managed(createEnvironmentDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				materialDescriptorSetLayout = Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 				descriptorSets = createDescriptorSets();
@@ -173,7 +173,7 @@ namespace blaze
 			depthBufferView(std::move(other.depthBufferView)),
 			renderPass(std::move(other.renderPass)),
 			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
-			skyboxDescriptorSetLayout(std::move(other.skyboxDescriptorSetLayout)),
+			environmentDescriptorSetLayout(std::move(other.environmentDescriptorSetLayout)),
 			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
 			descriptorPool(std::move(other.descriptorPool)),
 			descriptorSets(std::move(other.descriptorSets)),
@@ -212,7 +212,7 @@ namespace blaze
 			depthBufferView = std::move(other.depthBufferView);
 			renderPass = std::move(other.renderPass);
 			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
-			skyboxDescriptorSetLayout = std::move(other.skyboxDescriptorSetLayout);
+			environmentDescriptorSetLayout = std::move(other.environmentDescriptorSetLayout);
 			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
 			descriptorPool = std::move(other.descriptorPool);
 			descriptorSets = std::move(other.descriptorSets);
@@ -254,7 +254,7 @@ namespace blaze
 		const VkCommandBuffer& get_commandBuffer(size_t index) const { return commandBuffers[index]; }
 		VkDescriptorSetLayout get_uboLayout() const { return uboDescriptorSetLayout.get(); }
 		VkDescriptorSetLayout get_materialLayout() const { return materialDescriptorSetLayout.get(); }
-		VkDescriptorSetLayout get_skyboxLayout() const { return skyboxDescriptorSetLayout.get(); }
+		VkDescriptorSetLayout get_environmentLayout() const { return environmentDescriptorSetLayout.get(); }
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
@@ -337,7 +337,7 @@ namespace blaze
 		std::vector<VkImageView> createSwapchainImageViews() const;
 		VkRenderPass createRenderPass() const;
 		VkDescriptorSetLayout createUBODescriptorSetLayout() const;
-		VkDescriptorSetLayout createSkyboxDescriptorSetLayout() const;
+		VkDescriptorSetLayout createEnvironmentDescriptorSetLayout() const;
 		VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 		VkDescriptorPool createDescriptorPool() const;
 		std::vector<VkDescriptorSet> createDescriptorSets() const;

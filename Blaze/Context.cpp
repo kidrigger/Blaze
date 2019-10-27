@@ -247,7 +247,11 @@ namespace blaze
 			throw std::runtime_error("Submit Command Buffer failed with " + std::to_string(result));
 		}
 
-		vkWaitForFences(device.get(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		result = vkWaitForFences(device.get(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Wait for fences failed with " + std::to_string(result));
+		}
 		vkDestroyFence(device.get(), fence, nullptr);
 		vkFreeCommandBuffers(device.get(), get_transferCommandPool(), 1, &commandBuffer);
 	}

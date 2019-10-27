@@ -1,5 +1,6 @@
 
 #include "Model.hpp"
+#include <gltf/tiny_gltf.h>
 
 namespace blaze {
 

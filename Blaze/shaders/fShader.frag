@@ -28,6 +28,7 @@ layout(set = 1, binding = 3) uniform sampler2D occlusionImage;
 layout(set = 1, binding = 4) uniform sampler2D emissiveImage;
 
 layout(set = 2, binding = 0) uniform samplerCube skybox;
+layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -141,7 +142,7 @@ void main() {
 		vec3 metalRough = texture(metalRoughnessImage, texCoords0).rgb;
 		metallic		= metalRough.b * material.metallicFactor;
 		roughness		= metalRough.g * material.roughnessFactor;
-		ao				= metalRough.r;
+		ao				= 1.0f;
 	}
 
 	if (material.occlusionTextureSet >= 0) {
@@ -184,8 +185,13 @@ void main() {
 		float NdotL = max(dot(N, L), 0.0f);
 		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
 	}
+	
+	vec3 ks = fresnelSchlick(max(dot(N, V), 0.0), F0);
+	vec3 kd = vec3(1.0f) - ks;
+	kd *= 1.0f - metallic;
+	vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
-	vec3 ambient = vec3(0.03f) * albedo * ao;
+	vec3 ambient = kd * diffuse * ao;
 	vec3 color	 = ambient + L0 + emission;
 	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
 }

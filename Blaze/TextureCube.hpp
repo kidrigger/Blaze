@@ -378,4 +378,5 @@ namespace blaze
 	};
 
 	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_fbudrl, bool mipmapped = true);
+	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::string& name, bool mipmapped = true);
 }

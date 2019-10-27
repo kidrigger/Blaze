@@ -15,6 +15,8 @@
 
 namespace blaze
 {
+	const float PI = 3.1415926535897932384626433f;
+
 	void Renderer::renderFrame()
 	{
 		using namespace std;
@@ -268,35 +270,42 @@ namespace blaze
 		return util::createDescriptorSetLayout(context.get_device(), uboLayoutBindings);
 	}
 
-	VkDescriptorSetLayout Renderer::createSkyboxDescriptorSetLayout() const
+	VkDescriptorSetLayout Renderer::createEnvironmentDescriptorSetLayout() const
 	{
-		std::vector<VkDescriptorSetLayoutBinding> skyboxLayoutBindings = {
+		std::vector<VkDescriptorSetLayoutBinding> envLayoutBindings = {
 			{
-				0, 
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+				0,
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				1,
-				VK_SHADER_STAGE_FRAGMENT_BIT, 
+				VK_SHADER_STAGE_FRAGMENT_BIT,
+				nullptr
+			},
+			{
+				1,
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				1,
+				VK_SHADER_STAGE_FRAGMENT_BIT,
 				nullptr
 			}
 		};
 
-		return util::createDescriptorSetLayout(context.get_device(), skyboxLayoutBindings);
+		return util::createDescriptorSetLayout(context.get_device(), envLayoutBindings);
 	}
 
 	VkDescriptorSetLayout Renderer::createMaterialDescriptorSetLayout() const
 	{
 		std::vector<VkDescriptorSetLayoutBinding> samplerLayoutBindings;
 
-		VkDescriptorSetLayoutBinding layoutBinding = {};
-		layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		layoutBinding.descriptorCount = 1;
-		layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		layoutBinding.pImmutableSamplers = nullptr;
-
 		for (uint32_t bindingLocation = 0; bindingLocation < 5; bindingLocation++)
 		{
-			layoutBinding.binding = bindingLocation;
-			samplerLayoutBindings.push_back(layoutBinding);
+			samplerLayoutBindings.push_back(
+				{
+					bindingLocation,
+					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					1,
+					VK_SHADER_STAGE_FRAGMENT_BIT,
+					nullptr
+				});
 		}
 
 		return util::createDescriptorSetLayout(context.get_device(), samplerLayoutBindings);
@@ -497,7 +506,7 @@ namespace blaze
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {
 			uboDescriptorSetLayout.get(),
 			materialDescriptorSetLayout.get(),
-			skyboxDescriptorSetLayout.get()
+			environmentDescriptorSetLayout.get()
 		};
 
 		std::vector<VkPushConstantRange> pushConstantRanges;
@@ -787,7 +796,7 @@ namespace blaze
 
 		{
 			std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {
-				skyboxDescriptorSetLayout.get()
+				environmentDescriptorSetLayout.get()
 			};
 
 			std::vector<VkPushConstantRange> pushConstantRanges;
@@ -1013,22 +1022,6 @@ namespace blaze
 
 		auto cube = getUVCube(context);
 
-		auto cmdBuffer = context.startCommandBufferRecord();
-
-		// RENDERPASSES
-
-		VkRenderPassBeginInfo renderpassBeginInfo = {};
-		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpassBeginInfo.renderPass = irRenderPass.get();
-		renderpassBeginInfo.framebuffer = irFramebuffer.get();
-		renderpassBeginInfo.renderArea.offset = { 0, 0 };
-		renderpassBeginInfo.renderArea.extent = {dim, dim};
-
-		std::array<VkClearValue, 1> clearColor;
-		clearColor[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-		renderpassBeginInfo.pClearValues = clearColor.data();
-
 		glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f);
 
 		std::vector<glm::mat4> matrices = {
@@ -1047,11 +1040,27 @@ namespace blaze
 		};
 
 		IrradiancePushConstantBlock pcb{};
-		pcb.deltaPhi = 0.1f;
-		pcb.deltaTheta = 0.025f;
+		pcb.deltaPhi = (2.0f * PI) / 180.0f;
+		pcb.deltaTheta = (0.5f * PI) / 64.0f;
 
 		for (int face = 0; face < 6; face++)
 		{
+			auto cmdBuffer = context.startCommandBufferRecord();
+
+			// RENDERPASSES
+
+			VkRenderPassBeginInfo renderpassBeginInfo = {};
+			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderpassBeginInfo.renderPass = irRenderPass.get();
+			renderpassBeginInfo.framebuffer = irFramebuffer.get();
+			renderpassBeginInfo.renderArea.offset = { 0, 0 };
+			renderpassBeginInfo.renderArea.extent = { dim, dim };
+
+			std::array<VkClearValue, 1> clearColor;
+			clearColor[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+			renderpassBeginInfo.pClearValues = clearColor.data();
+
 			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
@@ -1102,14 +1111,17 @@ namespace blaze
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+			context.flushCommandBuffer(cmdBuffer);
 		}
 
+		auto cmdBuffer = context.startCommandBufferRecord();
 		irradianceMap.transferLayout(cmdBuffer,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			0, VK_ACCESS_SHADER_READ_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
 		context.flushCommandBuffer(cmdBuffer);
+
 
 		return irradianceMap;
 	}
