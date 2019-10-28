@@ -64,7 +64,6 @@ namespace blaze
 
 		std::vector<RenderCommand> renderCommands;
 		RenderCommand skyboxCommand;
-		std::vector<bool> commandBufferDirty;
 
 		util::Managed<ImageObject> depthBuffer;
 		util::Managed<VkImageView> depthBufferView;
@@ -138,7 +137,6 @@ namespace blaze
 
 				framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
-				commandBufferDirty.resize(commandBuffers.size(), true);
 
 				max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
 
@@ -189,7 +187,6 @@ namespace blaze
 			inFlightFences(std::move(other.inFlightFences)),
 			skyboxCommand(std::move(other.skyboxCommand)),
 			renderCommands(std::move(other.renderCommands)),
-			commandBufferDirty(std::move(other.commandBufferDirty)),
 			environmentMaps(std::move(other.environmentMaps))
 		{
 		}
@@ -228,7 +225,6 @@ namespace blaze
 			inFlightFences = std::move(other.inFlightFences);
 			skyboxCommand = std::move(other.skyboxCommand);
 			renderCommands = std::move(other.renderCommands);
-			commandBufferDirty = std::move(other.commandBufferDirty);
 			environmentMaps = std::move(other.environmentMaps);
 			return *this;
 		}
@@ -270,10 +266,6 @@ namespace blaze
 		void submit(const RNDRCMD& cmd)
 		{
 			renderCommands.emplace_back(cmd);
-			for (auto& val : commandBufferDirty)
-			{
-				val = true;
-			}
 		}
 
 		template <class RNDRCMD>
@@ -329,7 +321,6 @@ namespace blaze
 
 			framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
-			commandBufferDirty.resize(commandBuffers.size(), true);
 
 			recordCommandBuffers();
 		}

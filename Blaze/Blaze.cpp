@@ -203,7 +203,7 @@ namespace blaze
 		auto brdfLut = renderer.createBrdfLut();
 		writeToDescriptor(ds.get(), { {3, brdfLut.get_imageInfo()} });
 
-		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
+		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
 		// model.get_root()->scale = { 100.0f };
 
 		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay) 
@@ -223,7 +223,8 @@ namespace blaze
 		int intermittence = 0;
 		double elapsed = 0.0;
 
-		auto rect = getUVRect(renderer.get_context());
+		renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
+		renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -259,6 +260,8 @@ namespace blaze
 			// cam.setLight(3, glm::vec3{ 4.0f, 2.0f + 0.5f * sin(3 * elapsed + 1.4), 0.5f * cos(3 * elapsed + 1.4) }, 1.0f);
 			// cam.setLight(4, glm::vec3{ 8.0f, 2.0f + 0.5f * cos(3 * elapsed), 0.5f * sin(3 * elapsed) }, 1.0f);
 
+			model.get_root()->rotation = glm::quat(glm::vec3(0, elapsed, 0));
+
 			try
 			{
 				model.update();
@@ -268,8 +271,6 @@ namespace blaze
 				{
 					// Skybox rendered outsidewise
 					// renderer.submit(renderCommand);
-					renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
-					renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
 					onetime = false;
 				}
 			}
@@ -279,7 +280,7 @@ namespace blaze
 			}
 
 			deltaTime = glfwGetTime() - prevTime;
-			printf("\r%.4lf", deltaTime);
+			printf("\r%.4lf %.4lf", deltaTime, elapsed);
 		}
 
 		cout << endl;

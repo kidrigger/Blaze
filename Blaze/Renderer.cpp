@@ -631,62 +631,56 @@ namespace blaze
 	{
 		for (int i = 0; i < commandBuffers.size(); i++)
 		{
-			commandBufferDirty[i] = true;
 			rebuildCommandBuffer(i);
 		}
 	}
 
 	void Renderer::rebuildCommandBuffer(int frame)
 	{
-		if (commandBufferDirty[frame])
+		vkWaitForFences(context.get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+
+		VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+		auto result = vkBeginCommandBuffer(commandBuffers[frame], &commandBufferBeginInfo);
+		if (result != VK_SUCCESS)
 		{
-			vkWaitForFences(context.get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
+		}
 
-			VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-			commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		VkRenderPassBeginInfo renderpassBeginInfo = {};
+		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderpassBeginInfo.renderPass = renderPass.get();
+		renderpassBeginInfo.framebuffer = framebuffers[frame];
+		renderpassBeginInfo.renderArea.offset = { 0, 0 };
+		renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
 
-			auto result = vkBeginCommandBuffer(commandBuffers[frame], &commandBufferBeginInfo);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
-			}
+		std::array<VkClearValue, 2> clearColor;
+		clearColor[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		clearColor[1].depthStencil = { 1.0f, 0 };
+		renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+		renderpassBeginInfo.pClearValues = clearColor.data();
+		vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			VkRenderPassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderPass.get();
-			renderpassBeginInfo.framebuffer = framebuffers[frame];
-			renderpassBeginInfo.renderArea.offset = { 0, 0 };
-			renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
+		vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
 
-			std::array<VkClearValue, 2> clearColor;
-			clearColor[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-			clearColor[1].depthStencil = { 1.0f, 0 };
-			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-			renderpassBeginInfo.pClearValues = clearColor.data();
-			vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 0, 1, &descriptorSets[frame], 0, nullptr);
 
-			vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
+		for (auto& cmd : renderCommands)
+		{
+			cmd(commandBuffers[frame], graphicsPipelineLayout.get());
+		}
 
-			vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 0, 1, &descriptorSets[frame], 0, nullptr);
+		vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline.get());
+		skyboxCommand(commandBuffers[frame], graphicsPipelineLayout.get());
 
-			for (auto& cmd : renderCommands)
-			{
-				cmd(commandBuffers[frame], graphicsPipelineLayout.get());
-			}
+		vkCmdEndRenderPass(commandBuffers[frame]);
 
-			vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline.get());
-			skyboxCommand(commandBuffers[frame], graphicsPipelineLayout.get());
-
-			vkCmdEndRenderPass(commandBuffers[frame]);
-
-			result = vkEndCommandBuffer(commandBuffers[frame]);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
-			}
-
-			commandBufferDirty[frame] = false;
+		result = vkEndCommandBuffer(commandBuffers[frame]);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
 		}
 	}
 
