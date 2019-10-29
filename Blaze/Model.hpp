@@ -159,8 +159,32 @@ namespace blaze
 			glm::decompose(TRS, scale, rotation, translation, skew, pers);
 		}
 
-		Node(const Node& other) = default;
-		Node& operator=(const Node& other) = default;
+		Node(Node&& other)
+			: translation(other.translation),
+			rotation(other.rotation),
+			scale(other.scale),
+			localTRS(other.localTRS),
+			pcb(other.pcb),
+			children(std::move(other.children))
+		{
+		}
+		Node& operator=(Node&& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+			translation = other.translation;
+			rotation = other.rotation;
+			scale = other.scale;
+			localTRS = other.localTRS;
+			pcb = other.pcb;
+			children = std::move(other.children);
+			return *this;
+		}
+
+		Node(const Node& other) = delete;
+		Node& operator=(const Node& other) = delete;
 
 		void update(const glm::mat4 parentTRS = glm::mat4(1.0f))
 		{
@@ -211,7 +235,8 @@ namespace blaze
 		}
 
 		Model(Model&& other) noexcept
-			: primitives(std::move(other.primitives)),
+			: root(std::move(other.root)),
+			primitives(std::move(other.primitives)),
 			prime_nodes(std::move(other.prime_nodes)),
 			nodes(std::move(other.nodes)),
 			materials(std::move(other.materials)),
@@ -226,6 +251,7 @@ namespace blaze
 			{
 				return *this;
 			}
+			root = std::move(other.root);
 			primitives = std::move(other.primitives);
 			prime_nodes = std::move(other.prime_nodes);
 			nodes = std::move(other.nodes);
