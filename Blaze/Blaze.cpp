@@ -144,7 +144,7 @@ namespace blaze
 			face = skybox_dir + face;
 		}*/
 
-		string skybox_faces = "assets/Walk_Of_Fame/Mans_Outside_2k.hdr";
+		string skybox_faces = "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr";
 
 		auto skybox = loadImageCube(renderer.get_context(), skybox_faces, true);
 		vbo = getUVCube(renderer.get_context());
@@ -188,9 +188,9 @@ namespace blaze
 
 		VkDescriptorPoolSize poolSize = {};
 		poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSize.descriptorCount = 1;
+		poolSize.descriptorCount = 4;
 		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
-		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 2), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_environmentLayout(), dsPool.get()), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
 		writeToDescriptor(ds.get(), { {0, skybox.get_imageInfo()} });
 

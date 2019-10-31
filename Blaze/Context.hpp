@@ -72,7 +72,7 @@ namespace blaze
 					std::cout << "Using " << props.deviceName << std::endl;
 				}
 
-				allocator = util::Managed(createAllocator(), [](VmaAllocator& alloc) {vmaDestroyAllocator(alloc); });
+				allocator = util::Managed(createAllocator(), [](VmaAllocator& alloc) { vmaDestroyAllocator(alloc); });
 
 				isComplete = true;
 			}

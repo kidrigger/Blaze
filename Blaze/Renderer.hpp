@@ -70,14 +70,6 @@ namespace blaze
 
 		uint32_t currentFrame{ 0 };
 
-		// Felt cute, may refactor later.
-		struct EnvironmentMaps
-		{
-			TextureCube IrradianceMap;
-			TextureCube PreFilteredMap;
-			Texture2D	LutBrdf2D;
-		} environmentMaps;
-
 	public:
 		Renderer() noexcept
 		{
@@ -186,8 +178,7 @@ namespace blaze
 			renderFinishedSem(std::move(other.renderFinishedSem)),
 			inFlightFences(std::move(other.inFlightFences)),
 			skyboxCommand(std::move(other.skyboxCommand)),
-			renderCommands(std::move(other.renderCommands)),
-			environmentMaps(std::move(other.environmentMaps))
+			renderCommands(std::move(other.renderCommands))
 		{
 		}
 
@@ -225,7 +216,6 @@ namespace blaze
 			inFlightFences = std::move(other.inFlightFences);
 			skyboxCommand = std::move(other.skyboxCommand);
 			renderCommands = std::move(other.renderCommands);
-			environmentMaps = std::move(other.environmentMaps);
 			return *this;
 		}
 
