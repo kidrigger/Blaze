@@ -192,7 +192,7 @@ namespace blaze
 
 	VkRenderPass Renderer::createRenderPass() const
 	{
-		return util::createRenderPass(context.get_device(), swapchainFormat.get(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		return util::createRenderPass(context.get_device(), swapchainFormat.get(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	}
 
 	VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
@@ -344,14 +344,14 @@ namespace blaze
 		return std::make_tuple(pipelineLayout, graphicsPipeline, skyboxPipeline);
 	}
 
-	std::vector<VkFramebuffer> Renderer::createFramebuffers() const
+	std::vector<VkFramebuffer> Renderer::createRenderFramebuffers() const
 	{
-		using std::vector;
+		using namespace std;
 
-		vector<VkFramebuffer> swapchainFramebuffers(swapchainImageViews.size());
+		vector<VkFramebuffer> frameBuffers(swapchainImageViews.size());
 		for (size_t i = 0; i < swapchainImageViews.size(); i++)
 		{
-			std::array<VkImageView, 2> attachments = {
+			vector<VkImageView> attachments = {
 				swapchainImageViews[i],
 				depthBufferView.get()
 			};
@@ -365,17 +365,17 @@ namespace blaze
 			createInfo.height = swapchainExtent.get().height;
 			createInfo.layers = 1;
 
-			auto result = vkCreateFramebuffer(context.get_device(), &createInfo, nullptr, &swapchainFramebuffers[i]);
+			auto result = vkCreateFramebuffer(context.get_device(), &createInfo, nullptr, &frameBuffers[i]);
 			if (result != VK_SUCCESS)
 			{
 				for (size_t j = 0; j < i; j++)
 				{
-					vkDestroyFramebuffer(context.get_device(), swapchainFramebuffers[i], nullptr);
+					vkDestroyFramebuffer(context.get_device(), frameBuffers[i], nullptr);
 				}
-				throw std::runtime_error("Framebuffer creation failed with " + std::to_string(result));
+				throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
 			}
 		}
-		return swapchainFramebuffers;
+		return frameBuffers;
 	}
 
 	std::vector<VkCommandBuffer> Renderer::allocateCommandBuffers() const
@@ -420,7 +420,7 @@ namespace blaze
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderpassBeginInfo.renderPass = renderPass.get();
-		renderpassBeginInfo.framebuffer = framebuffers[frame];
+		renderpassBeginInfo.framebuffer = renderFramebuffers[frame];
 		renderpassBeginInfo.renderArea.offset = { 0, 0 };
 		renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
 
@@ -437,13 +437,15 @@ namespace blaze
 
 		for (auto& cmd : renderCommands)
 		{
-			cmd(commandBuffers[frame], graphicsPipelineLayout.get());
+			cmd(commandBuffers[frame], graphicsPipelineLayout.get(), frame);
 		}
 
 		vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline.get());
-		skyboxCommand(commandBuffers[frame], graphicsPipelineLayout.get());
+		skyboxCommand(commandBuffers[frame], graphicsPipelineLayout.get(), frame);
 
 		vkCmdEndRenderPass(commandBuffers[frame]);
+
+		gui.draw(commandBuffers[frame], frame);
 
 		result = vkEndCommandBuffer(commandBuffers[frame]);
 		if (result != VK_SUCCESS)
@@ -656,7 +658,7 @@ namespace blaze
 		uint32_t totalMips = irradianceMap.get_miplevels();
 		uint32_t mipsize = dim;
 		auto cmdBuffer = context.startCommandBufferRecord();
-		for (int miplevel = 0; miplevel < totalMips; miplevel++)
+		for (uint32_t miplevel = 0; miplevel < totalMips; miplevel++)
 		{
 			for (int face = 0; face < 6; face++)
 			{

@@ -154,6 +154,7 @@ namespace blaze::util
 		ManagedVector(const ManagedVector& other) = delete;
 		ManagedVector& operator=(const ManagedVector& other) = delete;
 
+		const std::vector<T>& get() const { return handles; }
 		const T& get(size_t index) const { return handles[index]; }
 		void set(size_t index, const T& val) { handles[index] = val; }
 		T& operator[](size_t index) { return handles[index]; }
@@ -226,6 +227,7 @@ namespace blaze::util
 		ManagedVector(const ManagedVector& other) = delete;
 		ManagedVector& operator=(const ManagedVector& other) = delete;
 
+		const std::vector<T>& get() const { return handles; }
 		const T& get(size_t index) const { return handles[index]; }
 		void set(size_t index, const T& val) { handles[index] = val; }
 		T& operator[](size_t index) { return handles[index]; }
@@ -284,6 +286,7 @@ namespace blaze::util
 		UnmanagedVector(const UnmanagedVector& other) = delete;
 		UnmanagedVector& operator=(const UnmanagedVector& other) = delete;
 
+		const std::vector<T>& get() const { return handles; }
 		const T& get(size_t index) const { return handles[index]; }
 		void set(size_t index, const T& val) { handles[index] = val; }
 		T& operator[](size_t index) { return handles[index]; }

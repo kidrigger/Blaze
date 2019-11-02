@@ -120,7 +120,7 @@ namespace blaze::util
 		return descriptorSetLayout;
 	}
 
-	VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkImageLayout finalLayout)
+	VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkImageLayout finalLayout, VkImageLayout initialLayout, VkAttachmentLoadOp colorLoadOp)
 	{
 		std::vector<VkAttachmentDescription> attachments;
 		VkAttachmentReference colorAttachmentRef;
@@ -128,11 +128,11 @@ namespace blaze::util
 		VkAttachmentDescription colorAttachment = {};
 		colorAttachment.format = colorAttachmentFormat;
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.loadOp = colorLoadOp;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachment.initialLayout = initialLayout;
 		colorAttachment.finalLayout = finalLayout;
 		attachments.push_back(colorAttachment);
 
@@ -207,7 +207,8 @@ namespace blaze::util
 
 	VkPipeline createGraphicsPipeline(VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass,
 		VkExtent2D viewPortSize, const std::string& vShader, const std::string& fShader, const std::vector<VkDynamicState>& dynamicStates,
-		VkCullModeFlags cullMode, VkBool32 depthTest, VkBool32 depthWrite, VkCompareOp depthCompareOp)
+		VkCullModeFlags cullMode, VkBool32 depthTest, VkBool32 depthWrite, VkCompareOp depthCompareOp,
+		VkVertexInputBindingDescription vertBindingDescription, const std::vector<VkVertexInputAttributeDescription>& vertAttributeDescription)
 	{
 		VkPipelineShaderStageCreateInfo vertexShaderStageCreateInfo = {};
 		VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo = {};
@@ -233,8 +234,8 @@ namespace blaze::util
 			fragmentShaderStageCreateInfo
 		};
 
-		auto bindingDescriptions = Vertex::getBindingDescription();
-		auto attributeDescriptions = Vertex::getAttributeDescriptions();
+		auto bindingDescriptions = vertBindingDescription;
+		auto attributeDescriptions = vertAttributeDescription;
 
 		VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
 		vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -283,8 +284,14 @@ namespace blaze::util
 		multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 		VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+		colorblendAttachment.blendEnable = VK_TRUE;
 		colorblendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorblendAttachment.blendEnable = VK_FALSE;
+		colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
 		VkPipelineColorBlendStateCreateInfo colorblendCreateInfo = {};
 		colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

@@ -17,6 +17,7 @@
 #include "Model.hpp"
 #include "Camera.hpp"
 #include "Primitives.hpp"
+#include "GUI.hpp"
 
 #include <optional>
 #include <vector>
@@ -42,8 +43,8 @@
 namespace blaze
 {
 	// Constants
-	const int WIDTH = 800;
-	const int HEIGHT = 600;
+	const int WIDTH = 1920;
+	const int HEIGHT = 1080;
 
 #ifdef VALIDATION_LAYERS_ENABLED
 	const bool enableValidationLayers = true;
@@ -102,6 +103,7 @@ namespace blaze
 		// Variables
 		GLFWwindow* window = nullptr;
 		Renderer renderer;
+		GUI gui;
 		IndexedVertexBuffer<Vertex> vbo;
 		Texture2D image;
 
@@ -117,9 +119,9 @@ namespace blaze
 		assert(glfwInit());
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
+		// glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
 		glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
-		window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", nullptr, nullptr);
+		window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", glfwGetPrimaryMonitor(), nullptr);
 		assert(window != nullptr);
 
 		{
@@ -128,8 +130,8 @@ namespace blaze
 			mouse_callback(window, x, y);
 		}
 
-		glfwSetCursorPosCallback(window, mouse_callback);
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		// glfwSetCursorPosCallback(window, mouse_callback);
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 		renderer = Renderer(window);
 		if (!renderer.complete())
@@ -188,7 +190,7 @@ namespace blaze
 
 		VkDescriptorPoolSize poolSize = {};
 		poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSize.descriptorCount = 4;
+		poolSize.descriptorCount = 1;
 		vector<VkDescriptorPoolSize> poolSizes = { poolSize };
 		Managed<VkDescriptorPool> dsPool = Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1), [dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 		Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_environmentLayout(), dsPool.get()), [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
@@ -206,7 +208,7 @@ namespace blaze
 		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
 		// model.get_root()->scale = { 100.0f };
 
-		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay) 
+		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) 
 		{
 			VkBuffer vbufs[] = { vbo.get_vertexBuffer() };
 			VkDeviceSize offsets[] = { 0 };
@@ -223,8 +225,10 @@ namespace blaze
 		int intermittence = 0;
 		double elapsed = 0.0;
 
-		renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
-		renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout) { model.draw(cmdBuffer, layout); });
+		renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frameCount) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
+		renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frameCount) { model.draw(cmdBuffer, layout); });
+
+		float lines[6000] = { 0 };
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -251,6 +255,19 @@ namespace blaze
 				if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 					cameraPos += glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
 				cam.moveBy(cameraPos);
+
+				double x = lastX;
+				double y = lastY;
+				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+					y = lastY + 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+					y = lastY - 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+					x = lastX + 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+					x = lastX - 1.0f;
+				mouse_callback(window, x, y);
+
 			}
 			cam.lookTo(cameraFront);
 			// cam.setLight(0, cam.get_position(), 1.0f);
@@ -262,17 +279,27 @@ namespace blaze
 
 			model.get_root()->rotation = glm::quat(glm::vec3(0, elapsed, 0));
 
+			GUI::startFrame();
+			{
+				ImGui::Begin("Hello, Vulkan");
+				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+				memcpy(lines, lines+1, 5999 * sizeof(float));
+				lines[5999] = 1000.0f / ImGui::GetIO().Framerate;
+				ImGui::PlotLines("FPS", lines, 6000, 0, nullptr, 0, 3);
+				bool x = ImGui::Button("Exit");
+				if (x)
+				{
+					glfwSetWindowShouldClose(window, GLFW_TRUE);
+				}
+				ImGui::End();
+			}
+			GUI::endFrame();
+
 			try
 			{
 				model.update();
 				renderer.set_cameraUBO(cam.getUbo());
 				renderer.renderFrame();
-				if (onetime) 
-				{
-					// Skybox rendered outsidewise
-					// renderer.submit(renderCommand);
-					onetime = false;
-				}
 			}
 			catch (std::exception& e)
 			{
@@ -280,7 +307,6 @@ namespace blaze
 			}
 
 			deltaTime = glfwGetTime() - prevTime;
-			printf("\r%.4lf %.4lf", deltaTime, elapsed);
 		}
 
 		cout << endl;

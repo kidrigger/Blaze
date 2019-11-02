@@ -64,5 +64,5 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 }
 
 void main() {
-	outColor = SRGBtoLINEAR(textureLod(skybox, position, 3));
+	outColor = vec4(SRGBtoLINEAR(texture(skybox, position)).rgb, 1.0f);
 }

@@ -30,31 +30,38 @@ namespace blaze
 			return bindingDesc;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions()
+		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
 		{
-			std::array<VkVertexInputAttributeDescription, 4> attributeDesc = {};
+			std::vector<VkVertexInputAttributeDescription> attributeDescs;
+			uint32_t idx = 0;
+			{
+				VkVertexInputAttributeDescription attributeDesc = {};
+				attributeDesc.binding = 0;
+				attributeDesc.location = idx++;
+				attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
+				attributeDesc.offset = offsetof(Vertex, position);
+				attributeDescs.push_back(attributeDesc);
 
-			attributeDesc[0].binding = 0;
-			attributeDesc[0].location = 0;
-			attributeDesc[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDesc[0].offset = offsetof(Vertex, position);
+				attributeDesc.binding = 0;
+				attributeDesc.location = idx++;
+				attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
+				attributeDesc.offset = offsetof(Vertex, normal);
+				attributeDescs.push_back(attributeDesc);
 
-			attributeDesc[1].binding = 0;
-			attributeDesc[1].location = 1;
-			attributeDesc[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDesc[1].offset = offsetof(Vertex, normal);
+				attributeDesc.binding = 0;
+				attributeDesc.location = idx++;
+				attributeDesc.format = VK_FORMAT_R32G32_SFLOAT;
+				attributeDesc.offset = offsetof(Vertex, texCoord0);
+				attributeDescs.push_back(attributeDesc);
 
-			attributeDesc[2].binding = 0;
-			attributeDesc[2].location = 2;
-			attributeDesc[2].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDesc[2].offset = offsetof(Vertex, texCoord0);
+				attributeDesc.binding = 0;
+				attributeDesc.location = idx++;
+				attributeDesc.format = VK_FORMAT_R32G32_SFLOAT;
+				attributeDesc.offset = offsetof(Vertex, texCoord1);
+				attributeDescs.push_back(attributeDesc);
+			}
 
-			attributeDesc[3].binding = 0;
-			attributeDesc[3].location = 3;
-			attributeDesc[3].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDesc[3].offset = offsetof(Vertex, texCoord1);
-
-			return attributeDesc;
+			return attributeDescs;
 		}
 	};
 

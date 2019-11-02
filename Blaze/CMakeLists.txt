@@ -10,6 +10,7 @@ file(GLOB_RECURSE SOURCE_FILES
 	"util/*.cpp"
 	"vma/*.cpp"
 	"gltf/*.cpp"
+	"gui/*.cpp"
 	)
 
 file(GLOB_RECURSE HEADER_FILES
@@ -17,6 +18,8 @@ file(GLOB_RECURSE HEADER_FILES
 	"util/*.hpp"
 	"vma/*.h"
 	"gltf/*.h"
+	"gui/*.h"
+	"gui/*.hpp"
 	"gltf/*.hpp"
 	)
 

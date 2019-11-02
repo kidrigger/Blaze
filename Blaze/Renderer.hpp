@@ -8,6 +8,7 @@
 #include "UniformBuffer.hpp"
 #include "TextureCube.hpp"
 #include "Texture2D.hpp"
+#include "GUI.hpp"
 
 #include <map>
 #include <vector>
@@ -19,7 +20,7 @@
 namespace blaze
 {
 	class Renderer;
-	using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout)>;
+	using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout, uint32_t frameCount)>;
 
 	class Renderer
 	{
@@ -31,6 +32,7 @@ namespace blaze
 		std::function<std::pair<uint32_t, uint32_t>(void)> getWindowSize;
 
 		Context context;
+		GUI gui;
 
 		util::Managed<VkSwapchainKHR> swapchain;
 		util::Unmanaged<VkFormat> swapchainFormat;
@@ -55,7 +57,7 @@ namespace blaze
 		util::Managed<VkPipeline> graphicsPipeline;
 		util::Managed<VkPipeline> skyboxPipeline;
 
-		util::ManagedVector<VkFramebuffer> framebuffers;
+		util::ManagedVector<VkFramebuffer> renderFramebuffers;
 		util::ManagedVector<VkCommandBuffer, false> commandBuffers;
 
 		util::ManagedVector<VkSemaphore> imageAvailableSem;
@@ -87,7 +89,7 @@ namespace blaze
 			using namespace std;
 			using namespace util;
 
-			skyboxCommand = [](VkCommandBuffer cb, VkPipelineLayout lay) {};
+			skyboxCommand = [](VkCommandBuffer cb, VkPipelineLayout lay, uint32_t frameCount) {};
 
 			glfwSetWindowUserPointer(window, this);
 			glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height)
@@ -127,7 +129,7 @@ namespace blaze
 					skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
 				}
 
-				framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+				renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
 
 				max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
@@ -138,6 +140,8 @@ namespace blaze
 					renderFinishedSem = ManagedVector(endSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
 					inFlightFences = ManagedVector(fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
 				}
+
+				gui = GUI(window, context, swapchainExtent.get(), swapchainFormat.get(), swapchainImageViews.get());
 
 				recordCommandBuffers();
 
@@ -154,6 +158,7 @@ namespace blaze
 			: getWindowSize(std::move(other.getWindowSize)),
 			isComplete(other.isComplete),
 			context(std::move(other.context)),
+			gui(std::move(other.gui)),
 			swapchain(std::move(other.swapchain)),
 			swapchainFormat(std::move(other.swapchainFormat)),
 			swapchainExtent(std::move(other.swapchainExtent)),
@@ -172,7 +177,7 @@ namespace blaze
 			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
 			graphicsPipeline(std::move(other.graphicsPipeline)),
 			skyboxPipeline(std::move(other.skyboxPipeline)),
-			framebuffers(std::move(other.framebuffers)),
+			renderFramebuffers(std::move(other.renderFramebuffers)),
 			commandBuffers(std::move(other.commandBuffers)),
 			imageAvailableSem(std::move(other.imageAvailableSem)),
 			renderFinishedSem(std::move(other.renderFinishedSem)),
@@ -191,6 +196,7 @@ namespace blaze
 			getWindowSize = std::move(other.getWindowSize);
 			isComplete = other.isComplete;
 			context = std::move(other.context);
+			gui = std::move(other.gui);
 			swapchain = std::move(other.swapchain);
 			swapchainFormat = std::move(other.swapchainFormat);
 			swapchainExtent = std::move(other.swapchainExtent);
@@ -209,7 +215,7 @@ namespace blaze
 			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
 			graphicsPipeline = std::move(other.graphicsPipeline);
 			skyboxPipeline = std::move(other.skyboxPipeline);
-			framebuffers = std::move(other.framebuffers);
+			renderFramebuffers = std::move(other.renderFramebuffers);
 			commandBuffers = std::move(other.commandBuffers);
 			imageAvailableSem = std::move(other.imageAvailableSem);
 			renderFinishedSem = std::move(other.renderFinishedSem);
@@ -229,20 +235,21 @@ namespace blaze
 		Texture2D	createBrdfLut() const;
 
 		std::pair<uint32_t, uint32_t> get_dimensions() const { return getWindowSize(); }
-		VkSwapchainKHR get_swapchain() const { return swapchain.get(); }
-		VkFormat get_swapchainFormat() const { return swapchainFormat.get(); }
-		VkExtent2D get_swapchainExtent() const { return swapchainExtent.get(); }
+		const VkSwapchainKHR& get_swapchain() const { return swapchain.get(); }
+		const VkFormat& get_swapchainFormat() const { return swapchainFormat.get(); }
+		const VkExtent2D& get_swapchainExtent() const { return swapchainExtent.get(); }
 		size_t get_swapchainImageCount() const { return swapchainImageViews.size(); }
 		const VkImageView& get_swapchainImageView(size_t index) const { return swapchainImageViews[index]; }
-		VkRenderPass get_renderPass() const { return renderPass.get(); }
-		VkPipeline get_graphicsPipeline() const { return graphicsPipeline.get(); }
-		size_t get_framebufferCount() const { return framebuffers.size(); }
-		const VkFramebuffer& get_framebuffer(size_t index) const { return framebuffers[index]; }
+		const std::vector<VkImageView>& get_swapchainImageViews() const { return swapchainImageViews.get(); }
+		const VkRenderPass& get_renderPass() const { return renderPass.get(); }
+		const VkPipeline& get_graphicsPipeline() const { return graphicsPipeline.get(); }
+		size_t get_framebufferCount() const { return renderFramebuffers.size(); }
+		const VkFramebuffer& get_framebuffer(size_t index) const { return renderFramebuffers[index]; }
 		size_t get_commandBufferCount() const { return commandBuffers.size(); }
 		const VkCommandBuffer& get_commandBuffer(size_t index) const { return commandBuffers[index]; }
-		VkDescriptorSetLayout get_uboLayout() const { return uboDescriptorSetLayout.get(); }
-		VkDescriptorSetLayout get_materialLayout() const { return materialDescriptorSetLayout.get(); }
-		VkDescriptorSetLayout get_environmentLayout() const { return environmentDescriptorSetLayout.get(); }
+		const VkDescriptorSetLayout& get_uboLayout() const { return uboDescriptorSetLayout.get(); }
+		const VkDescriptorSetLayout& get_materialLayout() const { return materialDescriptorSetLayout.get(); }
+		const VkDescriptorSetLayout& get_environmentLayout() const { return environmentDescriptorSetLayout.get(); }
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
@@ -309,7 +316,7 @@ namespace blaze
 				skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
 			}
 
-			framebuffers = ManagedVector(createFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+			renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
 
 			recordCommandBuffers();
@@ -326,7 +333,7 @@ namespace blaze
 		std::vector<VkDescriptorSet> createDescriptorSets() const;
 		std::vector<UniformBuffer<CameraUniformBufferObject>> createUniformBuffers(const CameraUniformBufferObject& ubo) const;
 		std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
-		std::vector<VkFramebuffer> createFramebuffers() const;
+		std::vector<VkFramebuffer> createRenderFramebuffers() const;
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
 		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const;
 		void recordCommandBuffers();
