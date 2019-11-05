@@ -165,7 +165,8 @@ namespace blaze
 			scale(other.scale),
 			localTRS(other.localTRS),
 			pcb(other.pcb),
-			children(std::move(other.children))
+			children(std::move(other.children)),
+			primitive_range(std::move(other.primitive_range))
 		{
 		}
 		Node& operator=(Node&& other)
@@ -180,6 +181,7 @@ namespace blaze
 			localTRS = other.localTRS;
 			pcb = other.pcb;
 			children = std::move(other.children);
+			primitive_range = std::move(other.primitive_range);
 			return *this;
 		}
 

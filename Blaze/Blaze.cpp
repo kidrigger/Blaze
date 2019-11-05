@@ -205,7 +205,7 @@ namespace blaze
 		auto brdfLut = renderer.createBrdfLut();
 		writeToDescriptor(ds.get(), { {3, brdfLut.get_imageInfo()} });
 
-		auto model = loadModel(renderer, "assets/helmet/DamagedHelmet.gltf");
+		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
 		// model.get_root()->scale = { 100.0f };
 
 		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) 
