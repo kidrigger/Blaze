@@ -21,6 +21,12 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
 	vec4 lightPos[16];
 } ubo;
 
+layout(set = 0, binding = 1) uniform SettingsUBO {
+	int viewMap;
+	int skyboxEnabled;
+	int enableIBL;
+} debugSettings;
+
 layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
 layout(set = 1, binding = 1) uniform sampler2D metalRoughnessImage;
 layout(set = 1, binding = 2) uniform sampler2D normalImage;
@@ -85,5 +91,5 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 }
 
 void main() {
-	outColor = vec4(SRGBtoLINEAR(tonemap(textureLod(skybox, position, 0))).rgb, 1.0f);
+	outColor = (debugSettings.skyboxEnabled > 0) ? vec4(SRGBtoLINEAR(tonemap(textureLod(skybox, position, 0))).rgb, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 1.0f);
 }

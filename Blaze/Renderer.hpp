@@ -45,13 +45,15 @@ namespace blaze
 
 		util::Managed<VkDescriptorSetLayout> uboDescriptorSetLayout;
 		util::Managed<VkDescriptorPool> descriptorPool;
-		util::UnmanagedVector<VkDescriptorSet> descriptorSets;
+		util::UnmanagedVector<VkDescriptorSet> uboDescriptorSets;
 
 		util::Managed<VkDescriptorSetLayout> environmentDescriptorSetLayout;
 		util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
 
-		std::vector<UniformBuffer<CameraUniformBufferObject>> uniformBuffers;
+		std::vector<UniformBuffer<CameraUniformBufferObject>> cameraUniformBuffers;
 		CameraUniformBufferObject cameraUBO{};
+		std::vector<UniformBuffer<SettingsUniformBufferObject>> settingsUniformBuffers;
+		SettingsUniformBufferObject settingsUBO{};
 
 		util::Managed<VkPipelineLayout> graphicsPipelineLayout;
 		util::Managed<VkPipeline> graphicsPipeline;
@@ -115,12 +117,13 @@ namespace blaze
 
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
-				uniformBuffers = createUniformBuffers(cameraUBO);
+				cameraUniformBuffers = createUniformBuffers(cameraUBO);
+				settingsUniformBuffers = createUniformBuffers(settingsUBO);
 				uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				environmentDescriptorSetLayout = Managed(createEnvironmentDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				materialDescriptorSetLayout = Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-				descriptorSets = createDescriptorSets();
+				uboDescriptorSets = createCameraDescriptorSets();
 
 				{
 					auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
@@ -171,9 +174,11 @@ namespace blaze
 			environmentDescriptorSetLayout(std::move(other.environmentDescriptorSetLayout)),
 			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
 			descriptorPool(std::move(other.descriptorPool)),
-			descriptorSets(std::move(other.descriptorSets)),
-			uniformBuffers(std::move(other.uniformBuffers)),
+			uboDescriptorSets(std::move(other.uboDescriptorSets)),
+			cameraUniformBuffers(std::move(other.cameraUniformBuffers)),
+			settingsUniformBuffers(std::move(other.settingsUniformBuffers)),
 			cameraUBO(other.cameraUBO),
+			settingsUBO(other.settingsUBO),
 			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
 			graphicsPipeline(std::move(other.graphicsPipeline)),
 			skyboxPipeline(std::move(other.skyboxPipeline)),
@@ -209,9 +214,11 @@ namespace blaze
 			environmentDescriptorSetLayout = std::move(other.environmentDescriptorSetLayout);
 			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
 			descriptorPool = std::move(other.descriptorPool);
-			descriptorSets = std::move(other.descriptorSets);
-			uniformBuffers = std::move(other.uniformBuffers);
+			uboDescriptorSets = std::move(other.uboDescriptorSets);
+			cameraUniformBuffers = std::move(other.cameraUniformBuffers);
+			settingsUniformBuffers = std::move(other.settingsUniformBuffers);
 			cameraUBO = other.cameraUBO;
+			settingsUBO = other.settingsUBO;
 			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
 			graphicsPipeline = std::move(other.graphicsPipeline);
 			skyboxPipeline = std::move(other.skyboxPipeline);
@@ -276,6 +283,11 @@ namespace blaze
 			cameraUBO = ubo;
 		}
 
+		void set_settingsUBO(const SettingsUniformBufferObject& ubo)
+		{
+			settingsUBO = ubo;
+		}
+
 		bool complete() const { return isComplete; }
 	private:
 
@@ -305,9 +317,10 @@ namespace blaze
 
 			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
-			uniformBuffers = createUniformBuffers(cameraUBO);
+			cameraUniformBuffers = createUniformBuffers(cameraUBO);
+			settingsUniformBuffers = createUniformBuffers(settingsUBO);
 			descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-			descriptorSets = createDescriptorSets();
+			uboDescriptorSets = createCameraDescriptorSets();
 
 			{
 				auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
@@ -332,8 +345,9 @@ namespace blaze
 		VkDescriptorSetLayout createEnvironmentDescriptorSetLayout() const;
 		VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 		VkDescriptorPool createDescriptorPool() const;
-		std::vector<VkDescriptorSet> createDescriptorSets() const;
+		std::vector<VkDescriptorSet> createCameraDescriptorSets() const;
 		std::vector<UniformBuffer<CameraUniformBufferObject>> createUniformBuffers(const CameraUniformBufferObject& ubo) const;
+		std::vector<UniformBuffer<SettingsUniformBufferObject>> createUniformBuffers(const SettingsUniformBufferObject& ubo) const;
 		std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
 		std::vector<VkFramebuffer> createRenderFramebuffers() const;
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
@@ -346,9 +360,17 @@ namespace blaze
 		void updateUniformBuffer(int frame, const CameraUniformBufferObject& ubo)
 		{
 			void* data;
-			vmaMapMemory(context.get_allocator(), uniformBuffers[frame].get_allocation(), &data);
-			memcpy(data, &ubo, uniformBuffers[frame].get_size());
-			vmaUnmapMemory(context.get_allocator(), uniformBuffers[frame].get_allocation());
+			vmaMapMemory(context.get_allocator(), cameraUniformBuffers[frame].get_allocation(), &data);
+			memcpy(data, &ubo, cameraUniformBuffers[frame].get_size());
+			vmaUnmapMemory(context.get_allocator(), cameraUniformBuffers[frame].get_allocation());
+		}
+
+		void updateUniformBuffer(int frame, const SettingsUniformBufferObject& ubo)
+		{
+			void* data;
+			vmaMapMemory(context.get_allocator(), settingsUniformBuffers[frame].get_allocation(), &data);
+			memcpy(data, &ubo, settingsUniformBuffers[frame].get_size());
+			vmaUnmapMemory(context.get_allocator(), settingsUniformBuffers[frame].get_allocation());
 		}
 	};
 }

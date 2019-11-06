@@ -28,6 +28,7 @@ namespace blaze
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 		rebuildCommandBuffer(imageIndex);
 		updateUniformBuffer(imageIndex, cameraUBO);
+		updateUniformBuffer(imageIndex, settingsUBO);
 
 		if (result != VK_SUCCESS)
 		{
@@ -204,6 +205,13 @@ namespace blaze
 				1,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 				nullptr
+			},
+			{
+				1,
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				1,
+				VK_SHADER_STAGE_FRAGMENT_BIT,
+				nullptr
 			}
 		};
 
@@ -254,10 +262,10 @@ namespace blaze
 				static_cast<uint32_t>(swapchainImages.size())
 			}
 		};
-		return util::createDescriptorPool(context.get_device(), poolSizes, static_cast<uint32_t>(swapchainImages.size()));
+		return util::createDescriptorPool(context.get_device(), poolSizes, 2u * static_cast<uint32_t>(swapchainImages.size()));
 	}
 
-	std::vector<VkDescriptorSet> Renderer::createDescriptorSets() const
+	std::vector<VkDescriptorSet> Renderer::createCameraDescriptorSets() const
 	{
 		std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), uboDescriptorSetLayout.get());
 		VkDescriptorSetAllocateInfo allocInfo = {};
@@ -276,7 +284,7 @@ namespace blaze
 		for (int i = 0; i < swapchainImages.size(); i++)
 		{
 			VkDescriptorBufferInfo info = {};
-			info.buffer = uniformBuffers[i].get_buffer();
+			info.buffer = cameraUniformBuffers[i].get_buffer();
 			info.offset = 0;
 			info.range = sizeof(CameraUniformBufferObject);
 
@@ -292,12 +300,42 @@ namespace blaze
 			vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
 		}
 
+		for (int i = 0; i < swapchainImages.size(); i++)
+		{
+			VkDescriptorBufferInfo info = {};
+			info.buffer = settingsUniformBuffers[i].get_buffer();
+			info.offset = 0;
+			info.range = sizeof(SettingsUniformBufferObject);
+
+			VkWriteDescriptorSet write = {};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			write.descriptorCount = 1;
+			write.dstSet = descriptorSets[i];
+			write.dstBinding = 1;
+			write.dstArrayElement = 0;
+			write.pBufferInfo = &info;
+
+			vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+		}
+
 		return descriptorSets;
 	}
 
 	std::vector<UniformBuffer<CameraUniformBufferObject>> Renderer::createUniformBuffers(const CameraUniformBufferObject& ubo) const
 	{
 		std::vector<UniformBuffer<CameraUniformBufferObject>> ubos;
+		ubos.reserve(swapchainImages.size());
+		for (int i = 0; i < swapchainImages.size(); i++)
+		{
+			ubos.emplace_back(context, ubo);
+		}
+		return std::move(ubos);
+	}
+
+	std::vector<UniformBuffer<SettingsUniformBufferObject>> Renderer::createUniformBuffers(const SettingsUniformBufferObject& ubo) const
+	{
+		std::vector<UniformBuffer<SettingsUniformBufferObject>> ubos;
 		ubos.reserve(swapchainImages.size());
 		for (int i = 0; i < swapchainImages.size(); i++)
 		{
@@ -433,7 +471,7 @@ namespace blaze
 
 		vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
 
-		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 0, 1, &descriptorSets[frame], 0, nullptr);
+		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 0, 1, &uboDescriptorSets[frame], 0, nullptr);
 
 		for (auto& cmd : renderCommands)
 		{

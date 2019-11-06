@@ -74,6 +74,31 @@ namespace blaze
 		alignas(16) glm::vec4 lightPos[16];
 	};
 
+	struct SettingsUniformBufferObject
+	{
+		alignas(4) enum ViewTextureMap : int
+		{
+			VTM_FULL,
+			VTM_DIFFUSE,
+			VTM_NORMAL,
+			VTM_METALLIC,
+			VTM_ROUGHNESS,
+			VTM_AO,
+			VTM_EMISSION,
+			VTM_MAX_COUNT
+		} textureMap;
+		alignas(4) union
+		{
+			bool B;
+			int I;
+		} enableSkybox{ 1 };
+		alignas(4) union
+		{
+			bool B;
+			int I;
+		} enableIBL{ 1 };
+	};
+
 	struct MaterialPushConstantBlock
 	{
 		glm::vec4 baseColorFactor{ 1.0f, 0, 1.0f, 1.0f };

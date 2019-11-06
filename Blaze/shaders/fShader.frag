@@ -13,13 +13,19 @@ struct Light {
 	vec3 direction;
 };
 
-layout(set = 0, binding = 0) uniform UniformBufferObject {
+layout(set = 0, binding = 0) uniform CameraBufferObject {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
 	int numLights;
 	vec4 lightPos[16];
 } ubo;
+
+layout(set = 0, binding = 1) uniform SettingsUBO {
+	int viewMap;
+	int enableSkybox;
+	int enableIBL;
+} debugSettings;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
 layout(set = 1, binding = 1) uniform sampler2D metalRoughnessImage;
@@ -207,22 +213,49 @@ void main() {
 		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
 	}
 
-	vec3 R = reflect(-V, N);
+	vec3 ambient = vec3(0.03f) * ao;
+	if (debugSettings.enableIBL > 0) {
+		vec3 R = reflect(-V, N);
 
-	const float MAX_REFLECTION_LOD = 4.0f;
-	vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+		const float MAX_REFLECTION_LOD = 4.0f;
+		vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
 
-	vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-	vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-	vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+		vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+		vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 	
-	vec3 ks = F;
-	vec3 kd = vec3(1.0f) - ks;
-	kd *= 1.0f - metallic;
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
 
-	vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
+		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
-	vec3 ambient = (kd * diffuse + specular) * ao;
+		ambient = (kd * diffuse + specular) * ao;
+	}
+
 	vec3 color	 = ambient + L0 + emission;
 	outColor	 = SRGBtoLINEAR(vec4(color, 1.0f));
+
+	if (debugSettings.viewMap > 0) {
+		switch (debugSettings.viewMap) {
+			case 1: {
+				outColor = vec4(albedo, 1.0f);
+			}; break;
+			case 2: {
+				outColor = vec4(0.5f + 0.5f * N, 1.0f);
+			}; break;
+			case 3: {
+				outColor = vec4(vec3(metallic), 1.0f);
+			}; break;
+			case 4: {
+				outColor = vec4(vec3(roughness), 1.0f);
+			}; break;
+			case 5: {
+				outColor = vec4(vec3(ao), 1.0f);
+			}; break;
+			case 6: {
+				outColor = vec4(emission, 1.0f);
+			}; break;
+		}
+	}
 }

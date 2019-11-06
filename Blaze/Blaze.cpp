@@ -55,6 +55,7 @@ namespace blaze
 #endif
 
 	bool firstMouse = true;
+	bool mouseEnabled = false;
 	double lastX = 0.0;
 	double lastY = 0.0;
 
@@ -67,8 +68,23 @@ namespace blaze
 	{
 		std::array<float, 300> deltaTime { 0 };
 		bool rotate{ false };
+		glm::vec3 scale;
 		char filename[256]{ 0 };
 		char skybox[256]{ 0 };
+
+		struct {
+			std::array<std::string, 7> labels{ "Full Render", "Diffuse Map", "Normal Map", "Metallic Map", "Roughness Map", "AO Map", "Emission Map" };
+			int currentValue = 0;
+			SettingsUniformBufferObject::ViewTextureMap value() const
+			{
+				return static_cast<SettingsUniformBufferObject::ViewTextureMap>(currentValue);
+			}
+		} textureMapSettings;
+
+		SettingsUniformBufferObject settingsUBO = {
+			SettingsUniformBufferObject::VTM_FULL,
+			1
+		};
 
 		void submitDelta(float delta)
 		{
@@ -91,7 +107,7 @@ namespace blaze
 		lastX = xpos;
 		lastY = ypos;
 
-		double sensitivity = 0.05f;
+		double sensitivity = mouseEnabled ? 0.05f : 0.1f;
 		xoffset *= sensitivity;
 		yoffset *= sensitivity;
 
@@ -129,7 +145,7 @@ namespace blaze
 		// cam.addLight(glm::vec3{ 0.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ 4.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ 8.0f, 2.0f, 0.0f }, 1.0f);
-		// cam.addLight(glm::vec3(0.0f), 1.0f);
+		cam.addLight(glm::vec3(0.0f), 1.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -254,7 +270,10 @@ namespace blaze
 			{
 				if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 				{
-					glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+					glfwSetCursorPosCallback(window, nullptr);
+					glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+					mouseEnabled = false;
 				}
 				glm::vec3 cameraPos(0.f);
 				float cameraSpeed = 1.f * static_cast<float>(deltaTime); // adjust accordingly
@@ -273,9 +292,9 @@ namespace blaze
 
 				double x = lastX;
 				double y = lastY;
-				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-					y = lastY + 1.0f;
 				if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+					y = lastY + 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 					y = lastY - 1.0f;
 				if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
 					x = lastX + 1.0f;
@@ -285,7 +304,7 @@ namespace blaze
 
 			}
 			cam.lookTo(cameraFront);
-			// cam.setLight(0, cam.get_position(), 1.0f);
+			cam.setLight(0, cam.get_position(), 1.0f);
 			// cam.setLight(0, glm::vec3{ -8.0f, 2.0f + 0.5f * sin(3*elapsed), 0.5f * cos(3 * elapsed) }, 1.0f);
 			// cam.setLight(1, glm::vec3{ -4.0f, 2.0f + 0.5f * cos(3 * elapsed + 4), 0.5f * sin(3 * elapsed + 4) }, 1.0f);
 			// cam.setLight(2, glm::vec3{ 0.0f, 2.0f + 0.5f * sin(3 * elapsed + 3.14), 0.5f * cos(3 * elapsed + 3.14) }, 1.0f);
@@ -322,7 +341,46 @@ namespace blaze
 							model = loadModel(renderer, settings.filename);
 						}
 					}
+					if (ImGui::InputFloat3("Scale##Model", &settings.scale[0]))
+					{
+						model.get_root()->scale = settings.scale;
+					}
 					ImGui::Checkbox("Rotate##Model", &settings.rotate);
+					if (ImGui::BeginCombo("Texture Views##Combo", settings.textureMapSettings.labels[settings.textureMapSettings.currentValue].c_str()))
+					{
+						int i = 0;
+						for (const auto& label : settings.textureMapSettings.labels)
+						{
+							bool selected = (settings.textureMapSettings.currentValue == i);
+							if (ImGui::Selectable(label.c_str(), selected))
+							{
+								settings.textureMapSettings.currentValue = i;
+							}
+							if (selected)
+							{
+								ImGui::SetItemDefaultFocus();
+							}
+							i++;
+						}
+						ImGui::EndCombo();
+						settings.settingsUBO.textureMap = settings.textureMapSettings.value();
+					}
+					ImGui::Checkbox("Enable Skybox", &settings.settingsUBO.enableSkybox.B);
+					ImGui::Checkbox("Enable IBL", &settings.settingsUBO.enableIBL.B);
+					if (ImGui::Button("Lock Mouse"))
+					{
+						firstMouse = true;
+
+						{
+							double x, y;
+							glfwGetCursorPos(window, &x, &y);
+							mouse_callback(window, x, y);
+						}
+
+						glfwSetCursorPosCallback(window, mouse_callback);
+						glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+						mouseEnabled = true;
+					}
 				}
 				ImGui::End();
 			}
@@ -331,6 +389,7 @@ namespace blaze
 			try
 			{
 				model.update();
+				renderer.set_settingsUBO(settings.settingsUBO);
 				renderer.set_cameraUBO(cam.getUbo());
 				renderer.renderFrame();
 			}
