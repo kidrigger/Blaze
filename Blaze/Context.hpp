@@ -42,12 +42,15 @@ namespace blaze
 
 		util::Managed<VmaAllocator> allocator;
 
+		GLFWwindow* window{ nullptr };
+
 	public:
 		Context() noexcept
 			: enableValidationLayers(true) {}
 
 		Context(GLFWwindow* window, bool enableValidationLayers = true) noexcept
-			: enableValidationLayers(enableValidationLayers)
+			: window(window),
+			enableValidationLayers(enableValidationLayers)
 		{
 			auto requiredExtensions = getRequiredInstanceExtensions();
 			try
@@ -84,7 +87,8 @@ namespace blaze
 		}
 
 		Context(Context&& other) noexcept
-			: enableValidationLayers(other.enableValidationLayers),
+			: window(other.window),
+			enableValidationLayers(other.enableValidationLayers),
 			isComplete(other.isComplete),
 			instance(std::move(other.instance)),
 			debugMessenger(std::move(other.debugMessenger)),
@@ -105,6 +109,7 @@ namespace blaze
 			{
 				return *this;
 			}
+			window = other.window;
 			enableValidationLayers = other.enableValidationLayers;
 			isComplete = other.isComplete;
 			instance = std::move(other.instance);
@@ -134,6 +139,8 @@ namespace blaze
 		inline VkCommandPool get_transferCommandPool() const { return graphicsCommandPool.get(); }
 		inline const util::QueueFamilyIndices& get_queueFamilyIndices() const { return queueFamilyIndices; }
 		inline VmaAllocator get_allocator() const { return allocator.get(); }
+
+		inline GLFWwindow* get_window() const { return window; }
 
 		bool complete() const { return isComplete; }
 		std::tuple<VkBuffer, VmaAllocation> createBuffer(size_t size, VkBufferUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const

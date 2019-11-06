@@ -141,7 +141,7 @@ namespace blaze
 					inFlightFences = ManagedVector(fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
 				}
 
-				gui = GUI(window, context, swapchainExtent.get(), swapchainFormat.get(), swapchainImageViews.get());
+				gui = GUI(context, swapchainExtent.get(), swapchainFormat.get(), swapchainImageViews.get());
 
 				recordCommandBuffers();
 
@@ -318,6 +318,8 @@ namespace blaze
 
 			renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+
+			gui.recreate(context, swapchainExtent.get(), swapchainImageViews.get());
 
 			recordCommandBuffers();
 		}

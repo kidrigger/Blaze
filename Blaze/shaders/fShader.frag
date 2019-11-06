@@ -48,6 +48,25 @@ layout(location = 0) out vec4 outColor;
 
 const float PI = 3.1415926535897932384626433832795f;
 
+vec3 Uncharted2Tonemap(vec3 color)
+{
+	float A = 0.15;
+	float B = 0.50;
+	float C = 0.10;
+	float D = 0.20;
+	float E = 0.02;
+	float F = 0.30;
+	float W = 11.2;
+	return ((color*(A*color+C*B)+D*E)/(color*(A*color+B)+D*F))-E/F;
+}
+
+vec4 tonemap(vec4 color)
+{
+	vec3 outcol = Uncharted2Tonemap(color.rgb);
+	outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
+	return vec4(pow(outcol, vec3(1.0f / 2.2f)), color.a);
+}
+
 vec4 SRGBtoLINEAR(vec4 srgbIn)
 {
 	#ifdef MANUAL_SRGB
@@ -57,7 +76,7 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 	vec3 bLess = step(vec3(0.04045),srgbIn.xyz);
 	vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
 	#endif //SRGB_FAST_APPROXIMATION
-	return vec4(linOut,srgbIn.w);;
+	return vec4(linOut,srgbIn.w);
 	#else //MANUAL_SRGB
 	return srgbIn;
 	#endif //MANUAL_SRGB
@@ -67,14 +86,14 @@ vec3 getNormal()
 {
 	vec3 tangentNormal = texture(normalImage, material.normalTextureSet == 0 ? texCoords0 : texCoords1).xyz * 2.0 - 1.0;
 
-	vec3 q1 = dFdx(position);
-	vec3 q2 = dFdy(position);
+	vec3 q1  = dFdx(position);
+	vec3 q2  = dFdy(position);
 	vec2 st1 = dFdx(texCoords0);
 	vec2 st2 = dFdy(texCoords0);
 
-	vec3 N = normalize(normal);
-	vec3 T = normalize(q1 * st2.t - q2 * st1.t);
-	vec3 B = -normalize(cross(N, T));
+	vec3 N	 = normalize(normal);
+	vec3 T	 = normalize(q1 * st2.t - q2 * st1.t);
+	vec3 B	 = -normalize(cross(N, T));
 	mat3 TBN = mat3(T, B, N);
 
 	return normalize(TBN * tangentNormal);
@@ -82,37 +101,37 @@ vec3 getNormal()
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-    float a      = roughness*roughness;
-    float a2     = a*a;
-    float NdotH  = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
+	float a		 = roughness*roughness;
+	float a2	 = a*a;
+	float NdotH  = max(dot(N, H), 0.0);
+	float NdotH2 = NdotH*NdotH;
 	
-    float num   = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
+	float num	= a2;
+	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+	denom		= PI * denom * denom;
 	
-    return num / denom;
+	return num / denom;
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-    float r = roughness;
-    float k = (r * r) / 2.0;
+	float r = roughness;
+	float k = (r * r) / 2.0;
 
-    float num   = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
+	float num   = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
 	
-    return num / denom;
+	return num / denom;
 }
 
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+	float NdotV = max(dot(N, V), 0.0);
+	float NdotL = max(dot(N, L), 0.0);
+	float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+	float ggx1  = GeometrySchlickGGX(NdotL, roughness);
 	
-    return ggx1 * ggx2;
+	return ggx1 * ggx2;
 }
 
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
@@ -157,8 +176,8 @@ void main() {
 		emission = SRGBtoLINEAR(texture(emissiveImage, texCoords0)).rgb * material.emissiveColorFactor.rgb;
 	}
 
-	vec3 F0 = vec3(0.04); 
-	F0      = mix(F0, albedo, metallic);
+	vec3 F0 = vec3(0.04);
+	F0		= mix(F0, albedo, metallic);
 
 	vec3 L0 = vec3(0.0f);
 
@@ -170,39 +189,40 @@ void main() {
 
 		float dist		  = length(ubo.lightPos[i].xyz - position);
 		float attenuation = 1.0 / (dist * dist);
-		vec3 radiance     = lightColor * attenuation * ubo.lightPos[i].w;
+		vec3 radiance	  = lightColor * attenuation * ubo.lightPos[i].w;
 		
 		float NDF = DistributionGGX(N, H, roughness);
-		float G   = GeometrySmith(N, V, L, roughness);
-		vec3 F  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
+		float G	  = GeometrySmith(N, V, L, roughness);
+		vec3 F	  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
 
 		vec3 ks = F;
 		vec3 kd = vec3(1.0f) - ks;
 		kd *= 1.0f - metallic;
 
-		vec3 numerator    = NDF * G * F;
+		vec3 numerator	  = NDF * G * F;
 		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-		vec3 specular     = numerator / max(denominator, 0.001);
+		vec3 specular	  = numerator / max(denominator, 0.001);
 
 		float NdotL = max(dot(N, L), 0.0f);
 		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
 	}
 
-	vec3 R = reflect(-V, N);   
+	vec3 R = reflect(-V, N);
 
-    const float MAX_REFLECTION_LOD = 10.0f;
-    vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+	const float MAX_REFLECTION_LOD = 4.0f;
+	vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
 
-	vec3 F        = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 	vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 	vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 	
 	vec3 ks = F;
 	vec3 kd = vec3(1.0f) - ks;
 	kd *= 1.0f - metallic;
+
 	vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
 	vec3 ambient = (kd * diffuse + specular) * ao;
 	vec3 color	 = ambient + L0 + emission;
-	outColor = SRGBtoLINEAR(vec4(color, 1.0f));
+	outColor	 = SRGBtoLINEAR(vec4(color, 1.0f));
 }

@@ -84,6 +84,7 @@ namespace blaze
 		}
 
 		const glm::vec3& get_position() const { return position; }
+		glm::vec3& get_position() { return position; }
 		const glm::vec3& get_up() const { return up; }
 
 		const CameraUniformBufferObject& getUbo()

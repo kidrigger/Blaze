@@ -35,7 +35,7 @@ namespace blaze
 
 		static bool complete;
 	public:
-		GUI(GLFWwindow* window, const Context& context, const VkExtent2D& size, const VkFormat& format, const std::vector<VkImageView>& swapchainImageViews)
+		GUI(const Context& context, const VkExtent2D& size, const VkFormat& format, const std::vector<VkImageView>& swapchainImageViews)
 			: width(size.width),
 			height(size.height),
 			valid(false)
@@ -66,7 +66,7 @@ namespace blaze
 			ImGuiIO& io = ImGui::GetIO(); (void)io;
 			ImGui::StyleColorsDark();
 
-			ImGui_ImplGlfw_InitForVulkan(window, true);
+			ImGui_ImplGlfw_InitForVulkan(context.get_window(), true);
 
 			ImGui_ImplVulkan_InitInfo init_info = {};
 			init_info.Instance = context.get_instance();
@@ -124,6 +124,13 @@ namespace blaze
 
 		GUI(const GUI& other) = delete;
 		GUI& operator=(const GUI& other) = delete;
+
+		void recreate(const Context& context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews)
+		{
+			width = size.width;
+			height = size.height;
+			framebuffers = util::ManagedVector(createSwapchainFramebuffers(context.get_device(), swapchainImageViews), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+		}
 
 		static void startFrame()
 		{

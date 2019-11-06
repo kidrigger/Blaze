@@ -142,7 +142,7 @@ namespace blaze {
 			"shaders/fEqvrect2Cube.frag.spv",
 			ds.get(),
 			dsLayout.get(),
-			512u,
+			static_cast<uint32_t>(height),
 			std::ignore
 		};
 

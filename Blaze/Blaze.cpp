@@ -21,10 +21,12 @@
 
 #include <optional>
 #include <vector>
+#include <deque>
 #include <iostream>
 #include <set>
 #include <algorithm>
 #include <string>
+#include <filesystem>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -60,6 +62,20 @@ namespace blaze
 	double pitch = 0.0;
 
 	glm::vec3 cameraFront{ 0.0f, 0.0f, 1.0f };
+
+	struct DebugRenderSettings
+	{
+		std::array<float, 300> deltaTime { 0 };
+		bool rotate{ false };
+		char filename[256]{ 0 };
+		char skybox[256]{ 0 };
+
+		void submitDelta(float delta)
+		{
+			memcpy(deltaTime.data(), deltaTime.data() + 1, deltaTime.size() * sizeof(float));
+			settings.deltaTime[deltaTime.size()-1] = delta;
+		}
+	} settings{};
 
 	void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	{
@@ -146,9 +162,10 @@ namespace blaze
 			face = skybox_dir + face;
 		}*/
 
-		string skybox_faces = "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr";
+		strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
+		strcpy(settings.filename, "assets/helmet/DamagedHelmet.gltf");
 
-		auto skybox = loadImageCube(renderer.get_context(), skybox_faces, true);
+		auto skybox = loadImageCube(renderer.get_context(), settings.skybox, true);
 		vbo = getUVCube(renderer.get_context());
 
 		auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool)
@@ -205,7 +222,7 @@ namespace blaze
 		auto brdfLut = renderer.createBrdfLut();
 		writeToDescriptor(ds.get(), { {3, brdfLut.get_imageInfo()} });
 
-		auto model = loadModel(renderer, "assets/spheres/MetalRoughSpheres.gltf");
+		auto model = loadModel(renderer, settings.filename);
 		// model.get_root()->scale = { 100.0f };
 
 		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) 
@@ -227,8 +244,6 @@ namespace blaze
 
 		renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frameCount) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
 		renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frameCount) { model.draw(cmdBuffer, layout); });
-
-		float lines[6000] = { 0 };
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -276,20 +291,38 @@ namespace blaze
 			// cam.setLight(2, glm::vec3{ 0.0f, 2.0f + 0.5f * sin(3 * elapsed + 3.14), 0.5f * cos(3 * elapsed + 3.14) }, 1.0f);
 			// cam.setLight(3, glm::vec3{ 4.0f, 2.0f + 0.5f * sin(3 * elapsed + 1.4), 0.5f * cos(3 * elapsed + 1.4) }, 1.0f);
 			// cam.setLight(4, glm::vec3{ 8.0f, 2.0f + 0.5f * cos(3 * elapsed), 0.5f * sin(3 * elapsed) }, 1.0f);
+			
+			if (settings.rotate)
+			{
+				model.get_root()->rotation *= glm::quat(glm::vec3(0, deltaTime, 0));
+			}
 
-			model.get_root()->rotation = glm::quat(glm::vec3(0, elapsed, 0));
 
 			GUI::startFrame();
 			{
-				ImGui::Begin("Hello, Vulkan");
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-				memcpy(lines, lines+1, 5999 * sizeof(float));
-				lines[5999] = 1000.0f / ImGui::GetIO().Framerate;
-				ImGui::PlotLines("FPS", lines, 6000, 0, nullptr, 0, 3);
-				bool x = ImGui::Button("Exit");
-				if (x)
+				if (ImGui::Begin("Profiling"))
 				{
-					glfwSetWindowShouldClose(window, GLFW_TRUE);
+					ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+					settings.submitDelta(1000.0f / ImGui::GetIO().Framerate);
+					ImGui::PlotLines("FPS", settings.deltaTime.data(), settings.deltaTime.size(), 0, nullptr, 0);
+					if (ImGui::Button("Exit"))
+					{
+						glfwSetWindowShouldClose(window, GLFW_TRUE);
+					}
+				}
+				ImGui::End();
+				if (ImGui::Begin("Scene##Settings"))
+				{
+					ImGui::InputText("Model", settings.filename, IM_ARRAYSIZE(settings.filename));
+					ImGui::SameLine();
+					if (ImGui::Button("Load##Model"))
+					{
+						if (filesystem::exists(settings.filename))
+						{
+							model = loadModel(renderer, settings.filename);
+						}
+					}
+					ImGui::Checkbox("Rotate##Model", &settings.rotate);
 				}
 				ImGui::End();
 			}
