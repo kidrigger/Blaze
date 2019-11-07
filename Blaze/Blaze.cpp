@@ -165,7 +165,7 @@ namespace blaze
 		// glfwSetCursorPosCallback(window, mouse_callback);
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-		renderer = Renderer(window);
+		renderer = Renderer(window, enableValidationLayers);
 		if (!renderer.complete())
 		{
 			throw std::runtime_error("Renderer could not be created");
@@ -346,6 +346,8 @@ namespace blaze
 						model.get_root()->scale = settings.scale;
 					}
 					ImGui::Checkbox("Rotate##Model", &settings.rotate);
+					ImGui::Text("Vertex Count: %d", model.get_vertexCount());
+					ImGui::Text("Triangle Count: %d", model.get_indexCount() / 3);
 					if (ImGui::BeginCombo("Texture Views##Combo", settings.textureMapSettings.labels[settings.textureMapSettings.currentValue].c_str()))
 					{
 						int i = 0;

@@ -295,6 +295,8 @@ namespace blaze
 		}
 
 		Node* get_root() { return &root; }
+		uint32_t get_vertexCount() const { return vbo.get_vertexCount(); }
+		uint32_t get_indexCount() const { return vbo.get_indexCount(); }
 
 	private:
 		void update_nodes(int node, int parent = -1)

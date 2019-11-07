@@ -20,41 +20,41 @@ namespace blaze
 		alignas(16) glm::vec2 texCoord0;
 		alignas(16) glm::vec2 texCoord1;
 
-		static VkVertexInputBindingDescription getBindingDescription()
+		static VkVertexInputBindingDescription getBindingDescription(uint32_t binding = 0)
 		{
 			VkVertexInputBindingDescription bindingDesc = {};
-			bindingDesc.binding = 0;
+			bindingDesc.binding = binding;
 			bindingDesc.stride = sizeof(Vertex);
 			bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			return bindingDesc;
 		}
 
-		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
+		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions(uint32_t binding = 0)
 		{
 			std::vector<VkVertexInputAttributeDescription> attributeDescs;
 			uint32_t idx = 0;
 			{
 				VkVertexInputAttributeDescription attributeDesc = {};
-				attributeDesc.binding = 0;
+				attributeDesc.binding = binding;
 				attributeDesc.location = idx++;
 				attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
 				attributeDesc.offset = offsetof(Vertex, position);
 				attributeDescs.push_back(attributeDesc);
 
-				attributeDesc.binding = 0;
+				attributeDesc.binding = binding;
 				attributeDesc.location = idx++;
 				attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
 				attributeDesc.offset = offsetof(Vertex, normal);
 				attributeDescs.push_back(attributeDesc);
 
-				attributeDesc.binding = 0;
+				attributeDesc.binding = binding;
 				attributeDesc.location = idx++;
 				attributeDesc.format = VK_FORMAT_R32G32_SFLOAT;
 				attributeDesc.offset = offsetof(Vertex, texCoord0);
 				attributeDescs.push_back(attributeDesc);
 
-				attributeDesc.binding = 0;
+				attributeDesc.binding = binding;
 				attributeDesc.location = idx++;
 				attributeDesc.format = VK_FORMAT_R32G32_SFLOAT;
 				attributeDesc.offset = offsetof(Vertex, texCoord1);

@@ -79,8 +79,8 @@ namespace blaze
 		{
 		}
 
-		Renderer(GLFWwindow* window) noexcept
-			: context(window),
+		Renderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept
+			: context(window, enableValidationLayers),
 			getWindowSize([window]()
 				{
 					int width, height;

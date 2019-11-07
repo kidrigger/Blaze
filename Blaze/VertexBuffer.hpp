@@ -24,6 +24,7 @@ namespace blaze
 	{
 	private:
 		util::Managed<BufferObject> vertexBuffer;
+		uint32_t count{ 0 };
 		size_t size{ 0 };
 
 	public:
@@ -32,7 +33,8 @@ namespace blaze
 		}
 
 		VertexBuffer(const Context& context, const std::vector<T>& data) noexcept
-			:size(sizeof(data[0])* data.size())
+			:size(sizeof(data[0])* data.size()),
+			count(static_cast<uint32_t>(data.size()))
 		{
 			using namespace util;
 			VmaAllocator allocator = context.get_allocator();
@@ -98,7 +100,8 @@ namespace blaze
 
 		VkBuffer get_buffer() const { return vertexBuffer.get().buffer; }
 		VmaAllocation get_memory() const { return vertexBuffer.get().allocation->GetMemory(); }
-		size_t get_size() const { return size; }
+		const size_t& get_size() const { return size; }
+		const uint32_t& get_count() const { return count; }
 	};
 
 	template <typename T>
@@ -108,6 +111,7 @@ namespace blaze
 	private:
 		util::Managed<BufferObject> vertexBuffer;
 		size_t vertexSize{ 0 };
+		uint32_t vertexCount{ 0 };
 		util::Managed<BufferObject> indexBuffer;
 		size_t indexSize{ 0 };
 		uint32_t indexCount{ 0 };
@@ -119,6 +123,7 @@ namespace blaze
 
 		IndexedVertexBuffer(const Context& context, const std::vector<T>& vertex_data, const std::vector<uint32_t>& index_data) noexcept
 			:vertexSize(sizeof(vertex_data[0])* vertex_data.size()),
+			vertexCount(static_cast<uint32_t>(vertex_data.size())),
 			indexSize(sizeof(uint32_t)* index_data.size()),
 			indexCount(static_cast<uint32_t>(index_data.size()))
 		{
@@ -178,6 +183,7 @@ namespace blaze
 		IndexedVertexBuffer(IndexedVertexBuffer&& other) noexcept
 			: vertexBuffer(std::move(other.vertexBuffer)),
 			vertexSize(other.vertexSize),
+			vertexCount(other.vertexCount),
 			indexBuffer(std::move(other.indexBuffer)),
 			indexSize(other.indexSize),
 			indexCount(other.indexCount)
@@ -192,6 +198,7 @@ namespace blaze
 			}
 			vertexBuffer = std::move(other.vertexBuffer);
 			vertexSize = other.vertexSize;
+			vertexCount = other.vertexCount;
 			indexBuffer = std::move(other.indexBuffer);
 			indexSize = other.indexSize;
 			indexCount = other.indexCount;
@@ -204,6 +211,7 @@ namespace blaze
 		const VkBuffer& get_vertexBuffer() const { return vertexBuffer.get().buffer; }
 		const VmaAllocation& get_vertexAllocation() const { return vertexBuffer.get().allocation; }
 		const size_t& get_verticeSize() const { return vertexSize; }
+		const uint32_t& get_vertexCount() const { return vertexCount; }
 		const VkBuffer& get_indexBuffer() const { return indexBuffer.get().buffer; }
 		const VmaAllocation& get_indexAllocation() const { return indexMemory.get().allocation; }
 		const size_t& get_indiceSize() const { return indexSize; }
