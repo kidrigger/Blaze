@@ -38,7 +38,7 @@ namespace blaze
 
 		UniformBuffer& operator=(UniformBuffer&& other) noexcept
 		{
-			if (this = &other)
+			if (this == &other)
 			{
 				return *this;
 			}

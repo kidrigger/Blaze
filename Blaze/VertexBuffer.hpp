@@ -3,7 +3,7 @@
 
 #include "Context.hpp"
 #include "util/Managed.hpp"
-#include "DataTypes.hpp"
+#include "Datatypes.hpp"
 
 #include <stdexcept>
 #include <vector>

@@ -9,7 +9,7 @@
 #include "Renderer.hpp"
 
 #define GLFW_INCLUDE_VULKAN
-#include <glfw/glfw3.h>
+#include <GLFW/glfw3.h>
 
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>

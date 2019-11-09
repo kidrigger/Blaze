@@ -33,7 +33,7 @@ add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
 target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR)
 
 # TODO: Add tests and install targets if needed.
-# include_directories ("glfw/include")
+# include_directories ("GLFW/include")
 # include_directories ("stb")
 # include_directories ("glm")
 
