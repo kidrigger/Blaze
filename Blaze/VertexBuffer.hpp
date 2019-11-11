@@ -70,10 +70,9 @@ namespace blaze
 		}
 
 		VertexBuffer(VertexBuffer&& other) noexcept
-			: buffer(other.buffer),
-			allocation(other.allocation),
-			size(other.size),
-			allocator(other.allocator)
+			: vertexBuffer(std::move(other.vertexBuffer)),
+			count(other.count),
+			size(other.size)
 		{
 		}
 
@@ -83,23 +82,24 @@ namespace blaze
 			{
 				return *this;
 			}
-			buffer = other.buffer;
-			allocation = other.allocation;
+			vertexBuffer = std::move(other.vertexBuffer);
+			count = other.count;
 			size = other.size;
-			allocator = other.allocator;
 			return *this;
 		}
 
 		VertexBuffer(const VertexBuffer& other) = delete;
 		VertexBuffer& operator=(const VertexBuffer& other) = delete;
 
-		~VertexBuffer()
+		void bind(VkCommandBuffer buf)
 		{
-			vmaDestroyBuffer(allocator)
+			VkBuffer vbufs[] = { vertexBuffer.get().buffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
 		}
 
 		VkBuffer get_buffer() const { return vertexBuffer.get().buffer; }
-		VmaAllocation get_memory() const { return vertexBuffer.get().allocation->GetMemory(); }
+		VmaAllocation get_allocation() const { return vertexBuffer.get().allocation; }
 		const size_t& get_size() const { return size; }
 		const uint32_t& get_count() const { return count; }
 	};
@@ -207,6 +207,14 @@ namespace blaze
 
 		IndexedVertexBuffer(const IndexedVertexBuffer& other) = delete;
 		IndexedVertexBuffer& operator=(const IndexedVertexBuffer& other) = delete;
+
+		void bind(VkCommandBuffer buf)
+		{
+			VkBuffer vbufs[] = { vertexBuffer.get().buffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
+			vkCmdBindIndexBuffer(buf, indexBuffer.get().buffer, 0, VK_INDEX_TYPE_UINT32);
+		}
 
 		const VkBuffer& get_vertexBuffer() const { return vertexBuffer.get().buffer; }
 		const VmaAllocation& get_vertexAllocation() const { return vertexBuffer.get().allocation; }

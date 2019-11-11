@@ -38,4 +38,6 @@ namespace blaze::util
 	bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions);
 
 	bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers);
+
+	VkFormat findSupportedFormat(VkPhysicalDevice device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 }

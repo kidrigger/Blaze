@@ -69,8 +69,7 @@ namespace blaze
 		std::vector<RenderCommand> renderCommands;
 		RenderCommand skyboxCommand;
 
-		util::Managed<ImageObject> depthBuffer;
-		util::Managed<VkImageView> depthBufferView;
+		Texture2D depthBufferTexture;
 
 		uint32_t currentFrame{ 0 };
 
@@ -112,9 +111,8 @@ namespace blaze
 				swapchainImages = getSwapchainImages();
 				swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
-				depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
-				depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, VK_IMAGE_VIEW_TYPE_2D, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-
+				depthBufferTexture = createDepthBuffer();
+				
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
 				cameraUniformBuffers = createUniformBuffers(cameraUBO);
@@ -167,8 +165,7 @@ namespace blaze
 			swapchainExtent(std::move(other.swapchainExtent)),
 			swapchainImages(std::move(other.swapchainImages)),
 			swapchainImageViews(std::move(other.swapchainImageViews)),
-			depthBuffer(std::move(other.depthBuffer)),
-			depthBufferView(std::move(other.depthBufferView)),
+			depthBufferTexture(std::move(other.depthBufferTexture)),
 			renderPass(std::move(other.renderPass)),
 			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
 			environmentDescriptorSetLayout(std::move(other.environmentDescriptorSetLayout)),
@@ -207,8 +204,7 @@ namespace blaze
 			swapchainExtent = std::move(other.swapchainExtent);
 			swapchainImages = std::move(other.swapchainImages);
 			swapchainImageViews = std::move(other.swapchainImageViews);
-			depthBuffer = std::move(other.depthBuffer);
-			depthBufferView = std::move(other.depthBufferView);
+			depthBufferTexture = std::move(other.depthBufferTexture);
 			renderPass = std::move(other.renderPass);
 			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
 			environmentDescriptorSetLayout = std::move(other.environmentDescriptorSetLayout);
@@ -311,10 +307,9 @@ namespace blaze
 
 			swapchainImages = getSwapchainImages();
 			swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
-
-			depthBuffer = Managed(createDepthBuffer(), [alloc = context.get_allocator()](ImageObject& obj) { vmaDestroyImage(alloc, obj.image, obj.allocation); });
-			depthBufferView = Managed(createImageView(context.get_device(), depthBuffer.get().image, VK_IMAGE_VIEW_TYPE_2D, depthBuffer.get().format, VK_IMAGE_ASPECT_DEPTH_BIT, 1), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-
+			
+			depthBufferTexture = createDepthBuffer();
+			
 			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
 			cameraUniformBuffers = createUniformBuffers(cameraUBO);
@@ -337,7 +332,7 @@ namespace blaze
 			recordCommandBuffers();
 		}
 
-		std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Renderer::createSwapchain() const;
+		std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> createSwapchain() const;
 		std::vector<VkImage> getSwapchainImages() const;
 		std::vector<VkImageView> createSwapchainImageViews() const;
 		VkRenderPass createRenderPass() const;
@@ -351,11 +346,11 @@ namespace blaze
 		std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
 		std::vector<VkFramebuffer> createRenderFramebuffers() const;
 		std::vector<VkCommandBuffer> allocateCommandBuffers() const;
-		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const;
+		std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> createSyncObjects() const;
 		void recordCommandBuffers();
 		void rebuildCommandBuffer(int frame);
 
-		ImageObject createDepthBuffer() const;
+		Texture2D createDepthBuffer() const;
 
 		void updateUniformBuffer(int frame, const CameraUniformBufferObject& ubo)
 		{

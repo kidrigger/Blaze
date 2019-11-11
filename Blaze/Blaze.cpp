@@ -68,7 +68,8 @@ namespace blaze
 	{
 		std::array<float, 300> deltaTime { 0 };
 		bool rotate{ false };
-		glm::vec3 scale;
+		float rotationSpeed{ 1.0f };
+		glm::vec3 scale{ 1.0f };
 		char filename[256]{ 0 };
 		char skybox[256]{ 0 };
 
@@ -150,7 +151,7 @@ namespace blaze
 		// GLFW Setup
 		assert(glfwInit());
 
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  
 		// glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
 		glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
 		window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", glfwGetPrimaryMonitor(), nullptr);
@@ -313,7 +314,7 @@ namespace blaze
 			
 			if (settings.rotate)
 			{
-				model.get_root()->rotation *= glm::quat(glm::vec3(0, deltaTime, 0));
+				model.get_root()->rotation *= glm::quat(glm::vec3(0, settings.rotationSpeed * deltaTime, 0));
 			}
 
 
@@ -345,6 +346,9 @@ namespace blaze
 					{
 						model.get_root()->scale = settings.scale;
 					}
+					ImGui::PushItemWidth(88.0f);
+					ImGui::InputFloat("Rotation Speed##Model", &settings.rotationSpeed);
+					ImGui::PopItemWidth();
 					ImGui::Checkbox("Rotate##Model", &settings.rotate);
 					ImGui::Text("Vertex Count: %d", model.get_vertexCount());
 					ImGui::Text("Triangle Count: %d", model.get_indexCount() / 3);

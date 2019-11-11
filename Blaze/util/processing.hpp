@@ -19,16 +19,19 @@ namespace blaze::util
 		VkDescriptorSet descriptor;
 		VkDescriptorSetLayout layout;
 		uint32_t cube_side{ 512 };
-		PCB pcb;
+		PCB pcb{};
 	};
+
+	struct Ignore {};
+
+	template <typename T>
+	constexpr bool is_ignore(const T& _x) { return false; }
+	template <>
+	constexpr bool is_ignore<Ignore>(const Ignore& _x) { return true; }
 
 	template <typename PCB>
 	class Process
 	{
-		template <typename T>
-		static constexpr bool is_ignore(const T& _x) { return false; }
-		template <>
-		static constexpr bool is_ignore<std::_Ignore>(const std::_Ignore& _x) { return true; }
 	public:
 
 		static TextureCube Process::convertDescriptorToCubemap(const Context& context, const Texture2CubemapInfo<PCB>& info)

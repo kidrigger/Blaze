@@ -391,7 +391,7 @@ namespace blaze
 		{
 			vector<VkImageView> attachments = {
 				swapchainImageViews[i],
-				depthBufferView.get()
+				depthBufferTexture.get_imageView()
 			};
 
 			VkFramebufferCreateInfo createInfo = {};
@@ -518,37 +518,24 @@ namespace blaze
 		return make_tuple(startSems, endSems, blockeFences);
 	}
 
-	ImageObject Renderer::createDepthBuffer() const
-	{
-		auto format = VK_FORMAT_D32_SFLOAT;
-		ImageObject obj = context.createImage(swapchainExtent.get().width, swapchainExtent.get().height, 1, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+	Texture2D Renderer::createDepthBuffer() const
+	{ 
+		VkFormat format = util::findSupportedFormat(context.get_physicalDevice(),
+			{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-		VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
-
-		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-		barrier.image = obj.image;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-		context.flushCommandBuffer(commandBuffer);
-
-		return obj;
+		ImageData2D imageData = {};
+		imageData.format = format;
+		imageData.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		imageData.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+		imageData.height = swapchainExtent.get().height;
+		imageData.width = swapchainExtent.get().width;
+		imageData.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		imageData.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		imageData.numChannels = 1;
+		imageData.size = swapchainExtent.get().width * swapchainExtent.get().height;
+		return Texture2D(context, imageData);
 	}
 
 	TextureCube Renderer::createIrradianceCube(VkDescriptorSet environment) const

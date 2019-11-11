@@ -2,7 +2,7 @@
 #pragma once
 
 #include <vector>
-#include "DataTypes.hpp"
+#include "Datatypes.hpp"
 #include "VertexBuffer.hpp"
 #include "Texture2D.hpp"
 #include "util/Managed.hpp"
@@ -277,10 +277,7 @@ namespace blaze
 
 		void draw(VkCommandBuffer buf, VkPipelineLayout layout)
 		{
-			VkBuffer vbufs[] = { vbo.get_vertexBuffer() };
-			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
-			vkCmdBindIndexBuffer(buf, vbo.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			vbo.bind(buf);
 			for (auto& node : nodes)
 			{
 				vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelPushConstantBlock), &node.pcb);
