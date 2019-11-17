@@ -72,6 +72,7 @@ namespace blaze
 		glm::vec3 scale{ 1.0f };
 		char filename[256]{ 0 };
 		char skybox[256]{ 0 };
+		bool lockLight{ true };
 
 		struct {
 			std::array<std::string, 7> labels{ "Full Render", "Diffuse Map", "Normal Map", "Metallic Map", "Roughness Map", "AO Map", "Emission Map" };
@@ -172,15 +173,8 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		/*string skybox_dir = "assets/Environment1.cubemap/";
-		vector<string> skybox_faces{ "negx.bmp", "posx.bmp", "posy.bmp", "negy.bmp", "posz.bmp", "negz.bmp" };
-		for (auto& face : skybox_faces)
-		{
-			face = skybox_dir + face;
-		}*/
-
 		strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
-		strcpy(settings.filename, "assets/helmet/DamagedHelmet.gltf");
+		strcpy(settings.filename, "assets/sponza/Sponza.gltf");
 
 		auto skybox = loadImageCube(renderer.get_context(), settings.skybox, true);
 		vbo = getUVCube(renderer.get_context());
@@ -240,7 +234,6 @@ namespace blaze
 		writeToDescriptor(ds.get(), { {3, brdfLut.get_imageInfo()} });
 
 		auto model = loadModel(renderer, settings.filename);
-		// model.get_root()->scale = { 100.0f };
 
 		renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) 
 		{
@@ -305,12 +298,11 @@ namespace blaze
 
 			}
 			cam.lookTo(cameraFront);
-			cam.setLight(0, cam.get_position(), 1.0f);
-			// cam.setLight(0, glm::vec3{ -8.0f, 2.0f + 0.5f * sin(3*elapsed), 0.5f * cos(3 * elapsed) }, 1.0f);
-			// cam.setLight(1, glm::vec3{ -4.0f, 2.0f + 0.5f * cos(3 * elapsed + 4), 0.5f * sin(3 * elapsed + 4) }, 1.0f);
-			// cam.setLight(2, glm::vec3{ 0.0f, 2.0f + 0.5f * sin(3 * elapsed + 3.14), 0.5f * cos(3 * elapsed + 3.14) }, 1.0f);
-			// cam.setLight(3, glm::vec3{ 4.0f, 2.0f + 0.5f * sin(3 * elapsed + 1.4), 0.5f * cos(3 * elapsed + 1.4) }, 1.0f);
-			// cam.setLight(4, glm::vec3{ 8.0f, 2.0f + 0.5f * cos(3 * elapsed), 0.5f * sin(3 * elapsed) }, 1.0f);
+
+			if (settings.lockLight)
+			{
+				cam.setLight(0, cam.get_position(), 1.0f);
+			}
 			
 			if (settings.rotate)
 			{
@@ -373,6 +365,7 @@ namespace blaze
 					}
 					ImGui::Checkbox("Enable Skybox", &settings.settingsUBO.enableSkybox.B);
 					ImGui::Checkbox("Enable IBL", &settings.settingsUBO.enableIBL.B);
+					ImGui::Checkbox("Lock Light", &settings.lockLight);
 					if (ImGui::Button("Lock Mouse"))
 					{
 						firstMouse = true;

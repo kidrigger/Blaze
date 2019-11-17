@@ -23,7 +23,7 @@ namespace blaze
 		using namespace std;
 
 		uint32_t imageIndex;
-		auto result = vkAcquireNextImageKHR(context.get_device(), swapchain.get(), numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
+		auto result = vkAcquireNextImageKHR(context.get_device(), swapchain.get_swapchain(), numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 		rebuildCommandBuffer(imageIndex);
@@ -63,7 +63,7 @@ namespace blaze
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = signalSemaphores;
 
-		VkSwapchainKHR swapchains[] = { swapchain.get() };
+		VkSwapchainKHR swapchains[] = { swapchain.get_swapchain() };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapchains;
 		presentInfo.pImageIndices = &imageIndex;
@@ -84,116 +84,9 @@ namespace blaze
 		currentFrame = (currentFrame + 1) % max_frames_in_flight;
 	}
 
-	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Renderer::createSwapchain() const
-	{
-		util::SwapchainSupportDetails swapchainSupport = util::getSwapchainSupport(context.get_physicalDevice(), context.get_surface());
-
-		VkSurfaceFormatKHR surfaceFormat = swapchainSupport.formats[0];
-		for (const auto& availableFormat : swapchainSupport.formats)
-		{
-			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
-				availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-			{
-				surfaceFormat = availableFormat;
-				break;
-			}
-		}
-
-		VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-		for (const auto& availablePresentMode : swapchainSupport.presentModes)
-		{
-			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-			{
-				presentMode = availablePresentMode;
-				break;
-			}
-			else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
-			{
-				presentMode = availablePresentMode;
-			}
-		}
-
-		VkExtent2D swapExtent;
-		auto capabilities = swapchainSupport.capabilities;
-		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-		{
-			swapExtent = capabilities.currentExtent;
-		}
-		else
-		{
-			auto [width, height] = getWindowSize();
-			swapExtent.width = std::clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-			swapExtent.height = std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-		}
-
-		uint32_t imageCount = capabilities.minImageCount + 1;
-		if (capabilities.maxImageCount > 0)
-		{
-			imageCount = std::min(imageCount, capabilities.maxImageCount);
-		}
-
-		VkSwapchainCreateInfoKHR createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = context.get_surface();
-		createInfo.minImageCount = imageCount;
-		createInfo.imageFormat = surfaceFormat.format;
-		createInfo.imageColorSpace = surfaceFormat.colorSpace;
-		createInfo.imageExtent = swapExtent;
-		createInfo.imageArrayLayers = 1;
-		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		createInfo.preTransform = swapchainSupport.capabilities.currentTransform;
-		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		createInfo.presentMode = presentMode;
-		createInfo.clipped = VK_TRUE;
-		createInfo.oldSwapchain = swapchain.get();
-
-		auto queueIndices = context.get_queueFamilyIndices();
-		uint32_t queueFamilyIndices[] = { queueIndices.graphicsIndex.value(), queueIndices.presentIndex.value() };
-		if (queueIndices.graphicsIndex != queueIndices.presentIndex)
-		{
-			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			createInfo.queueFamilyIndexCount = 2;
-			createInfo.pQueueFamilyIndices = queueFamilyIndices;
-		}
-		else
-		{
-			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			createInfo.queueFamilyIndexCount = 0;
-			createInfo.pQueueFamilyIndices = nullptr;
-		}
-
-		VkSwapchainKHR swapchain;
-		auto result = vkCreateSwapchainKHR(context.get_device(), &createInfo, nullptr, &swapchain);
-		if (result == VK_SUCCESS)
-		{
-			return std::make_tuple(swapchain, surfaceFormat.format, swapExtent);
-		}
-		throw std::runtime_error("Swapchain creation failed with " + std::to_string(result));
-	}
-
-	std::vector<VkImage> Renderer::getSwapchainImages() const
-	{
-		uint32_t swapchainImageCount = 0;
-		std::vector<VkImage> swapchainImages;
-		vkGetSwapchainImagesKHR(context.get_device(), swapchain.get(), &swapchainImageCount, nullptr);
-		swapchainImages.resize(swapchainImageCount);
-		vkGetSwapchainImagesKHR(context.get_device(), swapchain.get(), &swapchainImageCount, swapchainImages.data());
-		return swapchainImages;
-	}
-
-	std::vector<VkImageView> Renderer::createSwapchainImageViews() const
-	{
-		std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
-		for (size_t i = 0; i < swapchainImages.size(); i++)
-		{
-			swapchainImageViews[i] = util::createImageView(context.get_device(), swapchainImages[i], VK_IMAGE_VIEW_TYPE_2D, swapchainFormat.get(), VK_IMAGE_ASPECT_COLOR_BIT, 1);
-		}
-		return swapchainImageViews;
-	}
-
 	VkRenderPass Renderer::createRenderPass() const
 	{
-		return util::createRenderPass(context.get_device(), swapchainFormat.get(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		return util::createRenderPass(context.get_device(), swapchain.get_format(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	}
 
 	VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
@@ -259,29 +152,29 @@ namespace blaze
 		std::vector<VkDescriptorPoolSize> poolSizes = {
 			{
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				static_cast<uint32_t>(swapchainImages.size())
+				1
 			}
 		};
-		return util::createDescriptorPool(context.get_device(), poolSizes, 2u * static_cast<uint32_t>(swapchainImages.size()));
+		return util::createDescriptorPool(context.get_device(), poolSizes, 2u * swapchain.get_imageCount());
 	}
 
 	std::vector<VkDescriptorSet> Renderer::createCameraDescriptorSets() const
 	{
-		std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), uboDescriptorSetLayout.get());
+		std::vector<VkDescriptorSetLayout> layouts(swapchain.get_imageCount(), uboDescriptorSetLayout.get());
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = descriptorPool.get();
-		allocInfo.descriptorSetCount = static_cast<uint32_t>(swapchainImages.size());
+		allocInfo.descriptorSetCount = swapchain.get_imageCount();
 		allocInfo.pSetLayouts = layouts.data();
 
-		std::vector<VkDescriptorSet> descriptorSets(swapchainImages.size());
+		std::vector<VkDescriptorSet> descriptorSets(swapchain.get_imageCount());
 		auto result = vkAllocateDescriptorSets(context.get_device(), &allocInfo, descriptorSets.data());
 		if (result != VK_SUCCESS)
 		{
 			throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 		}
 
-		for (int i = 0; i < swapchainImages.size(); i++)
+		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
 			VkDescriptorBufferInfo info = {};
 			info.buffer = cameraUniformBuffers[i].get_buffer();
@@ -300,7 +193,7 @@ namespace blaze
 			vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
 		}
 
-		for (int i = 0; i < swapchainImages.size(); i++)
+		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
 			VkDescriptorBufferInfo info = {};
 			info.buffer = settingsUniformBuffers[i].get_buffer();
@@ -325,8 +218,8 @@ namespace blaze
 	std::vector<UniformBuffer<CameraUniformBufferObject>> Renderer::createUniformBuffers(const CameraUniformBufferObject& ubo) const
 	{
 		std::vector<UniformBuffer<CameraUniformBufferObject>> ubos;
-		ubos.reserve(swapchainImages.size());
-		for (int i = 0; i < swapchainImages.size(); i++)
+		ubos.reserve(swapchain.get_imageCount());
+		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
 			ubos.emplace_back(context, ubo);
 		}
@@ -336,8 +229,8 @@ namespace blaze
 	std::vector<UniformBuffer<SettingsUniformBufferObject>> Renderer::createUniformBuffers(const SettingsUniformBufferObject& ubo) const
 	{
 		std::vector<UniformBuffer<SettingsUniformBufferObject>> ubos;
-		ubos.reserve(swapchainImages.size());
-		for (int i = 0; i < swapchainImages.size(); i++)
+		ubos.reserve(swapchain.get_imageCount());
+		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
 			ubos.emplace_back(context, ubo);
 		}
@@ -374,9 +267,9 @@ namespace blaze
 			pipelineLayout = util::createPipelineLayout(context.get_device(), descriptorSetLayouts, pushConstantRanges);
 		}
 		
-		auto graphicsPipeline = util::createGraphicsPipeline(context.get_device(), pipelineLayout, renderPass.get(), swapchainExtent.get(), 
+		auto graphicsPipeline = util::createGraphicsPipeline(context.get_device(), pipelineLayout, renderPass.get(), swapchain.get_extent(),
 			"shaders/vShader.vert.spv", "shaders/fShader.frag.spv");
-		auto skyboxPipeline = util::createGraphicsPipeline(context.get_device(), pipelineLayout, renderPass.get(), swapchainExtent.get(), 
+		auto skyboxPipeline = util::createGraphicsPipeline(context.get_device(), pipelineLayout, renderPass.get(), swapchain.get_extent(),
 			"shaders/vSkybox.vert.spv", "shaders/fSkybox.frag.spv", {}, VK_CULL_MODE_FRONT_BIT, VK_TRUE, VK_FALSE, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 		return std::make_tuple(pipelineLayout, graphicsPipeline, skyboxPipeline);
@@ -386,11 +279,11 @@ namespace blaze
 	{
 		using namespace std;
 
-		vector<VkFramebuffer> frameBuffers(swapchainImageViews.size());
-		for (size_t i = 0; i < swapchainImageViews.size(); i++)
+		vector<VkFramebuffer> frameBuffers(swapchain.get_imageCount());
+		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
 			vector<VkImageView> attachments = {
-				swapchainImageViews[i],
+				swapchain.get_imageView(i),
 				depthBufferTexture.get_imageView()
 			};
 
@@ -399,8 +292,8 @@ namespace blaze
 			createInfo.renderPass = renderPass.get();
 			createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 			createInfo.pAttachments = attachments.data();
-			createInfo.width = swapchainExtent.get().width;
-			createInfo.height = swapchainExtent.get().height;
+			createInfo.width = swapchain.get_extent().width;
+			createInfo.height = swapchain.get_extent().height;
 			createInfo.layers = 1;
 
 			auto result = vkCreateFramebuffer(context.get_device(), &createInfo, nullptr, &frameBuffers[i]);
@@ -418,7 +311,7 @@ namespace blaze
 
 	std::vector<VkCommandBuffer> Renderer::allocateCommandBuffers() const
 	{
-		std::vector<VkCommandBuffer> commandBuffers(swapchainImages.size());
+		std::vector<VkCommandBuffer> commandBuffers(swapchain.get_imageCount());
 
 		VkCommandBufferAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -460,7 +353,7 @@ namespace blaze
 		renderpassBeginInfo.renderPass = renderPass.get();
 		renderpassBeginInfo.framebuffer = renderFramebuffers[frame];
 		renderpassBeginInfo.renderArea.offset = { 0, 0 };
-		renderpassBeginInfo.renderArea.extent = swapchainExtent.get();
+		renderpassBeginInfo.renderArea.extent = swapchain.get_extent();
 
 		std::array<VkClearValue, 2> clearColor;
 		clearColor[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -496,9 +389,9 @@ namespace blaze
 	{
 		using namespace std;
 
-		vector<VkSemaphore> startSems(swapchainImages.size());
-		vector<VkSemaphore> endSems(swapchainImages.size());
-		vector<VkFence> blockeFences(swapchainImages.size());
+		vector<VkSemaphore> startSems(swapchain.get_imageCount());
+		vector<VkSemaphore> endSems(swapchain.get_imageCount());
+		vector<VkFence> blockeFences(swapchain.get_imageCount());
 
 		for (auto& sem : startSems)
 		{
@@ -529,12 +422,12 @@ namespace blaze
 		imageData.format = format;
 		imageData.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		imageData.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-		imageData.height = swapchainExtent.get().height;
-		imageData.width = swapchainExtent.get().width;
+		imageData.height = swapchain.get_extent().height;
+		imageData.width = swapchain.get_extent().width;
 		imageData.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		imageData.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		imageData.numChannels = 1;
-		imageData.size = swapchainExtent.get().width * swapchainExtent.get().height;
+		imageData.size = swapchain.get_extent().width * swapchain.get_extent().height;
 		return Texture2D(context, imageData);
 	}
 

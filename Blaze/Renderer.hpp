@@ -9,6 +9,7 @@
 #include "TextureCube.hpp"
 #include "Texture2D.hpp"
 #include "GUI.hpp"
+#include "Swapchain.hpp"
 
 #include <map>
 #include <vector>
@@ -32,23 +33,17 @@ namespace blaze
 		std::function<std::pair<uint32_t, uint32_t>(void)> getWindowSize;
 
 		Context context;
+		Swapchain swapchain;
 		GUI gui;
-
-		util::Managed<VkSwapchainKHR> swapchain;
-		util::Unmanaged<VkFormat> swapchainFormat;
-		util::Unmanaged<VkExtent2D> swapchainExtent;
-
-		util::UnmanagedVector<VkImage> swapchainImages;
-		util::ManagedVector<VkImageView> swapchainImageViews;
 
 		util::Managed<VkRenderPass> renderPass;
 
 		util::Managed<VkDescriptorSetLayout> uboDescriptorSetLayout;
-		util::Managed<VkDescriptorPool> descriptorPool;
-		util::UnmanagedVector<VkDescriptorSet> uboDescriptorSets;
-
 		util::Managed<VkDescriptorSetLayout> environmentDescriptorSetLayout;
 		util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
+
+		util::Managed<VkDescriptorPool> descriptorPool;
+		util::UnmanagedVector<VkDescriptorSet> uboDescriptorSets;
 
 		std::vector<UniformBuffer<CameraUniformBufferObject>> cameraUniformBuffers;
 		CameraUniformBufferObject cameraUBO{};
@@ -101,16 +96,9 @@ namespace blaze
 
 			try
 			{
-				{
-					auto [swapc, swapcFormat, swapcExtent] = createSwapchain();
-					swapchain = Managed(swapc, [dev = context.get_device()](VkSwapchainKHR& swpc){ vkDestroySwapchainKHR(dev, swpc, nullptr); });
-					swapchainFormat = swapcFormat;
-					swapchainExtent = swapcExtent;
-				}
 
-				swapchainImages = getSwapchainImages();
-				swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
-
+				swapchain = Swapchain(context);
+				
 				depthBufferTexture = createDepthBuffer();
 				
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
@@ -142,7 +130,7 @@ namespace blaze
 					inFlightFences = ManagedVector(fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
 				}
 
-				gui = GUI(context, swapchainExtent.get(), swapchainFormat.get(), swapchainImageViews.get());
+				gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
 
 				recordCommandBuffers();
 
@@ -161,10 +149,6 @@ namespace blaze
 			context(std::move(other.context)),
 			gui(std::move(other.gui)),
 			swapchain(std::move(other.swapchain)),
-			swapchainFormat(std::move(other.swapchainFormat)),
-			swapchainExtent(std::move(other.swapchainExtent)),
-			swapchainImages(std::move(other.swapchainImages)),
-			swapchainImageViews(std::move(other.swapchainImageViews)),
 			depthBufferTexture(std::move(other.depthBufferTexture)),
 			renderPass(std::move(other.renderPass)),
 			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
@@ -200,10 +184,6 @@ namespace blaze
 			context = std::move(other.context);
 			gui = std::move(other.gui);
 			swapchain = std::move(other.swapchain);
-			swapchainFormat = std::move(other.swapchainFormat);
-			swapchainExtent = std::move(other.swapchainExtent);
-			swapchainImages = std::move(other.swapchainImages);
-			swapchainImageViews = std::move(other.swapchainImageViews);
 			depthBufferTexture = std::move(other.depthBufferTexture);
 			renderPass = std::move(other.renderPass);
 			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
@@ -238,12 +218,11 @@ namespace blaze
 		Texture2D	createBrdfLut() const;
 
 		std::pair<uint32_t, uint32_t> get_dimensions() const { return getWindowSize(); }
-		const VkSwapchainKHR& get_swapchain() const { return swapchain.get(); }
-		const VkFormat& get_swapchainFormat() const { return swapchainFormat.get(); }
-		const VkExtent2D& get_swapchainExtent() const { return swapchainExtent.get(); }
-		size_t get_swapchainImageCount() const { return swapchainImageViews.size(); }
-		const VkImageView& get_swapchainImageView(size_t index) const { return swapchainImageViews[index]; }
-		const std::vector<VkImageView>& get_swapchainImageViews() const { return swapchainImageViews.get(); }
+		const VkFormat& get_swapchainFormat() const { return swapchain.get_format(); }
+		const VkExtent2D& get_swapchainExtent() const { return swapchain.get_extent(); }
+		size_t get_swapchainImageCount() const { return swapchain.get_imageCount(); }
+		const VkImageView& get_swapchainImageView(uint32_t index) const { return swapchain.get_imageView(index); }
+		const std::vector<VkImageView>& get_swapchainImageViews() const { return swapchain.get_imageViews(); }
 		const VkRenderPass& get_renderPass() const { return renderPass.get(); }
 		const VkPipeline& get_graphicsPipeline() const { return graphicsPipeline.get(); }
 		size_t get_framebufferCount() const { return renderFramebuffers.size(); }
@@ -298,15 +277,7 @@ namespace blaze
 			}
 
 			using namespace util;
-			{
-				auto [swapc, swapcFormat, swapcExtent] = createSwapchain();
-				swapchain = Managed(swapc, [dev = context.get_device()](VkSwapchainKHR& swpc){ vkDestroySwapchainKHR(dev, swpc, nullptr); });
-				swapchainFormat = swapcFormat;
-				swapchainExtent = swapcExtent;
-			}
-
-			swapchainImages = getSwapchainImages();
-			swapchainImageViews = ManagedVector(createSwapchainImageViews(), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+			swapchain.recreate(context);
 			
 			depthBufferTexture = createDepthBuffer();
 			
@@ -327,14 +298,11 @@ namespace blaze
 			renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
 			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
 
-			gui.recreate(context, swapchainExtent.get(), swapchainImageViews.get());
+			gui.recreate(context, swapchain.get_extent(), swapchain.get_imageViews());
 
 			recordCommandBuffers();
 		}
 
-		std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> createSwapchain() const;
-		std::vector<VkImage> getSwapchainImages() const;
-		std::vector<VkImageView> createSwapchainImageViews() const;
 		VkRenderPass createRenderPass() const;
 		VkDescriptorSetLayout createUBODescriptorSetLayout() const;
 		VkDescriptorSetLayout createEnvironmentDescriptorSetLayout() const;
