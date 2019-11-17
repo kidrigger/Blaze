@@ -74,6 +74,12 @@ namespace blaze
 		alignas(16) glm::vec4 lightPos[16];
 	};
 
+	struct CubemapUniformBufferObject
+	{
+		alignas(16) glm::mat4 projection;
+		alignas(16) glm::mat4 view[6];
+	};
+
 	struct SettingsUniformBufferObject
 	{
 		alignas(4) enum ViewTextureMap : int

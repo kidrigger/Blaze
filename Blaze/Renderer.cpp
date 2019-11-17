@@ -547,7 +547,7 @@ namespace blaze
 		} pcb = {};
 
 		util::Texture2CubemapInfo<PCB> info = {
-			"shaders/vIrradiance.vert.spv",
+			"shaders/vIrradianceMultiview.vert.spv",
 			"shaders/fIrradiance.frag.spv",
 			environment,
 			get_environmentLayout(),

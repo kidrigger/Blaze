@@ -26,7 +26,8 @@ namespace blaze
 		};
 
 		const std::vector<const char*> deviceExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_MULTIVIEW_EXTENSION_NAME
 		};
 
 		util::Managed<VkInstance> instance;

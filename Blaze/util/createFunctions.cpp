@@ -119,6 +119,81 @@ namespace blaze::util
 		}
 		return descriptorSetLayout;
 	}
+	
+	VkRenderPass createRenderPassMultiView(VkDevice device, uint32_t viewMask, VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkImageLayout finalLayout, VkImageLayout initialLayout, VkAttachmentLoadOp colorLoadOp)
+	{
+		std::vector<VkAttachmentDescription> attachments;
+		VkAttachmentReference colorAttachmentRef;
+		uint32_t idx = 0;
+		VkAttachmentDescription colorAttachment = {};
+		colorAttachment.format = colorAttachmentFormat;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = colorLoadOp;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = initialLayout;
+		colorAttachment.finalLayout = finalLayout;
+		attachments.push_back(colorAttachment);
+
+		colorAttachmentRef = { idx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+		std::optional<VkAttachmentReference> depthAttachmentRef;
+		if (depthAttachmentFormat != VK_FORMAT_UNDEFINED)
+		{
+			VkAttachmentDescription attachment = {};
+			attachment.format = depthAttachmentFormat;
+			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			attachments.push_back(attachment);
+
+			depthAttachmentRef = { idx++, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		}
+
+		VkSubpassDescription subpassDesc = {};
+		subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpassDesc.colorAttachmentCount = 1;
+		subpassDesc.pColorAttachments = &colorAttachmentRef;
+		subpassDesc.pDepthStencilAttachment = depthAttachmentRef.has_value() ? &depthAttachmentRef.value() : nullptr;
+
+		VkSubpassDependency dependency = {};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkRenderPassMultiviewCreateInfo renderPassMultiviewCI{};
+		renderPassMultiviewCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+		renderPassMultiviewCI.subpassCount = 1;
+		renderPassMultiviewCI.pViewMasks = &viewMask;
+		renderPassMultiviewCI.correlationMaskCount = 0;
+		renderPassMultiviewCI.pCorrelationMasks = nullptr;
+
+		VkRenderPassCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		createInfo.pAttachments = attachments.data();
+		createInfo.subpassCount = 1;
+		createInfo.pSubpasses = &subpassDesc;
+		createInfo.dependencyCount = 1;
+		createInfo.pDependencies = &dependency;
+		createInfo.pNext = &renderPassMultiviewCI;
+
+		VkRenderPass renderpass = VK_NULL_HANDLE;
+		auto result = vkCreateRenderPass(device, &createInfo, nullptr, &renderpass);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("RenderPass creation failed with " + std::to_string(result));
+		}
+		return renderpass;
+	}
 
 	VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkImageLayout finalLayout, VkImageLayout initialLayout, VkAttachmentLoadOp colorLoadOp)
 	{

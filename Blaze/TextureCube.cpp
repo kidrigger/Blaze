@@ -138,7 +138,7 @@ namespace blaze {
 		util::Managed<VkDescriptorSet> ds = util::Managed(createDescriptorSet(dsLayout.get(), dsPool.get(), equirect, 1), [dev = context.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) { vkFreeDescriptorSets(dev, pool, 1, &dset); });
 
 		util::Texture2CubemapInfo<util::Ignore> convertInfo {
-			"shaders/vIrradiance.vert.spv",
+			"shaders/vIrradianceMultiview.vert.spv",
 			"shaders/fEqvrect2Cube.frag.spv",
 			ds.get(),
 			dsLayout.get(),

@@ -27,6 +27,10 @@ namespace blaze::util
 	VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED,
 		VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
+	
+	VkRenderPass createRenderPassMultiView(VkDevice device, uint32_t viewMask, VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+		VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
 
 	VkPipelineLayout createPipelineLayout(VkDevice device, const std::vector<VkDescriptorSetLayout> descriptorSetLayouts, const std::vector<VkPushConstantRange>& pushConstantRanges);
 

@@ -8,6 +8,7 @@
 #include <TextureCube.hpp>
 #include "DebugTimer.hpp"
 #include "util/createFunctions.hpp"
+#include <UniformBuffer.hpp>
 
 namespace blaze::util
 {
@@ -43,6 +44,9 @@ namespace blaze::util
 			util::Managed<VkPipeline> irPipeline;
 			util::Managed<VkRenderPass> irRenderPass;
 			util::Managed<VkFramebuffer> irFramebuffer;
+			util::Managed<VkDescriptorSetLayout> views;
+			util::Managed<VkDescriptorPool> descriptorPool;
+			util::Managed<VkDescriptorSet> descriptorSet;
 
 			VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 
@@ -53,21 +57,11 @@ namespace blaze::util
 			idc.numChannels = 4;
 			idc.size = 4 * 6 * dim * dim;
 			idc.layerSize = 4 * dim * dim;
-			idc.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			idc.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			idc.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 			idc.format = format;
-			idc.access = VK_ACCESS_TRANSFER_WRITE_BIT;
+			idc.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			TextureCube irradianceMap(context, idc, false);
-
-			ImageData2D id2d{};
-			id2d.height = dim;
-			id2d.width = dim;
-			id2d.numChannels = 4;
-			id2d.size = 4 * dim * dim;
-			id2d.format = format;
-			id2d.usage = id2d.usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			id2d.access = VK_ACCESS_SHADER_WRITE_BIT;
-			Texture2D fbColorAttachment(context, id2d, false);
 
 			struct CubePushConstantBlock
 			{
@@ -75,8 +69,31 @@ namespace blaze::util
 			};
 
 			{
+				std::vector<VkDescriptorPoolSize> poolSizes = {
+					{
+						VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+						1
+					}
+				};
+				descriptorPool = util::Managed(util::createDescriptorPool(context.get_device(), poolSizes, 1), [dev = context.get_device()](VkDescriptorPool& descPool){vkDestroyDescriptorPool(dev, descPool, nullptr); });
+				std::vector<VkDescriptorSetLayoutBinding> bindings = {
+					{
+						0,
+						VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+						1,
+						VK_SHADER_STAGE_VERTEX_BIT,
+						nullptr
+					}
+				};
+
+				views = util::Managed(util::createDescriptorSetLayout(context.get_device(), bindings), [dev = context.get_device()](VkDescriptorSetLayout& lay){vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+			}
+
+			{
+
 				std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {
-					info.layout
+					info.layout,
+					views.get()
 				};
 
 				std::vector<VkPushConstantRange> pushConstantRanges;
@@ -97,7 +114,7 @@ namespace blaze::util
 				irPipelineLayout = util::Managed(util::createPipelineLayout(context.get_device(), descriptorSetLayouts, pushConstantRanges), [dev = context.get_device()](VkPipelineLayout& lay){vkDestroyPipelineLayout(dev, lay, nullptr); });
 			}
 
-			irRenderPass = util::Managed(util::createRenderPass(context.get_device(), format), [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+			irRenderPass = util::Managed(util::createRenderPassMultiView(context.get_device(), 0b00111111, format), [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
 
 			{
 				auto tPipeline = util::createGraphicsPipeline(context.get_device(), irPipelineLayout.get(), irRenderPass.get(), { dim, dim },
@@ -111,19 +128,19 @@ namespace blaze::util
 				fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 				fbCreateInfo.width = dim;
 				fbCreateInfo.height = dim;
-				fbCreateInfo.layers = 1;
+				fbCreateInfo.layers = 6;
 				fbCreateInfo.renderPass = irRenderPass.get();
 				fbCreateInfo.attachmentCount = 1;
-				fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
+				fbCreateInfo.pAttachments = &irradianceMap.get_imageView();
 				vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
 				irFramebuffer = util::Managed(fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
 			}
 
 			auto cube = getUVCube(context);
 
-			glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f);
-
-			std::vector<glm::mat4> matrices = {
+			CubemapUniformBufferObject uboData = {
+				glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f),
+				{
 				// POSITIVE_X (Outside in - so NEG_X face)
 				glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 				// NEGATIVE_X (Outside in - so POS_X face)
@@ -136,11 +153,45 @@ namespace blaze::util
 				glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 				// NEGATIVE_Z
 				glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+			}
 			};
+
+			UniformBuffer<CubemapUniformBufferObject> ubo(context, uboData);
+
+			{
+				VkDescriptorSetAllocateInfo allocInfo = {};
+				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+				allocInfo.descriptorPool = descriptorPool.get();
+				allocInfo.descriptorSetCount = 1;
+				allocInfo.pSetLayouts = views.data();
+
+				VkDescriptorSet dSet;
+				auto result = vkAllocateDescriptorSets(context.get_device(), &allocInfo, &dSet);
+				if (result != VK_SUCCESS)
+				{
+					throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+				}
+				descriptorSet = util::Managed(dSet, [dev = context.get_device(), pool = descriptorPool.get()](VkDescriptorSet& ds){ vkFreeDescriptorSets(dev, pool, 1, &ds); });
+
+				VkDescriptorBufferInfo info = {};
+				info.buffer = ubo.get_buffer();
+				info.offset = 0;
+				info.range = sizeof(CubemapUniformBufferObject);
+
+				VkWriteDescriptorSet write = {};
+				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				write.descriptorCount = 1;
+				write.dstSet = descriptorSet.get();
+				write.dstBinding = 0;
+				write.dstArrayElement = 0;
+				write.pBufferInfo = &info;
+
+				vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+			}
 
 			CubePushConstantBlock pcb{};
 
-			for (int face = 0; face < 6; face++)
 			{
 				auto cmdBuffer = context.startCommandBufferRecord();
 
@@ -162,8 +213,9 @@ namespace blaze::util
 
 				vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
 				vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 0, 1, &info.descriptor, 0, nullptr);
+				vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 1, 1, descriptorSet.data(), 0, nullptr);
 
-				pcb.mvp = proj * matrices[face];
+				pcb.mvp = glm::mat4(1.0f);
 				vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(CubePushConstantBlock), &pcb);
 				if (!is_ignore(info.pcb))
 				{
@@ -177,40 +229,6 @@ namespace blaze::util
 				vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
 
 				vkCmdEndRenderPass(cmdBuffer);
-
-				fbColorAttachment.transferLayout(cmdBuffer,
-					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-				VkImageCopy copyRegion = {};
-
-				copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				copyRegion.srcSubresource.baseArrayLayer = 0;
-				copyRegion.srcSubresource.mipLevel = 0;
-				copyRegion.srcSubresource.layerCount = 1;
-				copyRegion.srcOffset = { 0, 0, 0 };
-
-				copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				copyRegion.dstSubresource.baseArrayLayer = face;
-				copyRegion.dstSubresource.mipLevel = 0;
-				copyRegion.dstSubresource.layerCount = 1;
-				copyRegion.dstOffset = { 0, 0, 0 };
-
-				copyRegion.extent.width = static_cast<uint32_t>(dim);
-				copyRegion.extent.height = static_cast<uint32_t>(dim);
-				copyRegion.extent.depth = 1;
-
-				vkCmdCopyImage(cmdBuffer,
-					fbColorAttachment.get_image(), fbColorAttachment.get_imageInfo().imageLayout,
-					irradianceMap.get_image(), irradianceMap.get_imageInfo().imageLayout,
-					1, &copyRegion);
-
-				fbColorAttachment.transferLayout(cmdBuffer,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT,
-					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
 				context.flushCommandBuffer(cmdBuffer);
 			}
 

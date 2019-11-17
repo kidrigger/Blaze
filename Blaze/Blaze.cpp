@@ -324,7 +324,7 @@ namespace blaze
 				{
 					ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 					settings.submitDelta(1000.0f / ImGui::GetIO().Framerate);
-					ImGui::PlotLines("FPS", settings.deltaTime.data(), settings.deltaTime.size(), 0, nullptr, 0);
+					ImGui::PlotLines("FPS", settings.deltaTime.data(), static_cast<int>(settings.deltaTime.size()), 0, nullptr, 0);
 					if (ImGui::Button("Exit"))
 					{
 						glfwSetWindowShouldClose(window, GLFW_TRUE);
