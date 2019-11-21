@@ -86,7 +86,7 @@ namespace blaze
 
 	VkRenderPass Renderer::createRenderPass() const
 	{
-		return util::createRenderPass(context.get_device(), swapchain.get_format(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		return util::createRenderPass(context.get_device(), swapchain.get_format(), VK_FORMAT_D32_SFLOAT);
 	}
 
 	VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
@@ -245,7 +245,8 @@ namespace blaze
 			std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {
 				uboDescriptorSetLayout.get(),
 				materialDescriptorSetLayout.get(),
-				environmentDescriptorSetLayout.get()
+				environmentDescriptorSetLayout.get(),
+				shadowCaster.get_shadowLayout()
 			};
 
 			std::vector<VkPushConstantRange> pushConstantRanges;
@@ -348,6 +349,11 @@ namespace blaze
 			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 		}
 
+		shadow.position = cameraUBO.lightPos[0];
+		shadow.nearPlane = 1.0f;
+		shadow.farPlane = 1000.0f;
+		shadowCaster.cast(context, shadow, commandBuffers[frame], drawables);
+
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderpassBeginInfo.renderPass = renderPass.get();
@@ -365,10 +371,15 @@ namespace blaze
 		vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.get());
 
 		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 0, 1, &uboDescriptorSets[frame], 0, nullptr);
-
-		for (auto& cmd : renderCommands)
+		if (environmentDescriptor != VK_NULL_HANDLE)
 		{
-			cmd(commandBuffers[frame], graphicsPipelineLayout.get(), frame);
+			vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 2, 1, &environmentDescriptor, 0, nullptr);
+		}
+		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 3, 1, &shadow.get_descriptor(), 0, nullptr);
+
+		for (Drawable* cmd : drawables)
+		{
+			cmd->draw(commandBuffers[frame], graphicsPipelineLayout.get());
 		}
 
 		vkCmdBindPipeline(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline.get());

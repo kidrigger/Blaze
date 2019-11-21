@@ -44,6 +44,7 @@ namespace blaze
 			}
 			buffer = std::move(other.buffer);
 			size = other.size;
+			return *this;
 		}
 
 		UniformBuffer(const UniformBuffer& other) = delete;
@@ -52,5 +53,13 @@ namespace blaze
 		VkBuffer get_buffer() const { return buffer.get().buffer; }
 		VmaAllocation get_allocation() const { return buffer.get().allocation; }
 		size_t get_size() const { return size; }
+
+		void write(const Context& context, const T& data)
+		{
+			void* dataPtr;
+			vmaMapMemory(context.get_allocator(), buffer.get().allocation, &dataPtr);
+			memcpy(dataPtr, &data, size);
+			vmaUnmapMemory(context.get_allocator(), buffer.get().allocation);
+		}
 	};
 }

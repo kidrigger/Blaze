@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "util/Managed.hpp"
+#include "Context.hpp"
 #include <vector>
 
 namespace blaze
@@ -41,8 +42,8 @@ namespace blaze
 			format = swapcFormat;
 			extent = swapcExtent;
 
-			images = getSwapchainImages(context);
-			imageViews = ManagedVector(createSwapchainImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+			images = getImages(context);
+			imageViews = ManagedVector(createImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
 			count = static_cast<uint32_t>(images.size());
 		}
@@ -55,8 +56,8 @@ namespace blaze
 			format = swapcFormat;
 			extent = swapcExtent;
 
-			images = getSwapchainImages(context);
-			imageViews = ManagedVector(createSwapchainImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+			images = getImages(context);
+			imageViews = ManagedVector(createImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
 
 			count = static_cast<uint32_t>(images.size());
 		}

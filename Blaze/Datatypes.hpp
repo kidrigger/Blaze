@@ -80,6 +80,13 @@ namespace blaze
 		alignas(16) glm::mat4 view[6];
 	};
 
+	struct ShadowUniformBufferObject
+	{
+		alignas(16) glm::mat4 projection;
+		alignas(16) glm::mat4 view[6];
+		alignas(16) glm::vec3 lightPos;
+	};
+
 	struct SettingsUniformBufferObject
 	{
 		alignas(4) enum ViewTextureMap : int
@@ -91,6 +98,8 @@ namespace blaze
 			VTM_ROUGHNESS,
 			VTM_AO,
 			VTM_EMISSION,
+			VTM_POSITION,
+			VTM_DISTANCE,
 			VTM_MAX_COUNT
 		} textureMap;
 		alignas(4) union

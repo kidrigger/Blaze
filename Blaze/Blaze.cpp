@@ -75,7 +75,7 @@ namespace blaze
 		bool lockLight{ true };
 
 		struct {
-			std::array<std::string, 7> labels{ "Full Render", "Diffuse Map", "Normal Map", "Metallic Map", "Roughness Map", "AO Map", "Emission Map" };
+			std::array<std::string, 9> labels{ "Full Render", "Diffuse Map", "Normal Map", "Metallic Map", "Roughness Map", "AO Map", "Emission Map", "Position", "Distance" };
 			int currentValue = 0;
 			SettingsUniformBufferObject::ViewTextureMap value() const
 			{
@@ -252,8 +252,8 @@ namespace blaze
 		int intermittence = 0;
 		double elapsed = 0.0;
 
-		renderer.submit([&ds](VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frameCount) { vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &ds.get(), 0, nullptr); });
-		renderer.submit([&model](VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t frameCount) { model.draw(cmdBuffer, layout); });
+		renderer.set_environmentDescriptor(ds.get());
+		renderer.submit(&model);
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -412,7 +412,14 @@ namespace blaze
 
 int main(int argc, char* argv[])
 {
-	blaze::run();
+	try
+	{
+		blaze::run();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
 
 	return 0;
 }

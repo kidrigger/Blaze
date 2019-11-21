@@ -96,7 +96,7 @@ namespace blaze::util
 		VkPhysicalDeviceFeatures physicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(device, &physicalDeviceFeatures);
 
-		return queueFamilyIndices.complete() && extensionsSupported && swapchainAdequate && physicalDeviceFeatures.samplerAnisotropy;
+		return queueFamilyIndices.complete() && extensionsSupported && swapchainAdequate && physicalDeviceFeatures.samplerAnisotropy && physicalDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
 	}
 
 	bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers)

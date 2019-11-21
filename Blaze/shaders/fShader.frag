@@ -1,5 +1,6 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
+
+const float shadow_bias = 0.05f;
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
@@ -37,6 +38,8 @@ layout(set = 2, binding = 0) uniform samplerCube skybox;
 layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
 layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
 layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
+
+layout(set = 3, binding = 0) uniform samplerCube shadow;
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -144,6 +147,14 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
+float calculateShadow(int lightIdx) {
+	vec3 dir = position - ubo.lightPos[lightIdx].xyz;
+	dir.x *= -1;
+	float dist = length(dir);
+	dir = normalize(dir);
+	return (dist > texture(shadow, dir).r + shadow_bias) ? 0.0f: 1.0f;
+}
+
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
 	vec3 N = (material.normalTextureSet > -1 ? getNormal() : normalize(normal));
@@ -210,7 +221,11 @@ void main() {
 		vec3 specular	  = numerator / max(denominator, 0.001);
 
 		float NdotL = max(dot(N, L), 0.0f);
-		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
+		
+
+		float shade = calculateShadow(i);
+
+		L0 += shade * (kd * albedo / PI + specular) * radiance * NdotL;
 	}
 
 	vec3 ambient = vec3(0.03f) * ao;
@@ -255,6 +270,14 @@ void main() {
 			}; break;
 			case 6: {
 				outColor = vec4(emission, 1.0f);
+			}; break;
+			case 7: {
+				outColor = vec4(position.xyz * 0.1f, 1.0f);
+			}; break;
+			case 8: {
+				vec3 dir = position.xyz - ubo.lightPos[0].xyz;
+				dir.x *= -1;
+				outColor = vec4(texture(shadow, normalize(dir)).rrr * 0.1f, 1.0f);
 			}; break;
 		}
 	}

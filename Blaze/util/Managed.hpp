@@ -105,7 +105,7 @@ namespace blaze::util
 		inline const T& get() const { return handle; }
 		inline void set(const T& val) { handle = val; }
 		inline T* data() { return &handle; }
-		inline bool const valid() { return is_valid; }
+		inline bool const valid() const { return is_valid; }
 	};
 
 	template <typename T, bool singular = true>

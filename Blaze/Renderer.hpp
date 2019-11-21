@@ -10,6 +10,8 @@
 #include "Texture2D.hpp"
 #include "GUI.hpp"
 #include "Swapchain.hpp"
+#include "ShadowCaster.hpp"
+#include "Drawable.hpp"
 
 #include <map>
 #include <vector>
@@ -35,6 +37,7 @@ namespace blaze
 		Context context;
 		Swapchain swapchain;
 		GUI gui;
+		ShadowCaster shadowCaster;
 
 		util::Managed<VkRenderPass> renderPass;
 
@@ -61,10 +64,13 @@ namespace blaze
 		util::ManagedVector<VkSemaphore> renderFinishedSem;
 		util::ManagedVector<VkFence> inFlightFences;
 
-		std::vector<RenderCommand> renderCommands;
+		std::vector<Drawable*> drawables;
+		VkDescriptorSet environmentDescriptor{ VK_NULL_HANDLE };
 		RenderCommand skyboxCommand;
 
 		Texture2D depthBufferTexture;
+
+		Shadow shadow;
 
 		uint32_t currentFrame{ 0 };
 
@@ -98,6 +104,8 @@ namespace blaze
 			{
 
 				swapchain = Swapchain(context);
+
+				shadowCaster = ShadowCaster(context);
 				
 				depthBufferTexture = createDepthBuffer();
 				
@@ -131,6 +139,8 @@ namespace blaze
 				}
 
 				gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
+
+				shadow = Shadow(context, shadowCaster.get_renderPass());
 
 				recordCommandBuffers();
 
@@ -169,7 +179,10 @@ namespace blaze
 			renderFinishedSem(std::move(other.renderFinishedSem)),
 			inFlightFences(std::move(other.inFlightFences)),
 			skyboxCommand(std::move(other.skyboxCommand)),
-			renderCommands(std::move(other.renderCommands))
+			drawables(std::move(other.drawables)),
+			environmentDescriptor(other.environmentDescriptor),
+			shadowCaster(std::move(other.shadowCaster)),
+			shadow(std::move(other.shadow))
 		{
 		}
 
@@ -204,7 +217,10 @@ namespace blaze
 			renderFinishedSem = std::move(other.renderFinishedSem);
 			inFlightFences = std::move(other.inFlightFences);
 			skyboxCommand = std::move(other.skyboxCommand);
-			renderCommands = std::move(other.renderCommands);
+			drawables = std::move(other.drawables);
+			environmentDescriptor = other.environmentDescriptor;
+			shadowCaster = std::move(other.shadowCaster);
+			shadow = std::move(other.shadow);
 			return *this;
 		}
 
@@ -241,10 +257,14 @@ namespace blaze
 		const Context& get_context() const { return context; }
 
 		// Submit
-		template <class RNDRCMD>
-		void submit(const RNDRCMD& cmd)
+		void submit(Drawable* cmd)
 		{
-			renderCommands.emplace_back(cmd);
+			drawables.push_back(cmd);
+		}
+
+		void set_environmentDescriptor(VkDescriptorSet envDS)
+		{
+			environmentDescriptor = envDS;
 		}
 
 		template <class RNDRCMD>
@@ -268,39 +288,46 @@ namespace blaze
 
 		void recreateSwapchain()
 		{
-			vkDeviceWaitIdle(context.get_device());
-			auto [width, height] = getWindowSize();
-			while (width == 0 || height == 0)
+			try
 			{
-				std::tie(width, height) = getWindowSize();
-				glfwWaitEvents();
+				vkDeviceWaitIdle(context.get_device());
+				auto [width, height] = getWindowSize();
+				while (width == 0 || height == 0)
+				{
+					std::tie(width, height) = getWindowSize();
+					glfwWaitEvents();
+				}
+
+				using namespace util;
+				swapchain.recreate(context);
+
+				depthBufferTexture = createDepthBuffer();
+
+				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
+
+				cameraUniformBuffers = createUniformBuffers(cameraUBO);
+				settingsUniformBuffers = createUniformBuffers(settingsUBO);
+				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+				uboDescriptorSets = createCameraDescriptorSets();
+
+				{
+					auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
+					graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+					graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+					skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+				}
+
+				renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+				commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+
+				gui.recreate(context, swapchain.get_extent(), swapchain.get_imageViews());
+
+				recordCommandBuffers();
 			}
-
-			using namespace util;
-			swapchain.recreate(context);
-			
-			depthBufferTexture = createDepthBuffer();
-			
-			renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
-
-			cameraUniformBuffers = createUniformBuffers(cameraUBO);
-			settingsUniformBuffers = createUniformBuffers(settingsUBO);
-			descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-			uboDescriptorSets = createCameraDescriptorSets();
-
+			catch (std::exception& e)
 			{
-				auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
-				graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
-				graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-				skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+				std::cerr << e.what() << std::endl;
 			}
-
-			renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-			commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
-
-			gui.recreate(context, swapchain.get_extent(), swapchain.get_imageViews());
-
-			recordCommandBuffers();
 		}
 
 		VkRenderPass createRenderPass() const;
@@ -322,18 +349,12 @@ namespace blaze
 
 		void updateUniformBuffer(int frame, const CameraUniformBufferObject& ubo)
 		{
-			void* data;
-			vmaMapMemory(context.get_allocator(), cameraUniformBuffers[frame].get_allocation(), &data);
-			memcpy(data, &ubo, cameraUniformBuffers[frame].get_size());
-			vmaUnmapMemory(context.get_allocator(), cameraUniformBuffers[frame].get_allocation());
+			cameraUniformBuffers[frame].write(context, ubo);
 		}
 
 		void updateUniformBuffer(int frame, const SettingsUniformBufferObject& ubo)
 		{
-			void* data;
-			vmaMapMemory(context.get_allocator(), settingsUniformBuffers[frame].get_allocation(), &data);
-			memcpy(data, &ubo, settingsUniformBuffers[frame].get_size());
-			vmaUnmapMemory(context.get_allocator(), settingsUniformBuffers[frame].get_allocation());
+			settingsUniformBuffers[frame].write(context, ubo);
 		}
 	};
 }

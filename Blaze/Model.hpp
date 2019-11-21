@@ -14,6 +14,8 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include "Drawable.hpp"
+
 namespace blaze
 {
 	class Material
@@ -195,7 +197,7 @@ namespace blaze
 		}
 	};
 
-	class Model
+	class Model : public Drawable
 	{
 	private:
 		Node root;
@@ -286,6 +288,20 @@ namespace blaze
 					auto& primitive = primitives[i];
 					vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &materials[primitive.material].get_descriptorSet(), 0, nullptr);
 					vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(ModelPushConstantBlock), sizeof(MaterialPushConstantBlock), &materials[primitive.material].get_pushConstantBlock());
+					vkCmdDrawIndexed(buf, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				}
+			}
+		}
+
+		void drawGeometry(VkCommandBuffer buf, VkPipelineLayout layout)
+		{
+			vbo.bind(buf);
+			for (auto& node : nodes)
+			{
+				vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelPushConstantBlock), &node.pcb);
+				for (int i = node.primitive_range.first; i < node.primitive_range.second; i++)
+				{
+					auto& primitive = primitives[i];
 					vkCmdDrawIndexed(buf, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
 				}
 			}

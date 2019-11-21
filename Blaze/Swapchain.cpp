@@ -1,6 +1,9 @@
 
 #include "Swapchain.hpp"
 
+#include <string>
+#include "util/createFunctions.hpp"
+
 namespace blaze
 {
 	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(const Context& context) const
