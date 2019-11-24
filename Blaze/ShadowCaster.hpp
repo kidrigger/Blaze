@@ -24,16 +24,15 @@ namespace blaze
 	class Shadow
 	{
 	public:
-		float nearPlane;
-		float farPlane;
-		glm::vec3 position;
+		float nearPlane{ 0.1f };
+		float farPlane{ 512.0f };
+		glm::vec3 position{ 0.0f };
 
 	private:
 		TextureCube shadowMap;
 		TextureCube depthMap;
 		util::Managed<VkFramebuffer> framebuffer;
 		util::Unmanaged<VkViewport> viewport;
-		util::Unmanaged<VkDescriptorSet> descriptorSet;
 
 	public:
 		Shadow() noexcept
@@ -94,7 +93,6 @@ namespace blaze
 		const VkViewport& get_viewport() const { return viewport.get(); }
 		const TextureCube& get_shadowMap() const { return shadowMap; }
 		TextureCube& get_shadowMap() { return shadowMap; }
-		const VkDescriptorSet& get_descriptor() const { return descriptorSet.get(); }
 
 		friend class ShadowCaster;
 	};
@@ -103,6 +101,9 @@ namespace blaze
 	{
 	public:
 		const VkFormat format{ VK_FORMAT_R32_SFLOAT };
+
+		using ShadowHandle = int32_t;
+		using LightHandle = uint32_t;
 	private:
 		util::Managed<VkRenderPass> renderPass;
 		util::Managed<VkPipelineLayout> pipelineLayout;
@@ -110,21 +111,41 @@ namespace blaze
 		util::Managed<VkDescriptorPool> dsPool;
 		util::Managed<VkDescriptorSetLayout> dsLayout;
 		util::Managed<VkDescriptorSetLayout> shadowLayout;
-		util::Managed<VkDescriptorSet> descriptorSet;
-		UniformBuffer<ShadowUniformBufferObject> ubo;
+		util::Unmanaged<VkDescriptorSet> uboDescriptorSet;
+		util::Unmanaged<VkDescriptorSet> shadowDescriptorSet;
+		UniformBuffer<ShadowUniformBufferObject> viewsUBO;
+		std::vector<Shadow> shadows;
+		std::vector<ShadowHandle> freeStack;
+		std::vector<bool> handleValidity;
+		LightsUniformBufferObject lightsData;
+		uint32_t MAX_SHADOWS;
+		uint32_t MAX_LIGHTS;
 
 	public:
 		ShadowCaster() noexcept
 		{
 		}
 
-		ShadowCaster(const Context& context) noexcept
+		ShadowCaster(const Context& context, uint32_t maxLights = 16, uint32_t maxShadows = 16) noexcept
+			: MAX_LIGHTS(maxLights),
+			MAX_SHADOWS(maxShadows)
 		{
 			using namespace util;
 
+			assert(MAX_LIGHTS <= 16);
+			memset(&lightsData, 0, sizeof(lightsData));
+			memset(lightsData.shadowIdx, -1, sizeof(lightsData.shadowIdx));
+
 			renderPass = Managed(createRenderPassMultiView(context.get_device(), 0b00111111, format, VK_FORMAT_D32_SFLOAT), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
 
-			ubo = UniformBuffer(context, createOmniShadowUBO());
+			viewsUBO = UniformBuffer(context, createOmniShadowUBO());
+			
+			handleValidity = std::vector<bool>(MAX_SHADOWS, false);
+			freeStack.reserve(MAX_SHADOWS);
+			for (uint32_t i = 0; i < MAX_SHADOWS; i++)
+			{
+				freeStack.push_back(MAX_SHADOWS - i - 1);
+			}
 
 			try
 			{
@@ -136,7 +157,7 @@ namespace blaze
 						},
 						{
 							VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-							16
+							MAX_SHADOWS
 						}
 					};
 					dsPool = util::Managed(util::createDescriptorPool(context.get_device(), poolSizes, 17), [dev = context.get_device()](VkDescriptorPool& descPool){vkDestroyDescriptorPool(dev, descPool, nullptr); });
@@ -156,7 +177,7 @@ namespace blaze
 						{
 							0,
 							VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-							1,
+							MAX_SHADOWS,
 							VK_SHADER_STAGE_FRAGMENT_BIT,
 							nullptr
 						}
@@ -172,7 +193,7 @@ namespace blaze
 						{
 							VK_SHADER_STAGE_VERTEX_BIT,
 							0,
-							sizeof(ModelPushConstantBlock)
+							sizeof(ModelPushConstantBlock) + sizeof(ShadowPushConstantBlock)
 						}
 					};
 					pipelineLayout = Managed(createPipelineLayout(context.get_device(), descriptorLayouts, pushConstantRanges), [dev = context.get_device()](VkPipelineLayout& lay){vkDestroyPipelineLayout(dev, lay, nullptr); });
@@ -197,10 +218,10 @@ namespace blaze
 					{
 						std::cerr << "Descriptor Set allocation failed with " << std::to_string(result) << std::endl;
 					}
-					descriptorSet = util::Managed(dSet, [dev = context.get_device(), pool = dsPool.get()](VkDescriptorSet& ds){ vkFreeDescriptorSets(dev, pool, 1, &ds); });
+					uboDescriptorSet = dSet;
 
 					VkDescriptorBufferInfo info = {};
-					info.buffer = ubo.get_buffer();
+					info.buffer = viewsUBO.get_buffer();
 					info.offset = 0;
 					info.range = sizeof(ShadowUniformBufferObject);
 
@@ -208,10 +229,50 @@ namespace blaze
 					write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 					write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					write.descriptorCount = 1;
-					write.dstSet = descriptorSet.get();
+					write.dstSet = uboDescriptorSet.get();
 					write.dstBinding = 0;
 					write.dstArrayElement = 0;
 					write.pBufferInfo = &info;
+
+					vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+					viewsUBO.write(context, createOmniShadowUBO());
+				}
+
+				shadows = std::vector<Shadow>();
+				for (uint32_t i = 0; i < MAX_SHADOWS; i++)
+				{
+					shadows.emplace_back(context, renderPass.get());
+				}
+
+				{
+					VkDescriptorSetAllocateInfo allocInfo = {};
+					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+					allocInfo.descriptorPool = dsPool.get();
+					allocInfo.descriptorSetCount = 1;
+					allocInfo.pSetLayouts = &shadowLayout.get();
+
+					VkDescriptorSet descriptorSet;
+					auto result = vkAllocateDescriptorSets(context.get_device(), &allocInfo, &descriptorSet);
+					if (result != VK_SUCCESS)
+					{
+						throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+					}
+					shadowDescriptorSet = descriptorSet;
+
+					std::vector<VkDescriptorImageInfo> imageInfos;
+					for (auto& shade : shadows)
+					{
+						imageInfos.push_back(shade.get_shadowMap().get_imageInfo());
+					}
+
+					VkWriteDescriptorSet write = {};
+					write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					write.descriptorCount = MAX_SHADOWS;
+					write.dstSet = descriptorSet;
+					write.dstBinding = 0;
+					write.dstArrayElement = 0;
+					write.pImageInfo = imageInfos.data();
 
 					vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
 				}
@@ -228,10 +289,17 @@ namespace blaze
 			pipeline(std::move(other.pipeline)),
 			dsPool(std::move(other.dsPool)),
 			dsLayout(std::move(other.dsLayout)),
-			descriptorSet(std::move(other.descriptorSet)),
+			uboDescriptorSet(std::move(other.uboDescriptorSet)),
+			shadowDescriptorSet(std::move(other.shadowDescriptorSet)),
 			shadowLayout(std::move(other.shadowLayout)),
-			ubo(std::move(other.ubo))
+			viewsUBO(std::move(other.viewsUBO)),
+			shadows(std::move(other.shadows)),
+			freeStack(std::move(other.freeStack)),
+			handleValidity(std::move(other.handleValidity)),
+			MAX_SHADOWS(other.MAX_SHADOWS),
+			MAX_LIGHTS(other.MAX_LIGHTS)
 		{
+			memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
 		}
 
 		ShadowCaster& operator=(ShadowCaster&& other) noexcept
@@ -245,54 +313,114 @@ namespace blaze
 			pipeline = std::move(other.pipeline);
 			dsPool = std::move(other.dsPool);
 			dsLayout = std::move(other.dsLayout);
-			descriptorSet = std::move(other.descriptorSet);
+			uboDescriptorSet = std::move(other.uboDescriptorSet);
+			shadowDescriptorSet = std::move(other.shadowDescriptorSet);
 			shadowLayout = std::move(other.shadowLayout);
-			ubo = std::move(other.ubo);
+			viewsUBO = std::move(other.viewsUBO);
+			shadows = std::move(other.shadows);
+			freeStack = std::move(other.freeStack);
+			handleValidity = std::move(other.handleValidity);
+			memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
+			MAX_SHADOWS = other.MAX_SHADOWS;
+			MAX_LIGHTS = other.MAX_LIGHTS;
 			return *this;
 		}
 
 		ShadowCaster(const ShadowCaster& other) = delete;
 		ShadowCaster& operator=(const ShadowCaster& other) = delete;
 
-		void cast(const Context& context, Shadow& shadow, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		LightHandle addLight(const glm::vec3& position, float brightness, bool hasShadow)
 		{
-			ubo.write(context, createOmniShadowUBO(shadow));
-
-			if (!shadow.descriptorSet.valid())
+			if (lightsData.numLights >= MAX_LIGHTS)
 			{
-				VkDescriptorSetAllocateInfo allocInfo = {};
-				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				allocInfo.descriptorPool = dsPool.get();
-				allocInfo.descriptorSetCount = 1;
-				allocInfo.pSetLayouts = &shadowLayout.get();
+				throw std::runtime_error("Max Light Count Reached.");
+			}
+			auto handle = lightsData.numLights;
+			lightsData.lightPos[handle] = glm::vec4(position, brightness);
+			lightsData.shadowIdx[handle] = createShadow(position);
+			lightsData.numLights++;
+			return handle;
+		}
 
-				VkDescriptorSet descriptorSet;
-				auto result = vkAllocateDescriptorSets(context.get_device(), &allocInfo, &descriptorSet);
-				if (result != VK_SUCCESS)
-				{
-					throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
-				}
+		void setLightPosition(LightHandle handle, const glm::vec3& position)
+		{
+			if (handle >= lightsData.numLights)
+			{
+				throw std::out_of_range("Invalid Light Handle.");
+			}
+			memcpy(&lightsData.lightPos[handle], &position[0], sizeof(glm::vec3));
+			ShadowHandle shade = lightsData.shadowIdx[handle];
+			if (shade >= 0)
+			{
+				shadows[shade].position = lightsData.lightPos[handle];
+			}
+		}
 
-				VkWriteDescriptorSet write = {};
-				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-				write.descriptorCount = 1;
-				write.dstSet = descriptorSet;
-				write.dstBinding = 0;
-				write.dstArrayElement = 0;
-				write.pImageInfo = &shadow.get_shadowMap().get_imageInfo();
+		void setLightBrightness(LightHandle handle, float brightness)
+		{
+			if (handle >= lightsData.numLights)
+			{
+				throw std::out_of_range("Invalid Light Handle.");
+			}
+			lightsData.lightPos[handle][3] = brightness;
+		}
 
-				vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+		const LightsUniformBufferObject& getLightsData() const { return lightsData; }
 
-				shadow.descriptorSet = descriptorSet;
+		void bind(VkCommandBuffer cmdBuffer, VkPipelineLayout layout, uint32_t set) const
+		{
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &shadowDescriptorSet.get(), 0, nullptr);
+		}
+
+		ShadowHandle createShadow(const glm::vec3& position = glm::vec3(0.0f), float nearPlane = 1.0f, float farPlane = 512.0f)
+		{
+			if (freeStack.empty())
+			{
+				throw std::runtime_error("Max shadows reached.");
+			}
+			auto handle = freeStack.back();
+			freeStack.pop_back();
+			handleValidity[handle] = true;
+			shadows[handle].position = position;
+			shadows[handle].nearPlane = nearPlane;
+			shadows[handle].farPlane = farPlane;
+			return handle;
+		}
+
+		void freeShadow(ShadowHandle handle)
+		{
+			if (!handleValidity[handle])
+			{
+				throw std::out_of_range("Invalid Shadow Handle.");
+			}
+			freeStack.push_back(handle);
+			handleValidity[handle] = false;
+		}
+
+		void cast(const Context& context, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		{
+			for (ShadowHandle handle : lightsData.shadowIdx)
+			{
+				if (handle < 0) continue;
+				cast(context, handle, cmdBuffer, drawables);
+			}
+		}
+
+		void cast(const Context& context, ShadowHandle handle, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		{
+			if (!handleValidity[handle])
+			{
+				throw std::out_of_range("Invalid Shadow Handle.");
 			}
 
-			shadow.get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-			
+			shadows[handle].get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+			auto shadowPCB = createOmniShadowPCB(shadows[handle]);
+
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderpassBeginInfo.renderPass = renderPass.get();
-			renderpassBeginInfo.framebuffer = shadow.framebuffer.get();
+			renderpassBeginInfo.framebuffer = shadows[handle].framebuffer.get();
 			renderpassBeginInfo.renderArea.offset = { 0, 0 };
 			renderpassBeginInfo.renderArea.extent = { SHADOW_MAP_SIZE,SHADOW_MAP_SIZE };
 
@@ -304,8 +432,9 @@ namespace blaze
 
 			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.get());
-			vkCmdSetViewport(cmdBuffer, 0, 1, &shadow.viewport.get());
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, descriptorSet.data(), 0, nullptr);
+			vkCmdSetViewport(cmdBuffer, 0, 1, &shadows[handle].viewport.get());
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, uboDescriptorSet.data(), 0, nullptr);
+			vkCmdPushConstants(cmdBuffer, pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(ModelPushConstantBlock), sizeof(ShadowPushConstantBlock), &shadowPCB);
 
 			for (Drawable* d : drawables)
 			{
@@ -314,39 +443,42 @@ namespace blaze
 
 			vkCmdEndRenderPass(cmdBuffer);
 
-			shadow.get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			shadows[handle].get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		}
+
+		void setShadowClipPlanes(ShadowHandle handle, float nearPlane, float farPlane)
+		{
+			if (!handleValidity[handle])
+			{
+				throw std::out_of_range("Invalid Shadow Handle.");
+			}
+			shadows[handle].nearPlane = nearPlane;
+			shadows[handle].farPlane = farPlane;
+		}
+
+		void setShadowPosition(ShadowHandle handle, const glm::vec3& position)
+		{
+			if (!handleValidity[handle])
+			{
+				throw std::out_of_range("Invalid Shadow Handle.");
+			}
+			shadows[handle].position = position;
 		}
 
 		const VkRenderPass& get_renderPass() const { return renderPass.get(); }
 		const VkDescriptorSetLayout& get_shadowLayout() const { return shadowLayout.get(); }
 
 	private:
-		ShadowUniformBufferObject createOmniShadowUBO(const Shadow& shadow) const
+		ShadowPushConstantBlock createOmniShadowPCB(const Shadow& shadow) const
 		{
-			// TODO FIX THIS
 			return {
 				glm::perspective(glm::radians(90.0f), 1.0f, shadow.nearPlane, shadow.farPlane),
-				{
-					// POSITIVE_X (Outside in - so NEG_X face)
-					glm::lookAt(shadow.position, shadow.position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-					// NEGATIVE_X (Outside in - so POS_X face)
-					glm::lookAt(shadow.position, shadow.position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-					// POSITIVE_Y
-					glm::lookAt(shadow.position, shadow.position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-					// NEGATIVE_Y
-					glm::lookAt(shadow.position, shadow.position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-					// POSITIVE_Z
-					glm::lookAt(shadow.position, shadow.position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-					// NEGATIVE_Z
-					glm::lookAt(shadow.position, shadow.position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
-				},
 				shadow.position
 			};
 		}
 		ShadowUniformBufferObject createOmniShadowUBO() const
 		{
 			return {
-				glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.f),
 				{
 					// POSITIVE_X (Outside in - so NEG_X face)
 					glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
@@ -360,8 +492,7 @@ namespace blaze
 					glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 					// NEGATIVE_Z
 					glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-				},
-				glm::vec3(0.0f)
+				}
 			};
 		}
 	};

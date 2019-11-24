@@ -70,8 +70,23 @@ namespace blaze
 		alignas(16) glm::mat4 view;
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 viewPos;
-		int numLights;
+	};
+
+	struct LightsUniformBufferObject
+	{
 		alignas(16) glm::vec4 lightPos[16];
+		alignas(16) int shadowIdx[16];
+		int numLights;
+	};
+
+	struct RendererUniformBufferObject
+	{
+		alignas(16) glm::mat4 view;
+		alignas(16) glm::mat4 projection;
+		alignas(16) glm::vec3 viewPos;
+		alignas(16) glm::vec4 lightPos[16];
+		alignas(16) int shadowIdx[16];
+		int numLights;
 	};
 
 	struct CubemapUniformBufferObject
@@ -82,9 +97,7 @@ namespace blaze
 
 	struct ShadowUniformBufferObject
 	{
-		alignas(16) glm::mat4 projection;
 		alignas(16) glm::mat4 view[6];
-		alignas(16) glm::vec3 lightPos;
 	};
 
 	struct SettingsUniformBufferObject
@@ -133,6 +146,12 @@ namespace blaze
 	struct ModelPushConstantBlock
 	{
 		glm::mat4 model;
+	};
+
+	struct ShadowPushConstantBlock
+	{
+		glm::mat4 projection;
+		glm::vec3 position;
 	};
 
 	struct BufferObject

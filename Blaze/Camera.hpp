@@ -31,7 +31,6 @@ namespace blaze
 			ubo.view = glm::lookAt(position, target + position, up);
 			ubo.projection = glm::perspective(fov, aspect, 0.1f, 10.0f);
 			ubo.viewPos = position;
-			ubo.numLights = 0;
 			uboDirty = true;
 		}
 
@@ -57,30 +56,6 @@ namespace blaze
 		{
 			target = direction;
 			uboDirty = true;
-		}
-
-		void addLight(const glm::vec3& position, float brightness)
-		{
-			if (ubo.numLights < 16)
-			{
-				ubo.lightPos[ubo.numLights++] = glm::vec4(position, brightness);
-			}
-			else
-			{
-				throw std::runtime_error("Max Light Count Reached.");
-			}
-		}
-
-		void setLight(int index, const glm::vec3& position, float brightness)
-		{
-			if (ubo.numLights > index)
-			{
-				ubo.lightPos[index] = glm::vec4(position, brightness);
-			}
-			else
-			{
-				throw std::runtime_error("Max Light index Wrong.");
-			}
 		}
 
 		const glm::vec3& get_position() const { return position; }

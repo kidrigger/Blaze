@@ -139,5 +139,6 @@ namespace blaze::util
 				return format;
 			}
 		}
+		return VK_FORMAT_UNDEFINED;
 	}
 }

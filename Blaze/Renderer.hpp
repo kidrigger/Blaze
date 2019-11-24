@@ -48,8 +48,8 @@ namespace blaze
 		util::Managed<VkDescriptorPool> descriptorPool;
 		util::UnmanagedVector<VkDescriptorSet> uboDescriptorSets;
 
-		std::vector<UniformBuffer<CameraUniformBufferObject>> cameraUniformBuffers;
-		CameraUniformBufferObject cameraUBO{};
+		std::vector<UniformBuffer<RendererUniformBufferObject>> rendererUniformBuffers;
+		RendererUniformBufferObject rendererUBO{};
 		std::vector<UniformBuffer<SettingsUniformBufferObject>> settingsUniformBuffers;
 		SettingsUniformBufferObject settingsUBO{};
 
@@ -69,8 +69,6 @@ namespace blaze
 		RenderCommand skyboxCommand;
 
 		Texture2D depthBufferTexture;
-
-		Shadow shadow;
 
 		uint32_t currentFrame{ 0 };
 
@@ -105,13 +103,13 @@ namespace blaze
 
 				swapchain = Swapchain(context);
 
-				shadowCaster = ShadowCaster(context);
+				shadowCaster = ShadowCaster(context, 16, 16);
 				
 				depthBufferTexture = createDepthBuffer();
 				
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
-				cameraUniformBuffers = createUniformBuffers(cameraUBO);
+				rendererUniformBuffers = createUniformBuffers(rendererUBO);
 				settingsUniformBuffers = createUniformBuffers(settingsUBO);
 				uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
 				environmentDescriptorSetLayout = Managed(createEnvironmentDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
@@ -140,7 +138,12 @@ namespace blaze
 
 				gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
 
-				shadow = Shadow(context, shadowCaster.get_renderPass());
+				rendererUBO.shadowIdx[0] = shadowCaster.createShadow();
+				shadowCaster.setShadowClipPlanes(rendererUBO.shadowIdx[0], 0.1f, 512.0f);
+				rendererUBO.shadowIdx[1] = shadowCaster.createShadow();
+				shadowCaster.setShadowClipPlanes(rendererUBO.shadowIdx[1], 0.1f, 512.0f);
+				rendererUBO.shadowIdx[2] = shadowCaster.createShadow();
+				shadowCaster.setShadowClipPlanes(rendererUBO.shadowIdx[2], 0.1f, 512.0f);
 
 				recordCommandBuffers();
 
@@ -166,9 +169,9 @@ namespace blaze
 			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
 			descriptorPool(std::move(other.descriptorPool)),
 			uboDescriptorSets(std::move(other.uboDescriptorSets)),
-			cameraUniformBuffers(std::move(other.cameraUniformBuffers)),
+			rendererUniformBuffers(std::move(other.rendererUniformBuffers)),
 			settingsUniformBuffers(std::move(other.settingsUniformBuffers)),
-			cameraUBO(other.cameraUBO),
+			rendererUBO(other.rendererUBO),
 			settingsUBO(other.settingsUBO),
 			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
 			graphicsPipeline(std::move(other.graphicsPipeline)),
@@ -181,8 +184,7 @@ namespace blaze
 			skyboxCommand(std::move(other.skyboxCommand)),
 			drawables(std::move(other.drawables)),
 			environmentDescriptor(other.environmentDescriptor),
-			shadowCaster(std::move(other.shadowCaster)),
-			shadow(std::move(other.shadow))
+			shadowCaster(std::move(other.shadowCaster))
 		{
 		}
 
@@ -204,9 +206,9 @@ namespace blaze
 			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
 			descriptorPool = std::move(other.descriptorPool);
 			uboDescriptorSets = std::move(other.uboDescriptorSets);
-			cameraUniformBuffers = std::move(other.cameraUniformBuffers);
+			rendererUniformBuffers = std::move(other.rendererUniformBuffers);
 			settingsUniformBuffers = std::move(other.settingsUniformBuffers);
-			cameraUBO = other.cameraUBO;
+			rendererUBO = other.rendererUBO;
 			settingsUBO = other.settingsUBO;
 			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
 			graphicsPipeline = std::move(other.graphicsPipeline);
@@ -220,7 +222,6 @@ namespace blaze
 			drawables = std::move(other.drawables);
 			environmentDescriptor = other.environmentDescriptor;
 			shadowCaster = std::move(other.shadowCaster);
-			shadow = std::move(other.shadow);
 			return *this;
 		}
 
@@ -248,6 +249,7 @@ namespace blaze
 		const VkDescriptorSetLayout& get_uboLayout() const { return uboDescriptorSetLayout.get(); }
 		const VkDescriptorSetLayout& get_materialLayout() const { return materialDescriptorSetLayout.get(); }
 		const VkDescriptorSetLayout& get_environmentLayout() const { return environmentDescriptorSetLayout.get(); }
+		ShadowCaster& get_lightSystem() { return shadowCaster; }
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
@@ -275,12 +277,17 @@ namespace blaze
 
 		void set_cameraUBO(const CameraUniformBufferObject& ubo)
 		{
-			cameraUBO = ubo;
+			memcpy(&rendererUBO, &ubo, sizeof(ubo));
+		}
+
+		void set_lightUBO(const LightsUniformBufferObject& ubo)
+		{
+			memcpy(&rendererUBO.lightPos, &ubo, sizeof(ubo));
 		}
 
 		void set_settingsUBO(const SettingsUniformBufferObject& ubo)
 		{
-			settingsUBO = ubo;
+			memcpy(&settingsUBO, &ubo, sizeof(ubo));
 		}
 
 		bool complete() const { return isComplete; }
@@ -305,7 +312,7 @@ namespace blaze
 
 				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
-				cameraUniformBuffers = createUniformBuffers(cameraUBO);
+				rendererUniformBuffers = createUniformBuffers(rendererUBO);
 				settingsUniformBuffers = createUniformBuffers(settingsUBO);
 				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 				uboDescriptorSets = createCameraDescriptorSets();
@@ -336,7 +343,7 @@ namespace blaze
 		VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 		VkDescriptorPool createDescriptorPool() const;
 		std::vector<VkDescriptorSet> createCameraDescriptorSets() const;
-		std::vector<UniformBuffer<CameraUniformBufferObject>> createUniformBuffers(const CameraUniformBufferObject& ubo) const;
+		std::vector<UniformBuffer<RendererUniformBufferObject>> createUniformBuffers(const RendererUniformBufferObject& ubo) const;
 		std::vector<UniformBuffer<SettingsUniformBufferObject>> createUniformBuffers(const SettingsUniformBufferObject& ubo) const;
 		std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
 		std::vector<VkFramebuffer> createRenderFramebuffers() const;
@@ -347,9 +354,9 @@ namespace blaze
 
 		Texture2D createDepthBuffer() const;
 
-		void updateUniformBuffer(int frame, const CameraUniformBufferObject& ubo)
+		void updateUniformBuffer(int frame, const RendererUniformBufferObject& ubo)
 		{
-			cameraUniformBuffers[frame].write(context, ubo);
+			rendererUniformBuffers[frame].write(context, ubo);
 		}
 
 		void updateUniformBuffer(int frame, const SettingsUniformBufferObject& ubo)

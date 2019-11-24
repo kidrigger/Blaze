@@ -144,10 +144,8 @@ namespace blaze
 		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 1000.0f);
 		// cam.addLight(glm::vec3{ -8.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ -4.0f, 2.0f, 0.0f }, 1.0f);
-		// cam.addLight(glm::vec3{ 0.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ 4.0f, 2.0f, 0.0f }, 1.0f);
 		// cam.addLight(glm::vec3{ 8.0f, 2.0f, 0.0f }, 1.0f);
-		cam.addLight(glm::vec3(0.0f), 1.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -172,6 +170,11 @@ namespace blaze
 		{
 			throw std::runtime_error("Renderer could not be created");
 		}
+
+		// TODO: Let there be lights
+		renderer.get_lightSystem().addLight(glm::vec3(0.0f), 1.0f, true);
+		renderer.get_lightSystem().addLight(glm::vec3{ 0.0f, 4.0f, -0.5f }, 1.0f, true);
+		renderer.get_lightSystem().addLight(glm::vec3{ 5.0f, 1.0f, -0.5f }, 1.0f, true);
 
 		strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
 		strcpy(settings.filename, "assets/sponza/Sponza.gltf");
@@ -264,7 +267,6 @@ namespace blaze
 			{
 				if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 				{
-
 					glfwSetCursorPosCallback(window, nullptr);
 					glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 					mouseEnabled = false;
@@ -301,14 +303,14 @@ namespace blaze
 
 			if (settings.lockLight)
 			{
-				cam.setLight(0, cam.get_position(), 1.0f);
+				renderer.get_lightSystem().setLightPosition(0, cam.get_position());
 			}
+			renderer.get_lightSystem().setLightPosition(1, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
 			
 			if (settings.rotate)
 			{
 				model.get_root()->rotation *= glm::quat(glm::vec3(0, settings.rotationSpeed * deltaTime, 0));
 			}
-
 
 			GUI::startFrame();
 			{

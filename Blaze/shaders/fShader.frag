@@ -18,8 +18,9 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	int numLights;
 	vec4 lightPos[16];
+	ivec4 shadowIdx[4];
+	int numLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
@@ -39,7 +40,7 @@ layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
 layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
 layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
 
-layout(set = 3, binding = 0) uniform samplerCube shadow;
+layout(set = 3, binding = 0) uniform samplerCube shadow[16];
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -56,6 +57,11 @@ layout(push_constant) uniform MaterialData {
 layout(location = 0) out vec4 outColor;
 
 const float PI = 3.1415926535897932384626433832795f;
+
+int getShadowIdx(int lightIndex)
+{
+	return ubo.shadowIdx[lightIndex/4][lightIndex%4];
+}
 
 vec3 Uncharted2Tonemap(vec3 color)
 {
@@ -152,7 +158,8 @@ float calculateShadow(int lightIdx) {
 	dir.x *= -1;
 	float dist = length(dir);
 	dir = normalize(dir);
-	return (dist > texture(shadow, dir).r + shadow_bias) ? 0.0f: 1.0f;
+	int shadowIdx = getShadowIdx(lightIdx);
+	return (shadowIdx >= 0 ? (dist > texture(shadow[shadowIdx], dir).r + shadow_bias ? 0.0f: 1.0f) : 1.0f);
 }
 
 void main() {
@@ -277,7 +284,7 @@ void main() {
 			case 8: {
 				vec3 dir = position.xyz - ubo.lightPos[0].xyz;
 				dir.x *= -1;
-				outColor = vec4(texture(shadow, normalize(dir)).rrr * 0.1f, 1.0f);
+				outColor = vec4(texture(shadow[0], normalize(dir)).rrr * 0.1f, 1.0f);
 			}; break;
 		}
 	}

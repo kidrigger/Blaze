@@ -27,7 +27,8 @@ namespace blaze
 
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 		rebuildCommandBuffer(imageIndex);
-		updateUniformBuffer(imageIndex, cameraUBO);
+		set_lightUBO(shadowCaster.getLightsData());
+		updateUniformBuffer(imageIndex, rendererUBO);
 		updateUniformBuffer(imageIndex, settingsUBO);
 
 		if (result != VK_SUCCESS)
@@ -177,9 +178,9 @@ namespace blaze
 		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
 			VkDescriptorBufferInfo info = {};
-			info.buffer = cameraUniformBuffers[i].get_buffer();
+			info.buffer = rendererUniformBuffers[i].get_buffer();
 			info.offset = 0;
-			info.range = sizeof(CameraUniformBufferObject);
+			info.range = sizeof(RendererUniformBufferObject);
 
 			VkWriteDescriptorSet write = {};
 			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -215,9 +216,9 @@ namespace blaze
 		return descriptorSets;
 	}
 
-	std::vector<UniformBuffer<CameraUniformBufferObject>> Renderer::createUniformBuffers(const CameraUniformBufferObject& ubo) const
+	std::vector<UniformBuffer<RendererUniformBufferObject>> Renderer::createUniformBuffers(const RendererUniformBufferObject& ubo) const
 	{
-		std::vector<UniformBuffer<CameraUniformBufferObject>> ubos;
+		std::vector<UniformBuffer<RendererUniformBufferObject>> ubos;
 		ubos.reserve(swapchain.get_imageCount());
 		for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 		{
@@ -349,10 +350,7 @@ namespace blaze
 			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 		}
 
-		shadow.position = cameraUBO.lightPos[0];
-		shadow.nearPlane = 1.0f;
-		shadow.farPlane = 1000.0f;
-		shadowCaster.cast(context, shadow, commandBuffers[frame], drawables);
+		shadowCaster.cast(context, commandBuffers[frame], drawables);
 
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -375,7 +373,7 @@ namespace blaze
 		{
 			vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 2, 1, &environmentDescriptor, 0, nullptr);
 		}
-		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 3, 1, &shadow.get_descriptor(), 0, nullptr);
+		shadowCaster.bind(commandBuffers[frame], graphicsPipelineLayout.get(), 3);
 
 		for (Drawable* cmd : drawables)
 		{
