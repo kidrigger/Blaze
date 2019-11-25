@@ -337,7 +337,14 @@ namespace blaze
 			}
 			auto handle = lightsData.numLights;
 			lightsData.lightPos[handle] = glm::vec4(position, brightness);
-			lightsData.shadowIdx[handle] = createShadow(position);
+			if (hasShadow)
+			{
+				lightsData.shadowIdx[handle] = createShadow(position);
+			}
+			else
+			{
+				lightsData.shadowIdx[handle] = -1;
+			}
 			lightsData.numLights++;
 			return handle;
 		}

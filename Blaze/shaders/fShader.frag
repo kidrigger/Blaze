@@ -176,7 +176,9 @@ void main() {
 	if (material.baseColorTextureSet < 0) {
 		albedo = material.baseColorFactor.rgb;
 	} else {
-		albedo = SRGBtoLINEAR(texture(diffuseImage, texCoords0)).rgb * material.baseColorFactor.rgb;
+		vec4 texRGBA = texture(diffuseImage, texCoords0);
+		if (texRGBA.a < 0.5f) discard;
+		albedo = SRGBtoLINEAR(texRGBA).rgb * material.baseColorFactor.rgb;
 	}
 
 	if (material.physicalDescriptorTextureSet < 0) {

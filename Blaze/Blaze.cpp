@@ -73,6 +73,7 @@ namespace blaze
 		char filename[256]{ 0 };
 		char skybox[256]{ 0 };
 		bool lockLight{ true };
+		int currentLight{ 0 };
 
 		struct {
 			std::array<std::string, 9> labels{ "Full Render", "Diffuse Map", "Normal Map", "Metallic Map", "Roughness Map", "AO Map", "Emission Map", "Position", "Distance" };
@@ -85,7 +86,8 @@ namespace blaze
 
 		SettingsUniformBufferObject settingsUBO = {
 			SettingsUniformBufferObject::VTM_FULL,
-			1
+			0,
+			0
 		};
 
 		void submitDelta(float delta)
@@ -142,10 +144,6 @@ namespace blaze
 		Texture2D image;
 
 		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 1000.0f);
-		// cam.addLight(glm::vec3{ -8.0f, 2.0f, 0.0f }, 1.0f);
-		// cam.addLight(glm::vec3{ -4.0f, 2.0f, 0.0f }, 1.0f);
-		// cam.addLight(glm::vec3{ 4.0f, 2.0f, 0.0f }, 1.0f);
-		// cam.addLight(glm::vec3{ 8.0f, 2.0f, 0.0f }, 1.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -171,10 +169,12 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		// TODO: Let there be lights
 		renderer.get_lightSystem().addLight(glm::vec3(0.0f), 1.0f, true);
-		renderer.get_lightSystem().addLight(glm::vec3{ 0.0f, 4.0f, -0.5f }, 1.0f, true);
-		renderer.get_lightSystem().addLight(glm::vec3{ 5.0f, 1.0f, -0.5f }, 1.0f, true);
+		std::vector<ShadowCaster::LightHandle> lights = {
+			renderer.get_lightSystem().addLight(glm::vec3{ 0.0f }, 1.0f, true),
+			renderer.get_lightSystem().addLight(glm::vec3{ 0.0f }, 1.0f, true),
+			renderer.get_lightSystem().addLight(glm::vec3{ 0.0f }, 1.0f, true),
+		};
 
 		strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
 		strcpy(settings.filename, "assets/sponza/Sponza.gltf");
@@ -300,12 +300,12 @@ namespace blaze
 
 			}
 			cam.lookTo(cameraFront);
-
+			
+			renderer.get_lightSystem().setLightPosition(0, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
 			if (settings.lockLight)
 			{
-				renderer.get_lightSystem().setLightPosition(0, cam.get_position());
+				renderer.get_lightSystem().setLightPosition(lights[settings.currentLight], cam.get_position());
 			}
-			renderer.get_lightSystem().setLightPosition(1, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
 			
 			if (settings.rotate)
 			{
@@ -368,6 +368,11 @@ namespace blaze
 					ImGui::Checkbox("Enable Skybox", &settings.settingsUBO.enableSkybox.B);
 					ImGui::Checkbox("Enable IBL", &settings.settingsUBO.enableIBL.B);
 					ImGui::Checkbox("Lock Light", &settings.lockLight);
+					ImGui::SameLine();
+					ImGui::InputInt("Light to Lock", &settings.currentLight);
+					{
+						settings.currentLight = std::max(std::min(settings.currentLight, static_cast<int>(lights.size()-1)), 0);
+					}
 					if (ImGui::Button("Lock Mouse"))
 					{
 						firstMouse = true;
