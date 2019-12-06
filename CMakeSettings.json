@@ -15,6 +15,21 @@
           "name": "GLFW_BUILD_DOCS",
           "value": "False",
           "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_C_FLAGS_DEBUG",
+          "value": "/MDd /ZI /Ob0 /Od /RTC1 /JMC",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS_DEBUG",
+          "value": "/MDd /ZI /Ob0 /Od /RTC1 /JMC",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_EXE_LINKER_FLAGS_DEBUG",
+          "value": "/debug /INCREMENTAL",
+          "type": "STRING"
         }
       ]
     }

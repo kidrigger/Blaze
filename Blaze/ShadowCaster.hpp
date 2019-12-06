@@ -16,12 +16,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-const int32_t SHADOW_MAP_SIZE = 512;
+const int32_t POINT_SHADOW_MAP_SIZE = 512;
+const int32_t DIR_SHADOW_MAP_SIZE = 2048;
 
 namespace blaze
 {
 	class ShadowCaster;
-	class Shadow
+	class PointShadow
 	{
 	public:
 		float nearPlane{ 0.1f };
@@ -35,18 +36,18 @@ namespace blaze
 		util::Unmanaged<VkViewport> viewport;
 
 	public:
-		Shadow() noexcept
+		PointShadow() noexcept
 		{
 		}
 
-		Shadow(const Context& context, VkRenderPass renderPass) noexcept
+		PointShadow(const Context& context, VkRenderPass renderPass) noexcept
 		{
 			ImageDataCube idc{};
-			idc.height = SHADOW_MAP_SIZE;
-			idc.width = SHADOW_MAP_SIZE;
+			idc.height = POINT_SHADOW_MAP_SIZE;
+			idc.width = POINT_SHADOW_MAP_SIZE;
 			idc.numChannels = 1;
-			idc.size = 6 * SHADOW_MAP_SIZE * SHADOW_MAP_SIZE;
-			idc.layerSize = SHADOW_MAP_SIZE * SHADOW_MAP_SIZE;
+			idc.size = 6 * POINT_SHADOW_MAP_SIZE * POINT_SHADOW_MAP_SIZE;
+			idc.layerSize = POINT_SHADOW_MAP_SIZE * POINT_SHADOW_MAP_SIZE;
 			idc.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			idc.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			idc.format = VK_FORMAT_R32_SFLOAT;
@@ -62,9 +63,9 @@ namespace blaze
 
 			viewport = VkViewport{
 				0.0f,
-				SHADOW_MAP_SIZE,
-				SHADOW_MAP_SIZE,
-				-SHADOW_MAP_SIZE,
+				POINT_SHADOW_MAP_SIZE,
+				POINT_SHADOW_MAP_SIZE,
+				-POINT_SHADOW_MAP_SIZE,
 				0.0f,
 				1.0f
 			};
@@ -78,8 +79,8 @@ namespace blaze
 				VkFramebuffer fbo = VK_NULL_HANDLE;
 				VkFramebufferCreateInfo fbCreateInfo = {};
 				fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				fbCreateInfo.width = SHADOW_MAP_SIZE;
-				fbCreateInfo.height = SHADOW_MAP_SIZE;
+				fbCreateInfo.width = POINT_SHADOW_MAP_SIZE;
+				fbCreateInfo.height = POINT_SHADOW_MAP_SIZE;
 				fbCreateInfo.layers = 6;
 				fbCreateInfo.renderPass = renderPass;
 				fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
@@ -97,6 +98,90 @@ namespace blaze
 		friend class ShadowCaster;
 	};
 
+	class DirectionalShadow
+	{
+	public:
+		float nearPlane{ 0.1f };
+		float farPlane{ 512.0f };
+		float width{ 512 };
+		float height{ 512 };
+		glm::vec3 position{ 0.0f };
+		glm::vec3 direction{ 0.0f };
+
+	private:
+		Texture2D shadowMap;
+		util::Managed<VkFramebuffer> framebuffer;
+		util::Unmanaged<VkViewport> viewport;
+
+	public:
+		DirectionalShadow() noexcept
+		{
+		}
+
+		DirectionalShadow(const Context& context, VkRenderPass renderPass) noexcept
+		{
+			ImageData2D idc{};
+			idc.height = DIR_SHADOW_MAP_SIZE;
+			idc.width = DIR_SHADOW_MAP_SIZE;
+			idc.numChannels = 1;
+			idc.size = DIR_SHADOW_MAP_SIZE * DIR_SHADOW_MAP_SIZE;
+			idc.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			idc.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			idc.format = VK_FORMAT_D32_SFLOAT;
+			idc.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+			shadowMap = Texture2D(context, idc, false);
+
+			viewport = VkViewport{
+				0.0f,
+				DIR_SHADOW_MAP_SIZE,
+				DIR_SHADOW_MAP_SIZE,
+				-DIR_SHADOW_MAP_SIZE,
+				0.0f,
+				1.0f
+			};
+
+			{
+				std::vector<VkImageView> attachments = {
+					shadowMap.get_imageView()
+				};
+
+				VkFramebuffer fbo = VK_NULL_HANDLE;
+				VkFramebufferCreateInfo fbCreateInfo = {};
+				fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+				fbCreateInfo.width = DIR_SHADOW_MAP_SIZE;
+				fbCreateInfo.height = DIR_SHADOW_MAP_SIZE;
+				fbCreateInfo.layers = 1;
+				fbCreateInfo.renderPass = renderPass;
+				fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+				fbCreateInfo.pAttachments = attachments.data();
+				vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
+				framebuffer = util::Managed(fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+			}
+		}
+
+		const VkFramebuffer& get_framebuffer() const { return framebuffer.get(); }
+		const VkViewport& get_viewport() const { return viewport.get(); }
+		const Texture2D& get_shadowMap() const { return shadowMap; }
+		Texture2D& get_shadowMap() { return shadowMap; }
+
+		friend class ShadowCaster;
+	};
+
+	class ShadowHandler
+	{
+	public:
+		using ShadowHandle = int32_t;
+	private:
+		std::vector<PointShadow> pointShadows;
+		std::vector<ShadowHandle> freeStack;
+		std::vector<bool> handleValidity;
+	public:
+		ShadowHandler()
+		{
+
+		}
+	};
+
 	class ShadowCaster
 	{
 	public:
@@ -105,21 +190,36 @@ namespace blaze
 		using ShadowHandle = int32_t;
 		using LightHandle = uint32_t;
 	private:
-		util::Managed<VkRenderPass> renderPass;
+		util::Managed<VkRenderPass> renderPassOmni;
+		util::Managed<VkRenderPass> renderPassDirectional;
 		util::Managed<VkPipelineLayout> pipelineLayout;
-		util::Managed<VkPipeline> pipeline;
+		util::Managed<VkPipeline> pipelineOmni;
+		util::Managed<VkPipeline> pipelineDirectional;
 		util::Managed<VkDescriptorPool> dsPool;
 		util::Managed<VkDescriptorSetLayout> dsLayout;
 		util::Managed<VkDescriptorSetLayout> shadowLayout;
 		util::Unmanaged<VkDescriptorSet> uboDescriptorSet;
 		util::Unmanaged<VkDescriptorSet> shadowDescriptorSet;
 		UniformBuffer<ShadowUniformBufferObject> viewsUBO;
-		std::vector<Shadow> shadows;
-		std::vector<ShadowHandle> freeStack;
-		std::vector<bool> handleValidity;
+
+		static const ShadowHandle SHADOW_HANDLE_TYPE_MASK = 0x0F000000;
+		static const ShadowHandle SHADOW_HANDLE_INDEX_MASK = 0xF0FFFFFF;
+
+		std::vector<PointShadow> pointShadows;
+		std::vector<ShadowHandle> pointShadowFreeStack;
+		std::vector<bool> pointShadowHandleValidity;
+		static const ShadowHandle SHADOW_HANDLE_POINT_TYPE = 0x01000000;
+
+		std::vector<DirectionalShadow> dirShadows;
+		std::vector<ShadowHandle> dirShadowFreeStack;
+		std::vector<bool> dirShadowHandleValidity;
+		static const ShadowHandle SHADOW_HANDLE_DIRECTIONAL_TYPE = 0x02000000;
+
 		LightsUniformBufferObject lightsData;
-		uint32_t MAX_SHADOWS;
-		uint32_t MAX_LIGHTS;
+		uint32_t MAX_POINT_SHADOWS;
+		uint32_t MAX_DIR_SHADOWS;
+		uint32_t MAX_POINT_LIGHTS;
+		uint32_t MAX_DIR_LIGHTS;
 
 	public:
 		ShadowCaster() noexcept
@@ -127,25 +227,36 @@ namespace blaze
 		}
 
 		ShadowCaster(const Context& context, uint32_t maxLights = 16, uint32_t maxShadows = 16) noexcept
-			: MAX_LIGHTS(maxLights),
-			MAX_SHADOWS(maxShadows)
+			: MAX_POINT_LIGHTS(maxLights),
+			MAX_DIR_LIGHTS(1),
+			MAX_POINT_SHADOWS(maxShadows),
+			MAX_DIR_SHADOWS(1)
 		{
 			using namespace util;
 
-			assert(MAX_LIGHTS <= 16);
+			assert(MAX_POINT_LIGHTS <= 16);
+			assert(MAX_DIR_LIGHTS <= 4);
 			memset(&lightsData, 0, sizeof(lightsData));
 			memset(lightsData.shadowIdx, -1, sizeof(lightsData.shadowIdx));
 
-			renderPass = Managed(createRenderPassMultiView(context.get_device(), 0b00111111, format, VK_FORMAT_D32_SFLOAT), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
+			pointShadowHandleValidity = std::vector<bool>(MAX_POINT_SHADOWS, false);
+			pointShadowFreeStack.reserve(MAX_POINT_SHADOWS);
+			for (uint32_t i = 0; i < MAX_POINT_SHADOWS; i++)
+			{
+				pointShadowFreeStack.push_back((MAX_POINT_SHADOWS - i - 1) | SHADOW_HANDLE_POINT_TYPE);
+			}
+
+			dirShadowHandleValidity = std::vector<bool>(MAX_DIR_SHADOWS, false);
+			dirShadowFreeStack.reserve(MAX_DIR_SHADOWS);
+			for (uint32_t i = 0; i < MAX_DIR_SHADOWS; i++)
+			{
+				dirShadowFreeStack.push_back((MAX_DIR_SHADOWS - i - 1) | SHADOW_HANDLE_DIRECTIONAL_TYPE);
+			}
+
+			renderPassOmni = Managed(createRenderPassMultiView(context.get_device(), 0b00111111, format, VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
+			renderPassDirectional = Managed(createShadowRenderPass(context.get_device()), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
 
 			viewsUBO = UniformBuffer(context, createOmniShadowUBO());
-			
-			handleValidity = std::vector<bool>(MAX_SHADOWS, false);
-			freeStack.reserve(MAX_SHADOWS);
-			for (uint32_t i = 0; i < MAX_SHADOWS; i++)
-			{
-				freeStack.push_back(MAX_SHADOWS - i - 1);
-			}
 
 			try
 			{
@@ -157,7 +268,7 @@ namespace blaze
 						},
 						{
 							VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-							MAX_SHADOWS
+							MAX_POINT_SHADOWS + MAX_DIR_SHADOWS
 						}
 					};
 					dsPool = util::Managed(util::createDescriptorPool(context.get_device(), poolSizes, 17), [dev = context.get_device()](VkDescriptorPool& descPool){vkDestroyDescriptorPool(dev, descPool, nullptr); });
@@ -172,12 +283,19 @@ namespace blaze
 					};
 
 					dsLayout = util::Managed(util::createDescriptorSetLayout(context.get_device(), bindings), [dev = context.get_device()](VkDescriptorSetLayout& lay){vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
-				
+
 					bindings = {
 						{
 							0,
 							VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-							MAX_SHADOWS,
+							MAX_POINT_SHADOWS,
+							VK_SHADER_STAGE_FRAGMENT_BIT,
+							nullptr
+						},
+						{
+							1,
+							VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+							MAX_DIR_SHADOWS,
 							VK_SHADER_STAGE_FRAGMENT_BIT,
 							nullptr
 						}
@@ -199,10 +317,16 @@ namespace blaze
 					pipelineLayout = Managed(createPipelineLayout(context.get_device(), descriptorLayouts, pushConstantRanges), [dev = context.get_device()](VkPipelineLayout& lay){vkDestroyPipelineLayout(dev, lay, nullptr); });
 				}
 
-				pipeline = Managed(
-					createGraphicsPipeline(context.get_device(), pipelineLayout.get(), renderPass.get(),
-						{ SHADOW_MAP_SIZE, SHADOW_MAP_SIZE }, "shaders/vShadow.vert.spv", "shaders/fShadow.frag.spv",
+				pipelineOmni = Managed(
+					createGraphicsPipeline(context.get_device(), pipelineLayout.get(), renderPassOmni.get(),
+						{ POINT_SHADOW_MAP_SIZE, POINT_SHADOW_MAP_SIZE }, "shaders/vShadow.vert.spv", "shaders/fShadow.frag.spv",
 						{ VK_DYNAMIC_STATE_VIEWPORT }, VK_CULL_MODE_FRONT_BIT, VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS),
+					[dev = context.get_device()](VkPipeline& pipe){ vkDestroyPipeline(dev, pipe, nullptr); });
+
+				pipelineDirectional = Managed(
+					createGraphicsPipeline(context.get_device(), pipelineLayout.get(), renderPassDirectional.get(),
+						{ DIR_SHADOW_MAP_SIZE, DIR_SHADOW_MAP_SIZE }, "shaders/vDirShadow.vert.spv", "shaders/fDirShadow.frag.spv",
+						{ VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_DEPTH_BIAS }, VK_CULL_MODE_FRONT_BIT, VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS),
 					[dev = context.get_device()](VkPipeline& pipe){ vkDestroyPipeline(dev, pipe, nullptr); });
 
 				{
@@ -238,10 +362,13 @@ namespace blaze
 					viewsUBO.write(context, createOmniShadowUBO());
 				}
 
-				shadows = std::vector<Shadow>();
-				for (uint32_t i = 0; i < MAX_SHADOWS; i++)
+				for (uint32_t i = 0; i < MAX_POINT_SHADOWS; i++)
 				{
-					shadows.emplace_back(context, renderPass.get());
+					pointShadows.emplace_back(context, renderPassOmni.get());
+				}
+				for (uint32_t i = 0; i < MAX_DIR_SHADOWS; i++)
+				{
+					dirShadows.emplace_back(context, renderPassDirectional.get());
 				}
 
 				{
@@ -259,22 +386,39 @@ namespace blaze
 					}
 					shadowDescriptorSet = descriptorSet;
 
-					std::vector<VkDescriptorImageInfo> imageInfos;
-					for (auto& shade : shadows)
+					std::vector<VkDescriptorImageInfo> pointImageInfos;
+					for (auto& shade : pointShadows)
 					{
-						imageInfos.push_back(shade.get_shadowMap().get_imageInfo());
+						pointImageInfos.push_back(shade.get_shadowMap().get_imageInfo());
 					}
 
-					VkWriteDescriptorSet write = {};
-					write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					write.descriptorCount = MAX_SHADOWS;
-					write.dstSet = descriptorSet;
-					write.dstBinding = 0;
-					write.dstArrayElement = 0;
-					write.pImageInfo = imageInfos.data();
+					std::array<VkWriteDescriptorSet, 2> writes;
 
-					vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+					writes[0] = {};
+					writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writes[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					writes[0].descriptorCount = MAX_POINT_SHADOWS;
+					writes[0].dstSet = descriptorSet;
+					writes[0].dstBinding = 0;
+					writes[0].dstArrayElement = 0;
+					writes[0].pImageInfo = pointImageInfos.data();
+
+					std::vector<VkDescriptorImageInfo> dirImageInfos;
+					for (auto& shade : dirShadows)
+					{
+						dirImageInfos.push_back(shade.get_shadowMap().get_imageInfo());
+					}
+
+					writes[1] = {};
+					writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					writes[1].descriptorCount = MAX_DIR_SHADOWS;
+					writes[1].dstSet = descriptorSet;
+					writes[1].dstBinding = 1;
+					writes[1].dstArrayElement = 0;
+					writes[1].pImageInfo = dirImageInfos.data();
+
+					vkUpdateDescriptorSets(context.get_device(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 				}
 			}
 			catch (std::exception& e)
@@ -284,20 +428,27 @@ namespace blaze
 		}
 
 		ShadowCaster(ShadowCaster&& other) noexcept
-			: renderPass(std::move(other.renderPass)),
+			: renderPassOmni(std::move(other.renderPassOmni)),
+			renderPassDirectional(std::move(other.renderPassDirectional)),
 			pipelineLayout(std::move(other.pipelineLayout)),
-			pipeline(std::move(other.pipeline)),
+			pipelineOmni(std::move(other.pipelineOmni)),
+			pipelineDirectional(std::move(other.pipelineDirectional)),
 			dsPool(std::move(other.dsPool)),
 			dsLayout(std::move(other.dsLayout)),
 			uboDescriptorSet(std::move(other.uboDescriptorSet)),
 			shadowDescriptorSet(std::move(other.shadowDescriptorSet)),
 			shadowLayout(std::move(other.shadowLayout)),
 			viewsUBO(std::move(other.viewsUBO)),
-			shadows(std::move(other.shadows)),
-			freeStack(std::move(other.freeStack)),
-			handleValidity(std::move(other.handleValidity)),
-			MAX_SHADOWS(other.MAX_SHADOWS),
-			MAX_LIGHTS(other.MAX_LIGHTS)
+			pointShadows(std::move(other.pointShadows)),
+			pointShadowFreeStack(std::move(other.pointShadowFreeStack)),
+			pointShadowHandleValidity(std::move(other.pointShadowHandleValidity)),
+			dirShadows(std::move(other.dirShadows)),
+			dirShadowFreeStack(std::move(other.dirShadowFreeStack)),
+			dirShadowHandleValidity(std::move(other.dirShadowHandleValidity)),
+			MAX_POINT_SHADOWS(other.MAX_POINT_SHADOWS),
+			MAX_DIR_SHADOWS(other.MAX_DIR_SHADOWS),
+			MAX_POINT_LIGHTS(other.MAX_POINT_LIGHTS),
+			MAX_DIR_LIGHTS(other.MAX_DIR_LIGHTS)
 		{
 			memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
 		}
@@ -308,64 +459,97 @@ namespace blaze
 			{
 				return *this;
 			}
-			renderPass = std::move(other.renderPass);
+			renderPassOmni = std::move(other.renderPassOmni);
+			renderPassDirectional = std::move(other.renderPassDirectional);
 			pipelineLayout = std::move(other.pipelineLayout);
-			pipeline = std::move(other.pipeline);
+			pipelineOmni = std::move(other.pipelineOmni);
+			pipelineDirectional = std::move(other.pipelineDirectional);
 			dsPool = std::move(other.dsPool);
 			dsLayout = std::move(other.dsLayout);
 			uboDescriptorSet = std::move(other.uboDescriptorSet);
 			shadowDescriptorSet = std::move(other.shadowDescriptorSet);
 			shadowLayout = std::move(other.shadowLayout);
 			viewsUBO = std::move(other.viewsUBO);
-			shadows = std::move(other.shadows);
-			freeStack = std::move(other.freeStack);
-			handleValidity = std::move(other.handleValidity);
+			pointShadows = std::move(other.pointShadows);
+			pointShadowFreeStack = std::move(other.pointShadowFreeStack);
+			pointShadowHandleValidity = std::move(other.pointShadowHandleValidity);
+			dirShadows = std::move(other.dirShadows);
+			dirShadowFreeStack = std::move(other.dirShadowFreeStack);
+			dirShadowHandleValidity = std::move(other.dirShadowHandleValidity);
 			memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
-			MAX_SHADOWS = other.MAX_SHADOWS;
-			MAX_LIGHTS = other.MAX_LIGHTS;
+			MAX_POINT_SHADOWS = other.MAX_POINT_SHADOWS;
+			MAX_DIR_SHADOWS = other.MAX_DIR_SHADOWS;
+			MAX_POINT_LIGHTS = other.MAX_POINT_LIGHTS;
+			MAX_DIR_LIGHTS = other.MAX_DIR_LIGHTS;
 			return *this;
 		}
 
 		ShadowCaster(const ShadowCaster& other) = delete;
 		ShadowCaster& operator=(const ShadowCaster& other) = delete;
 
-		LightHandle addLight(const glm::vec3& position, float brightness, bool hasShadow)
+		LightHandle addPointLight(const glm::vec3& position, float brightness, bool hasShadow)
 		{
-			if (lightsData.numLights >= MAX_LIGHTS)
+			if (lightsData.numPointLights >= MAX_POINT_LIGHTS)
 			{
 				throw std::runtime_error("Max Light Count Reached.");
 			}
-			auto handle = lightsData.numLights;
+			auto handle = lightsData.numPointLights;
 			lightsData.lightPos[handle] = glm::vec4(position, brightness);
+			lightsData.lightDir[handle] = glm::vec4(0.0f);
 			if (hasShadow)
 			{
-				lightsData.shadowIdx[handle] = createShadow(position);
+				lightsData.shadowIdx[handle] = createPointShadow(position);
 			}
 			else
 			{
 				lightsData.shadowIdx[handle] = -1;
 			}
-			lightsData.numLights++;
+			lightsData.numPointLights++;
+			return handle;
+		}
+
+		LightHandle addDirLight(const glm::vec3& position, const glm::vec3& direction, float brightness, bool hasShadow)
+		{
+			if (lightsData.numDirLights >= MAX_DIR_LIGHTS)
+			{
+				throw std::runtime_error("Max Light Count Reached.");
+			}
+			auto handle = lightsData.numPointLights;
+			lightsData.lightPos[handle] = glm::vec4(position, brightness);
+			lightsData.lightDir[handle] = glm::vec4(direction, 1.0f);
+			if (hasShadow)
+			{
+				auto shade = createDirShadow(position, direction);
+				auto shadeIdx = shade & SHADOW_HANDLE_INDEX_MASK;
+				lightsData.shadowIdx[handle] = shade;
+				lightsData.dirLightTransform[shadeIdx] = createDirShadowPCB(dirShadows[shadeIdx]).projection;
+			}
+			else
+			{
+				lightsData.shadowIdx[handle] = -1;
+			}
+			lightsData.numPointLights++;
 			return handle;
 		}
 
 		void setLightPosition(LightHandle handle, const glm::vec3& position)
 		{
-			if (handle >= lightsData.numLights)
+			if (handle >= lightsData.numPointLights)
 			{
 				throw std::out_of_range("Invalid Light Handle.");
 			}
 			memcpy(&lightsData.lightPos[handle], &position[0], sizeof(glm::vec3));
 			ShadowHandle shade = lightsData.shadowIdx[handle];
+			auto shadeIdx = shade & SHADOW_HANDLE_INDEX_MASK;
 			if (shade >= 0)
 			{
-				shadows[shade].position = lightsData.lightPos[handle];
+				pointShadows[shadeIdx].position = lightsData.lightPos[handle];
 			}
 		}
 
 		void setLightBrightness(LightHandle handle, float brightness)
 		{
-			if (handle >= lightsData.numLights)
+			if (handle >= lightsData.numPointLights)
 			{
 				throw std::out_of_range("Invalid Light Handle.");
 			}
@@ -379,57 +563,109 @@ namespace blaze
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &shadowDescriptorSet.get(), 0, nullptr);
 		}
 
-		ShadowHandle createShadow(const glm::vec3& position = glm::vec3(0.0f), float nearPlane = 1.0f, float farPlane = 512.0f)
+		ShadowHandle createPointShadow(const glm::vec3& position = glm::vec3(0.0f), float nearPlane = 1.0f, float farPlane = 512.0f)
 		{
-			if (freeStack.empty())
+			if (pointShadowFreeStack.empty())
 			{
 				throw std::runtime_error("Max shadows reached.");
 			}
-			auto handle = freeStack.back();
-			freeStack.pop_back();
-			handleValidity[handle] = true;
-			shadows[handle].position = position;
-			shadows[handle].nearPlane = nearPlane;
-			shadows[handle].farPlane = farPlane;
+			auto handle = pointShadowFreeStack.back();
+			pointShadowFreeStack.pop_back();
+			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+			pointShadowHandleValidity[handleIdx] = true;
+			pointShadows[handleIdx].position = position;
+			pointShadows[handleIdx].nearPlane = nearPlane;
+			pointShadows[handleIdx].farPlane = farPlane;
+			return handle;
+		}
+
+		ShadowHandle createDirShadow(const glm::vec3& position = glm::vec3(0.0f), const glm::vec3& direction = glm::vec3(0,-1,0), float width = 64.0f, float height = 64.0f, float nearPlane = 1.0f, float  farPlane = 512.0f)
+		{
+			if (dirShadowFreeStack.empty())
+			{
+				throw std::runtime_error("Max shadows reached.");
+			}
+			auto handle = dirShadowFreeStack.back();
+			dirShadowFreeStack.pop_back();
+			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+			dirShadowHandleValidity[handleIdx] = true;
+			dirShadows[handleIdx].position = position;
+			dirShadows[handleIdx].direction = direction;
+			dirShadows[handleIdx].width = width;
+			dirShadows[handleIdx].height = height;
+			dirShadows[handleIdx].nearPlane = nearPlane;
+			dirShadows[handleIdx].farPlane = farPlane;
 			return handle;
 		}
 
 		void freeShadow(ShadowHandle handle)
 		{
-			if (!handleValidity[handle])
+			if (handle < 0)
 			{
 				throw std::out_of_range("Invalid Shadow Handle.");
 			}
-			freeStack.push_back(handle);
-			handleValidity[handle] = false;
+
+			auto shadowType = handle & SHADOW_HANDLE_TYPE_MASK;
+			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+			
+			switch (shadowType)
+			{
+			case SHADOW_HANDLE_POINT_TYPE:
+			{
+				if (!pointShadowHandleValidity[handleIdx])
+				{
+					throw std::out_of_range("Invalid Shadow Handle.");
+				}
+				pointShadowFreeStack.push_back(handle);
+				pointShadowHandleValidity[handleIdx] = false;
+			}; break;
+			case SHADOW_HANDLE_DIRECTIONAL_TYPE:
+			{
+				if (!dirShadowHandleValidity[handleIdx])
+				{
+					throw std::out_of_range("Invalid Shadow Handle.");
+				}
+				dirShadowFreeStack.push_back(handle);
+				dirShadowHandleValidity[handleIdx] = false;
+			}; break;
+			default:
+			{
+				throw std::runtime_error("Unknown Handle");
+			}
+			}
 		}
 
 		void cast(const Context& context, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
 			for (ShadowHandle handle : lightsData.shadowIdx)
 			{
-				if (handle < 0) continue;
-				cast(context, handle, cmdBuffer, drawables);
+				if (handle < 0) continue; 
+				auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+
+				switch (handle & SHADOW_HANDLE_TYPE_MASK)
+				{
+				case SHADOW_HANDLE_POINT_TYPE:
+				{
+					cast(context, pointShadows[handleIdx], cmdBuffer, drawables);
+				}; break;
+				case SHADOW_HANDLE_DIRECTIONAL_TYPE:
+				{
+					cast(context, dirShadows[handleIdx], cmdBuffer, drawables);
+				}; break;
+				}
 			}
 		}
 
-		void cast(const Context& context, ShadowHandle handle, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		void cast(const Context& context, PointShadow& shadow, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
-			if (!handleValidity[handle])
-			{
-				throw std::out_of_range("Invalid Shadow Handle.");
-			}
-
-			shadows[handle].get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-			auto shadowPCB = createOmniShadowPCB(shadows[handle]);
+			auto shadowPCB = createOmniShadowPCB(shadow);
 
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderPass.get();
-			renderpassBeginInfo.framebuffer = shadows[handle].framebuffer.get();
+			renderpassBeginInfo.renderPass = renderPassOmni.get();
+			renderpassBeginInfo.framebuffer = shadow.framebuffer.get();
 			renderpassBeginInfo.renderArea.offset = { 0, 0 };
-			renderpassBeginInfo.renderArea.extent = { SHADOW_MAP_SIZE,SHADOW_MAP_SIZE };
+			renderpassBeginInfo.renderArea.extent = { POINT_SHADOW_MAP_SIZE,POINT_SHADOW_MAP_SIZE };
 
 			std::array<VkClearValue, 2> clearColor;
 			clearColor[0].color = { 1000.0f, 0.0f, 0.0f, 1.0f };
@@ -438,8 +674,39 @@ namespace blaze
 			renderpassBeginInfo.pClearValues = clearColor.data();
 
 			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.get());
-			vkCmdSetViewport(cmdBuffer, 0, 1, &shadows[handle].viewport.get());
+			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineOmni.get());
+			vkCmdSetViewport(cmdBuffer, 0, 1, &shadow.viewport.get());
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, uboDescriptorSet.data(), 0, nullptr);
+			vkCmdPushConstants(cmdBuffer, pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(ModelPushConstantBlock), sizeof(ShadowPushConstantBlock), &shadowPCB);
+
+			for (Drawable* d : drawables)
+			{
+				d->drawGeometry(cmdBuffer, pipelineLayout.get());
+			}
+
+			vkCmdEndRenderPass(cmdBuffer);
+		}
+
+		void cast(const Context& context, DirectionalShadow& shadow, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		{
+			auto shadowPCB = createDirShadowPCB(shadow);
+
+			VkRenderPassBeginInfo renderpassBeginInfo = {};
+			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderpassBeginInfo.renderPass = renderPassDirectional.get();
+			renderpassBeginInfo.framebuffer = shadow.framebuffer.get();
+			renderpassBeginInfo.renderArea.offset = { 0, 0 };
+			renderpassBeginInfo.renderArea.extent = { DIR_SHADOW_MAP_SIZE, DIR_SHADOW_MAP_SIZE };
+
+			std::array<VkClearValue, 1> clearColor;
+			clearColor[0].depthStencil = { 1.0f, 0 };
+			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+			renderpassBeginInfo.pClearValues = clearColor.data();
+
+			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDirectional.get());
+			vkCmdSetDepthBias(cmdBuffer, 1.25f, 0.0f, 1.75f);
+			vkCmdSetViewport(cmdBuffer, 0, 1, &shadow.viewport.get());
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, uboDescriptorSet.data(), 0, nullptr);
 			vkCmdPushConstants(cmdBuffer, pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(ModelPushConstantBlock), sizeof(ShadowPushConstantBlock), &shadowPCB);
 
@@ -450,33 +717,45 @@ namespace blaze
 
 			vkCmdEndRenderPass(cmdBuffer);
 
-			shadows[handle].get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			shadow.get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 
 		void setShadowClipPlanes(ShadowHandle handle, float nearPlane, float farPlane)
 		{
-			if (!handleValidity[handle])
+			assert(((handle & SHADOW_HANDLE_TYPE_MASK) == SHADOW_HANDLE_POINT_TYPE) && "Shadow passed is not a point shadow");
+
+			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+
+			if (!pointShadowHandleValidity[handleIdx])
 			{
 				throw std::out_of_range("Invalid Shadow Handle.");
 			}
-			shadows[handle].nearPlane = nearPlane;
-			shadows[handle].farPlane = farPlane;
+			pointShadows[handleIdx].nearPlane = nearPlane;
+			pointShadows[handleIdx].farPlane = farPlane;
 		}
 
 		void setShadowPosition(ShadowHandle handle, const glm::vec3& position)
 		{
-			if (!handleValidity[handle])
+			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+			if (!pointShadowHandleValidity[handleIdx])
 			{
 				throw std::out_of_range("Invalid Shadow Handle.");
 			}
-			shadows[handle].position = position;
+			pointShadows[handleIdx].position = position;
 		}
 
-		const VkRenderPass& get_renderPass() const { return renderPass.get(); }
+		const VkRenderPass& get_renderPass() const { return renderPassOmni.get(); }
 		const VkDescriptorSetLayout& get_shadowLayout() const { return shadowLayout.get(); }
 
 	private:
-		ShadowPushConstantBlock createOmniShadowPCB(const Shadow& shadow) const
+		ShadowPushConstantBlock createDirShadowPCB(const DirectionalShadow& shadow) const
+		{
+			return {
+				glm::ortho(-shadow.width / 2, shadow.width / 2, -shadow.height / 2, shadow.height / 2, shadow.nearPlane, shadow.farPlane) * glm::lookAt(shadow.position, shadow.position + shadow.direction, glm::vec3(0,1,0)),
+				shadow.direction
+			};
+		}
+		ShadowPushConstantBlock createOmniShadowPCB(const PointShadow& shadow) const
 		{
 			return {
 				glm::perspective(glm::radians(90.0f), 1.0f, shadow.nearPlane, shadow.farPlane),

@@ -70,13 +70,17 @@ namespace blaze
 		alignas(16) glm::mat4 view;
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 viewPos;
+		alignas(4)  float	  farPlane;
 	};
 
 	struct LightsUniformBufferObject
 	{
+		alignas(16) glm::mat4 dirLightTransform[4];
 		alignas(16) glm::vec4 lightPos[16];
+		alignas(16) glm::vec4 lightDir[16];
 		alignas(16) int shadowIdx[16];
-		int numLights;
+		int numPointLights;
+		int numDirLights;
 	};
 
 	struct RendererUniformBufferObject
@@ -84,9 +88,13 @@ namespace blaze
 		alignas(16) glm::mat4 view;
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 viewPos;
+		alignas(4)  float	  farPlane;
+		alignas(16) glm::mat4 dirLightTransform[4];
 		alignas(16) glm::vec4 lightPos[16];
+		alignas(16) glm::vec4 lightDir[16];
 		alignas(16) int shadowIdx[16];
 		int numLights;
+		int numDirLights;
 	};
 
 	struct CubemapUniformBufferObject
