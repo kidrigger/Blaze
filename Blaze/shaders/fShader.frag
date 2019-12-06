@@ -1,12 +1,15 @@
 #version 450
 
+#define MAX_POINT_LIGHTS 16
+#define MAX_DIR_LIGHTS 4
+
 const float shadow_bias = 0.05f;
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoords0;
 layout(location = 3) in vec2 texCoords1;
-layout(location = 4) in vec3 inColor;
+layout(location = 4) in vec4 lightCoord[MAX_DIR_LIGHTS];
 
 struct Light {
 	vec3 position;
@@ -18,9 +21,13 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	vec4 lightPos[16];
-	ivec4 shadowIdx[4];
+	float farPlane;
+	mat4 lightDirPV[MAX_DIR_LIGHTS];
+	vec4 lightPos[MAX_POINT_LIGHTS];
+	vec4 lightDir[MAX_POINT_LIGHTS];
+	ivec4 shadowIdx[MAX_POINT_LIGHTS/4];
 	int numLights;
+	int numDirLights;
 } ubo;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
@@ -41,6 +48,7 @@ layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
 layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
 
 layout(set = 3, binding = 0) uniform samplerCube shadow[16];
+layout(set = 3, binding = 1) uniform sampler2D dirShadow[1];
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -154,12 +162,32 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 }
 
 float calculateShadow(int lightIdx) {
-	vec3 dir = position - ubo.lightPos[lightIdx].xyz;
-	dir.x *= -1;
-	float dist = length(dir);
-	dir = normalize(dir);
-	int shadowIdx = getShadowIdx(lightIdx);
-	return (shadowIdx >= 0 ? (dist > texture(shadow[shadowIdx], dir).r + shadow_bias ? 0.0f: 1.0f) : 1.0f);
+	int shadowHandle = getShadowIdx(lightIdx);
+	int shadowType = shadowHandle & 0x0F000000;
+	int shadowIdx = shadowHandle & 0xF0FFFFFF;
+	if (shadowIdx < 0) {
+		return 1.0f;
+	}
+	if (shadowType == 0x01000000) {
+		vec3 dir = position - ubo.lightPos[lightIdx].xyz;
+		dir.x *= -1;
+		float dist = length(dir);
+		dir = normalize(dir);
+		return (dist - shadow_bias > texture(shadow[shadowIdx], dir).r ? 0.0f: 1.0f);
+	} else if (shadowType == 0x02000000) {
+		vec4 shadowCoord = lightCoord[shadowIdx];
+		float shade = 1.0f;
+		if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+		{
+			float dist = texture( dirShadow[shadowIdx], shadowCoord.st).r;
+			if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
+			{
+				return 0.0f;
+			}
+		}
+		return 1.0f;
+	}
+	return 1.0f;
 }
 
 void main() {
@@ -207,13 +235,13 @@ void main() {
 
 	vec3 L0 = vec3(0.0f);
 
-	for (int i = 0; i < ubo.numLights; i++) {
-
-		vec3 L		 = normalize(ubo.lightPos[i].xyz - position);
+	for (int i = 0; i < ubo.numLights + ubo.numDirLights; i++) {
+		
+		vec3 L		 = normalize((ubo.lightDir[i].w < 0.5f ? ubo.lightPos[i].xyz - position : -ubo.lightDir[i].xyz));
 		vec3 H		 = normalize(V + L);
 		float cosine = max(dot(L, N), 0.0f);
 
-		float dist		  = length(ubo.lightPos[i].xyz - position);
+		float dist		  = length((ubo.lightDir[i].w < 0.5f ? ubo.lightPos[i].xyz - position : -ubo.lightDir[i].xyz));
 		float attenuation = 1.0 / (dist * dist);
 		vec3 radiance	  = lightColor * attenuation * ubo.lightPos[i].w;
 		
@@ -284,9 +312,11 @@ void main() {
 				outColor = vec4(position.xyz * 0.1f, 1.0f);
 			}; break;
 			case 8: {
-				vec3 dir = position.xyz - ubo.lightPos[0].xyz;
-				dir.x *= -1;
-				outColor = vec4(texture(shadow[0], normalize(dir)).rrr * 0.1f, 1.0f);
+				float v = texture(dirShadow[0], lightCoord[0].st).r;
+				float r = clamp(v * 9.0f, 0.0f, 1.0f);
+				float g = clamp(v * 9.0f - 1.0f, 0.0f, 1.0f);
+				float b = clamp(v * 9.0f - 2.0f, 0.0f, 1.0f);
+				outColor = vec4(r,g,b, 1.0f);
 			}; break;
 		}
 	}

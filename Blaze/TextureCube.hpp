@@ -348,6 +348,12 @@ namespace blaze
 			imageInfo.imageLayout = newImageLayout;
 		}
 
+		void implicitTransferLayout(VkImageLayout newImageLayout)
+		{
+			layout = newImageLayout;
+			imageInfo.imageLayout = newImageLayout;
+		}
+
 	private:
 		VkSampler createSampler(VkDevice device, uint32_t miplevels) const
 		{

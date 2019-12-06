@@ -31,6 +31,7 @@ namespace blaze
 			ubo.view = glm::lookAt(position, target + position, up);
 			ubo.projection = glm::perspective(fov, aspect, 0.1f, 10.0f);
 			ubo.viewPos = position;
+			ubo.farPlane = farPlane;
 			uboDirty = true;
 		}
 
@@ -69,6 +70,7 @@ namespace blaze
 				ubo.view = glm::lookAt(position, target + position, up);
 				ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 				ubo.viewPos = position;
+				ubo.farPlane = farPlane;
 				uboDirty = false;
 			}
 			return ubo;

@@ -138,13 +138,6 @@ namespace blaze
 
 				gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
 
-				rendererUBO.shadowIdx[0] = shadowCaster.createShadow();
-				shadowCaster.setShadowClipPlanes(rendererUBO.shadowIdx[0], 0.1f, 512.0f);
-				rendererUBO.shadowIdx[1] = shadowCaster.createShadow();
-				shadowCaster.setShadowClipPlanes(rendererUBO.shadowIdx[1], 0.1f, 512.0f);
-				rendererUBO.shadowIdx[2] = shadowCaster.createShadow();
-				shadowCaster.setShadowClipPlanes(rendererUBO.shadowIdx[2], 0.1f, 512.0f);
-
 				recordCommandBuffers();
 
 				isComplete = true;
@@ -282,7 +275,7 @@ namespace blaze
 
 		void set_lightUBO(const LightsUniformBufferObject& ubo)
 		{
-			memcpy(&rendererUBO.lightPos, &ubo, sizeof(ubo));
+			memcpy(&rendererUBO.dirLightTransform, &ubo, sizeof(ubo));
 		}
 
 		void set_settingsUBO(const SettingsUniformBufferObject& ubo)

@@ -72,7 +72,7 @@ namespace blaze
 		glm::vec3 scale{ 1.0f };
 		char filename[256]{ 0 };
 		char skybox[256]{ 0 };
-		bool lockLight{ true };
+		bool lockLight{ false };
 		int currentLight{ 0 };
 
 		struct {
@@ -169,11 +169,12 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		renderer.get_lightSystem().addLight(glm::vec3(0.0f), 1.0f, true);
+		renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 1.0f, true);
 		std::vector<ShadowCaster::LightHandle> lights = {
-			renderer.get_lightSystem().addLight(glm::vec3{ 0.0f }, 1.0f, true),
-			renderer.get_lightSystem().addLight(glm::vec3{ 0.0f }, 1.0f, true),
-			renderer.get_lightSystem().addLight(glm::vec3{ 0.0f }, 1.0f, true),
+			renderer.get_lightSystem().addPointLight(glm::vec3{ -7.0f, 1.0f, -0.5f }, 0.5f, true),
+			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 0.5f, true),
+			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 0.5f, true),
+			renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0,-1.0,-0.5), 1.0f, true)
 		};
 
 		strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
