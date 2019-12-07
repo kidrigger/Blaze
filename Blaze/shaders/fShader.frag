@@ -3,6 +3,8 @@
 #define MAX_POINT_LIGHTS 16
 #define MAX_DIR_LIGHTS 4
 
+#define MANUAL_SRGB 1
+
 const float shadow_bias = 0.05f;
 
 layout(location = 0) in vec3 position;
@@ -286,7 +288,7 @@ void main() {
 	}
 
 	vec3 color	 = ambient + L0 + emission;
-	outColor	 = SRGBtoLINEAR(vec4(color, 1.0f));
+	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, 1.0f)));
 
 	if (debugSettings.viewMap > 0) {
 		switch (debugSettings.viewMap) {

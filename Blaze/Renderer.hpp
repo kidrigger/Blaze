@@ -32,8 +32,6 @@ namespace blaze
 		bool isComplete{ false };
 		bool windowResized{ false };
 
-		std::function<std::pair<uint32_t, uint32_t>(void)> getWindowSize;
-
 		Context context;
 		Swapchain swapchain;
 		GUI gui;
@@ -78,13 +76,7 @@ namespace blaze
 		}
 
 		Renderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept
-			: context(window, enableValidationLayers),
-			getWindowSize([window]()
-				{
-					int width, height;
-					glfwGetWindowSize(window, &width, &height);
-					return std::make_pair((uint32_t)width, (uint32_t)height);
-				})
+			: context(window, enableValidationLayers)
 		{
 			using namespace std;
 			using namespace util;
@@ -150,8 +142,7 @@ namespace blaze
 		}
 
 		Renderer(Renderer&& other) noexcept
-			: getWindowSize(std::move(other.getWindowSize)),
-			isComplete(other.isComplete),
+			: isComplete(other.isComplete),
 			context(std::move(other.context)),
 			gui(std::move(other.gui)),
 			swapchain(std::move(other.swapchain)),
@@ -187,7 +178,6 @@ namespace blaze
 			{
 				return *this;
 			}
-			getWindowSize = std::move(other.getWindowSize);
 			isComplete = other.isComplete;
 			context = std::move(other.context);
 			gui = std::move(other.gui);
@@ -227,7 +217,12 @@ namespace blaze
 		TextureCube createPrefilteredCube(VkDescriptorSet environment) const;
 		Texture2D	createBrdfLut() const;
 
-		std::pair<uint32_t, uint32_t> get_dimensions() const { return getWindowSize(); }
+		std::pair<uint32_t, uint32_t> get_dimensions() const
+		{
+			int x, y;
+			glfwGetWindowSize(context.get_window(), &x, &y);
+			return { x,y };
+		}
 		const VkFormat& get_swapchainFormat() const { return swapchain.get_format(); }
 		const VkExtent2D& get_swapchainExtent() const { return swapchain.get_extent(); }
 		size_t get_swapchainImageCount() const { return swapchain.get_imageCount(); }
@@ -291,10 +286,10 @@ namespace blaze
 			try
 			{
 				vkDeviceWaitIdle(context.get_device());
-				auto [width, height] = getWindowSize();
+				auto [width, height] = get_dimensions();
 				while (width == 0 || height == 0)
 				{
-					std::tie(width, height) = getWindowSize();
+					std::tie(width, height) = get_dimensions();
 					glfwWaitEvents();
 				}
 
