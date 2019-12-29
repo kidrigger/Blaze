@@ -25,8 +25,8 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 	vec3 viewPos;
 	float farPlane;
 	mat4 lightDirPV[MAX_DIR_LIGHTS];
+	vec4 lightDir[MAX_DIR_LIGHTS];
 	vec4 lightPos[MAX_POINT_LIGHTS];
-	vec4 lightDir[MAX_POINT_LIGHTS];
 	ivec4 shadowIdx[MAX_POINT_LIGHTS/4];
 	int numLights;
 	int numDirLights;
@@ -163,31 +163,29 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
-float calculateShadow(int lightIdx) {
+float calculatePointShadow(int lightIdx) {
 	int shadowHandle = getShadowIdx(lightIdx);
-	int shadowType = shadowHandle & 0x0F000000;
 	int shadowIdx = shadowHandle & 0xF0FFFFFF;
 	if (shadowIdx < 0) {
 		return 1.0f;
 	}
-	if (shadowType == 0x01000000) {
-		vec3 dir = position - ubo.lightPos[lightIdx].xyz;
-		dir.x *= -1;
-		float dist = length(dir);
-		dir = normalize(dir);
-		return (dist - shadow_bias > texture(shadow[shadowIdx], dir).r ? 0.0f: 1.0f);
-	} else if (shadowType == 0x02000000) {
-		vec4 shadowCoord = lightCoord[shadowIdx];
-		float shade = 1.0f;
-		if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+	vec3 dir = position - ubo.lightPos[lightIdx].xyz;
+	dir.x *= -1;
+	float dist = length(dir);
+	dir = normalize(dir);
+	return (dist - shadow_bias > texture(shadow[shadowIdx], dir).r ? 0.0f: 1.0f);
+}
+
+float calculateDirectionalShadow(int shadowIdx) {
+	vec4 shadowCoord = lightCoord[shadowIdx];
+	float shade = 1.0f;
+	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+	{
+		float dist = texture( dirShadow[shadowIdx], shadowCoord.st).r;
+		if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
 		{
-			float dist = texture( dirShadow[shadowIdx], shadowCoord.st).r;
-			if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
-			{
-				return 0.0f;
-			}
+			return 0.0f;
 		}
-		return 1.0f;
 	}
 	return 1.0f;
 }
@@ -237,13 +235,13 @@ void main() {
 
 	vec3 L0 = vec3(0.0f);
 
-	for (int i = 0; i < ubo.numLights + ubo.numDirLights; i++) {
+	for (int i = 0; i < ubo.numLights; i++) {
 		
-		vec3 L		 = normalize((ubo.lightDir[i].w < 0.5f ? ubo.lightPos[i].xyz - position : -ubo.lightDir[i].xyz));
+		vec3 L		 = normalize(ubo.lightPos[i].xyz - position);
 		vec3 H		 = normalize(V + L);
 		float cosine = max(dot(L, N), 0.0f);
 
-		float dist		  = length((ubo.lightDir[i].w < 0.5f ? ubo.lightPos[i].xyz - position : -ubo.lightDir[i].xyz));
+		float dist		  = length(ubo.lightPos[i].xyz - position);
 		float attenuation = 1.0 / (dist * dist);
 		vec3 radiance	  = lightColor * attenuation * ubo.lightPos[i].w;
 		
@@ -262,7 +260,36 @@ void main() {
 		float NdotL = max(dot(N, L), 0.0f);
 		
 
-		float shade = calculateShadow(i);
+		float shade = calculatePointShadow(i);
+
+		L0 += shade * (kd * albedo / PI + specular) * radiance * NdotL;
+	}
+
+	for (int i = 0; i < ubo.numDirLights; i++) {
+		
+		vec3 L		 = normalize(-ubo.lightDir[i].xyz);
+		vec3 H		 = normalize(V + L);
+		float cosine = max(dot(L, N), 0.0f);
+
+		float dist		  = length(-ubo.lightDir[i].xyz);
+		float attenuation = 1.0 / (dist * dist);
+		vec3 radiance	  = lightColor * attenuation * ubo.lightPos[i].w;
+		
+		float NDF = DistributionGGX(N, H, roughness);
+		float G	  = GeometrySmith(N, V, L, roughness);
+		vec3 F	  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
+
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
+
+		vec3 numerator	  = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+		vec3 specular	  = numerator / max(denominator, 0.001);
+
+		float NdotL = max(dot(N, L), 0.0f);
+		
+		float shade = calculateDirectionalShadow(i);
 
 		L0 += shade * (kd * albedo / PI + specular) * radiance * NdotL;
 	}

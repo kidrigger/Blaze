@@ -76,8 +76,8 @@ namespace blaze
 	struct LightsUniformBufferObject
 	{
 		alignas(16) glm::mat4 dirLightTransform[4];
+		alignas(16) glm::vec4 lightDir[4];
 		alignas(16) glm::vec4 lightPos[16];
-		alignas(16) glm::vec4 lightDir[16];
 		alignas(16) int shadowIdx[16];
 		int numPointLights;
 		int numDirLights;
@@ -90,8 +90,8 @@ namespace blaze
 		alignas(16) glm::vec3 viewPos;
 		alignas(4)  float	  farPlane;
 		alignas(16) glm::mat4 dirLightTransform[4];
+		alignas(16) glm::vec4 lightDir[4];
 		alignas(16) glm::vec4 lightPos[16];
-		alignas(16) glm::vec4 lightDir[16];
 		alignas(16) int shadowIdx[16];
 		int numLights;
 		int numDirLights;

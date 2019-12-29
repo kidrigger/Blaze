@@ -202,18 +202,18 @@ namespace blaze
 		util::Unmanaged<VkDescriptorSet> shadowDescriptorSet;
 		UniformBuffer<ShadowUniformBufferObject> viewsUBO;
 
-		static const ShadowHandle SHADOW_HANDLE_TYPE_MASK = 0x0F000000;
-		static const ShadowHandle SHADOW_HANDLE_INDEX_MASK = 0xF0FFFFFF;
+		static const uint32_t LIGHT_MASK_INDEX = 0xF0FFFFFF;
+		static const uint32_t LIGHT_MASK_TYPE  = 0x0F000000;
+		static const uint32_t LIGHT_TYPE_POINT = 0x01000000;
+		static const uint32_t LIGHT_TYPE_DIR   = 0x02000000;
 
 		std::vector<PointShadow> pointShadows;
 		std::vector<ShadowHandle> pointShadowFreeStack;
 		std::vector<bool> pointShadowHandleValidity;
-		static const ShadowHandle SHADOW_HANDLE_POINT_TYPE = 0x01000000;
 
 		std::vector<DirectionalShadow> dirShadows;
 		std::vector<ShadowHandle> dirShadowFreeStack;
 		std::vector<bool> dirShadowHandleValidity;
-		static const ShadowHandle SHADOW_HANDLE_DIRECTIONAL_TYPE = 0x02000000;
 
 		LightsUniformBufferObject lightsData;
 		uint32_t MAX_POINT_SHADOWS;
@@ -243,14 +243,14 @@ namespace blaze
 			pointShadowFreeStack.reserve(MAX_POINT_SHADOWS);
 			for (uint32_t i = 0; i < MAX_POINT_SHADOWS; i++)
 			{
-				pointShadowFreeStack.push_back((MAX_POINT_SHADOWS - i - 1) | SHADOW_HANDLE_POINT_TYPE);
+				pointShadowFreeStack.push_back(MAX_POINT_SHADOWS - i - 1);
 			}
 
 			dirShadowHandleValidity = std::vector<bool>(MAX_DIR_SHADOWS, false);
 			dirShadowFreeStack.reserve(MAX_DIR_SHADOWS);
 			for (uint32_t i = 0; i < MAX_DIR_SHADOWS; i++)
 			{
-				dirShadowFreeStack.push_back((MAX_DIR_SHADOWS - i - 1) | SHADOW_HANDLE_DIRECTIONAL_TYPE);
+				dirShadowFreeStack.push_back(MAX_DIR_SHADOWS - i - 1);
 			}
 
 			renderPassOmni = Managed(createRenderPassMultiView(context.get_device(), 0b00111111, format, VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
@@ -489,13 +489,12 @@ namespace blaze
 
 		LightHandle addPointLight(const glm::vec3& position, float brightness, bool hasShadow)
 		{
-			if (lightsData.numPointLights >= MAX_POINT_LIGHTS)
+			if (lightsData.numPointLights >= (int)MAX_POINT_LIGHTS)
 			{
 				throw std::runtime_error("Max Light Count Reached.");
 			}
 			auto handle = lightsData.numPointLights;
 			lightsData.lightPos[handle] = glm::vec4(position, brightness);
-			lightsData.lightDir[handle] = glm::vec4(0.0f);
 			if (hasShadow)
 			{
 				lightsData.shadowIdx[handle] = createPointShadow(position);
@@ -505,55 +504,71 @@ namespace blaze
 				lightsData.shadowIdx[handle] = -1;
 			}
 			lightsData.numPointLights++;
-			return handle;
+			return handle | LIGHT_TYPE_POINT;
 		}
 
 		LightHandle addDirLight(const glm::vec3& position, const glm::vec3& direction, float brightness, bool hasShadow)
 		{
-			if (lightsData.numDirLights >= MAX_DIR_LIGHTS)
+			if (lightsData.numDirLights >= (int)MAX_DIR_LIGHTS)
 			{
 				throw std::runtime_error("Max Light Count Reached.");
 			}
-			auto handle = lightsData.numPointLights;
-			lightsData.lightPos[handle] = glm::vec4(position, brightness);
-			lightsData.lightDir[handle] = glm::vec4(direction, 1.0f);
+			auto handle = lightsData.numDirLights;
+			lightsData.lightDir[handle] = glm::vec4(direction, brightness);
 			if (hasShadow)
 			{
 				auto shade = createDirShadow(position, direction);
-				auto shadeIdx = shade & SHADOW_HANDLE_INDEX_MASK;
-				lightsData.shadowIdx[handle] = shade;
-				lightsData.dirLightTransform[shadeIdx] = createDirShadowPCB(dirShadows[shadeIdx]).projection;
+				assert(shade == handle);
+				lightsData.dirLightTransform[handle] = createDirShadowPCB(dirShadows[handle]).projection;
 			}
 			else
 			{
 				lightsData.shadowIdx[handle] = -1;
 			}
-			lightsData.numPointLights++;
-			return handle;
+			lightsData.numDirLights++;
+			return handle | LIGHT_TYPE_DIR;
 		}
 
 		void setLightPosition(LightHandle handle, const glm::vec3& position)
 		{
-			if (handle >= lightsData.numPointLights)
+			assert((handle & LIGHT_MASK_TYPE) == LIGHT_TYPE_POINT);
+			int handleIdx = handle & LIGHT_MASK_INDEX;
+			if (handleIdx >= lightsData.numPointLights)
 			{
 				throw std::out_of_range("Invalid Light Handle.");
 			}
-			memcpy(&lightsData.lightPos[handle], &position[0], sizeof(glm::vec3));
-			ShadowHandle shade = lightsData.shadowIdx[handle];
-			auto shadeIdx = shade & SHADOW_HANDLE_INDEX_MASK;
+			memcpy(&lightsData.lightPos[handleIdx], &position[0], sizeof(glm::vec3));
+			ShadowHandle shade = lightsData.shadowIdx[handleIdx];
 			if (shade >= 0)
 			{
-				pointShadows[shadeIdx].position = lightsData.lightPos[handle];
+				pointShadows[shade].position = lightsData.lightPos[handleIdx];
 			}
 		}
 
 		void setLightBrightness(LightHandle handle, float brightness)
 		{
-			if (handle >= lightsData.numPointLights)
+			int handleIdx = handle & LIGHT_MASK_INDEX;
+			switch (handle & LIGHT_MASK_TYPE)
 			{
-				throw std::out_of_range("Invalid Light Handle.");
+			case LIGHT_TYPE_POINT:
+			{
+				if (handleIdx >= lightsData.numPointLights)
+				{
+					throw std::out_of_range("Invalid Light Handle.");
+				}
+				lightsData.lightPos[handleIdx][3] = brightness;
+			};
+			break;
+			case LIGHT_TYPE_DIR:
+			{
+				if (handleIdx >= lightsData.numDirLights)
+				{
+					throw std::out_of_range("Invalid Light Handle.");
+				}
+				lightsData.lightDir[handleIdx][3] = brightness;
+			};
+			break;
 			}
-			lightsData.lightPos[handle][3] = brightness;
 		}
 
 		const LightsUniformBufferObject& getLightsData() const { return lightsData; }
@@ -571,11 +586,10 @@ namespace blaze
 			}
 			auto handle = pointShadowFreeStack.back();
 			pointShadowFreeStack.pop_back();
-			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
-			pointShadowHandleValidity[handleIdx] = true;
-			pointShadows[handleIdx].position = position;
-			pointShadows[handleIdx].nearPlane = nearPlane;
-			pointShadows[handleIdx].farPlane = farPlane;
+			pointShadowHandleValidity[handle] = true;
+			pointShadows[handle].position = position;
+			pointShadows[handle].nearPlane = nearPlane;
+			pointShadows[handle].farPlane = farPlane;
 			return handle;
 		}
 
@@ -587,17 +601,17 @@ namespace blaze
 			}
 			auto handle = dirShadowFreeStack.back();
 			dirShadowFreeStack.pop_back();
-			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
-			dirShadowHandleValidity[handleIdx] = true;
-			dirShadows[handleIdx].position = position;
-			dirShadows[handleIdx].direction = direction;
-			dirShadows[handleIdx].width = width;
-			dirShadows[handleIdx].height = height;
-			dirShadows[handleIdx].nearPlane = nearPlane;
-			dirShadows[handleIdx].farPlane = farPlane;
+			dirShadowHandleValidity[handle] = true;
+			dirShadows[handle].position = position;
+			dirShadows[handle].direction = direction;
+			dirShadows[handle].width = width;
+			dirShadows[handle].height = height;
+			dirShadows[handle].nearPlane = nearPlane;
+			dirShadows[handle].farPlane = farPlane;
 			return handle;
 		}
 
+		/*
 		void freeShadow(ShadowHandle handle)
 		{
 			if (handle < 0)
@@ -634,25 +648,19 @@ namespace blaze
 			}
 			}
 		}
+		*/
 
 		void cast(const Context& context, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
 			for (ShadowHandle handle : lightsData.shadowIdx)
 			{
-				if (handle < 0) continue; 
-				auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+				if (handle < 0) continue;
+				cast(context, pointShadows[handle], cmdBuffer, drawables);
+			}
 
-				switch (handle & SHADOW_HANDLE_TYPE_MASK)
-				{
-				case SHADOW_HANDLE_POINT_TYPE:
-				{
-					cast(context, pointShadows[handleIdx], cmdBuffer, drawables);
-				}; break;
-				case SHADOW_HANDLE_DIRECTIONAL_TYPE:
-				{
-					cast(context, dirShadows[handleIdx], cmdBuffer, drawables);
-				}; break;
-				}
+			for (int i = 0; i < lightsData.numDirLights; i++)
+			{
+				cast(context, dirShadows[i], cmdBuffer, drawables);
 			}
 		}
 
@@ -722,21 +730,17 @@ namespace blaze
 
 		void setShadowClipPlanes(ShadowHandle handle, float nearPlane, float farPlane)
 		{
-			assert(((handle & SHADOW_HANDLE_TYPE_MASK) == SHADOW_HANDLE_POINT_TYPE) && "Shadow passed is not a point shadow");
-
-			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
-
-			if (!pointShadowHandleValidity[handleIdx])
+			if (!pointShadowHandleValidity[handle])
 			{
 				throw std::out_of_range("Invalid Shadow Handle.");
 			}
-			pointShadows[handleIdx].nearPlane = nearPlane;
-			pointShadows[handleIdx].farPlane = farPlane;
+			pointShadows[handle].nearPlane = nearPlane;
+			pointShadows[handle].farPlane = farPlane;
 		}
 
 		void setShadowPosition(ShadowHandle handle, const glm::vec3& position)
 		{
-			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
+			auto handleIdx = handle;
 			if (!pointShadowHandleValidity[handleIdx])
 			{
 				throw std::out_of_range("Invalid Shadow Handle.");

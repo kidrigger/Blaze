@@ -169,16 +169,16 @@ namespace blaze
 			throw std::runtime_error("Renderer could not be created");
 		}
 
-		renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 4.0f, true);
+		auto swingingLight = renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 4.0f, true);
 		std::vector<ShadowCaster::LightHandle> lights = {
 			renderer.get_lightSystem().addPointLight(glm::vec3{ -7.0f, 1.0f, -0.5f }, 3.f, true),
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 3.f, true),
-			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 3.f, true),
-			renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0,-1.0,-0.5), 5.0f, true)
-		};
+			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 3.f, true)
+		}; 
+		renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0, -1.0, -0.5), 5.0f, true);
 
-		strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
-		strcpy(settings.filename, "assets/sponza/Sponza.gltf");
+		strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
+		strcpy_s(settings.filename, "assets/sponza/Sponza.gltf");
 
 		auto skybox = loadImageCube(renderer.get_context(), settings.skybox, true);
 		vbo = getUVCube(renderer.get_context());
@@ -302,7 +302,7 @@ namespace blaze
 			}
 			cam.lookTo(cameraFront);
 			
-			renderer.get_lightSystem().setLightPosition(0, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
+			renderer.get_lightSystem().setLightPosition(swingingLight, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
 			if (settings.lockLight)
 			{
 				renderer.get_lightSystem().setLightPosition(lights[settings.currentLight], cam.get_position());
