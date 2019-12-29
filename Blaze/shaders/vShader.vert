@@ -10,8 +10,8 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
 	mat4 projection;
 	vec3 viewPos;
 	mat4 dirLightPV[MAX_DIR_LIGHTS];
+	vec4 lightDir[MAX_DIR_LIGHTS];
 	vec4 lightPos[MAX_POINT_LIGHTS];
-	vec4 lightDir[MAX_POINT_LIGHTS];
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
