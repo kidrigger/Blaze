@@ -133,6 +133,8 @@ namespace blaze
 			bool B;
 			int I;
 		} enableIBL{ 1 };
+		alignas(4) float exposure{ 4.5f };
+		alignas(4) float gamma{ 2.2f };
 	};
 
 	struct MaterialPushConstantBlock

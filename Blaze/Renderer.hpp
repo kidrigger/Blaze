@@ -36,6 +36,7 @@ namespace blaze
 		Swapchain swapchain;
 		GUI gui;
 		ShadowCaster shadowCaster;
+		Camera* camera;
 
 		util::Managed<VkRenderPass> renderPass;
 
@@ -266,6 +267,11 @@ namespace blaze
 		void set_cameraUBO(const CameraUniformBufferObject& ubo)
 		{
 			memcpy(&rendererUBO, &ubo, sizeof(ubo));
+		}
+
+		void set_camera(Camera* cam)
+		{
+			camera = cam;
 		}
 
 		void set_lightUBO(const LightsUniformBufferObject& ubo)

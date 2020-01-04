@@ -36,6 +36,8 @@ layout(set = 0, binding = 1) uniform SettingsUBO {
 	int viewMap;
 	int enableSkybox;
 	int enableIBL;
+	float exposure;
+	float gamma;
 } debugSettings;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseImage;
@@ -87,9 +89,9 @@ vec3 Uncharted2Tonemap(vec3 color)
 
 vec4 tonemap(vec4 color)
 {
-	vec3 outcol = Uncharted2Tonemap(color.rgb);
+	vec3 outcol = Uncharted2Tonemap(color.rgb * debugSettings.exposure);
 	outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
-	return vec4(pow(outcol, vec3(1.0f / 2.2f)), color.a);
+	return vec4(pow(outcol, vec3(1.0f / debugSettings.gamma)), color.a);
 }
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -341,11 +343,12 @@ void main() {
 				outColor = vec4(position.xyz * 0.1f, 1.0f);
 			}; break;
 			case 8: {
-				float v = texture(dirShadow[0], lightCoord[0].st).r;
-				float r = clamp(v * 9.0f, 0.0f, 1.0f);
-				float g = clamp(v * 9.0f - 1.0f, 0.0f, 1.0f);
-				float b = clamp(v * 9.0f - 2.0f, 0.0f, 1.0f);
-				outColor = vec4(r,g,b, 1.0f);
+				// float v = texture(dirShadow[0], lightCoord[0].st).r;
+				// float r = clamp(v * 3.0f - 6.0f, 0.0f, 1.0f);
+				// float g = clamp(v * 3.0f - 7.0f, 0.0f, 1.0f);
+				// float b = clamp(v * 3.0f - 8.0f, 0.0f, 1.0f);
+				// outColor = vec4(r,g,b, 1.0f);
+				outColor = vec4(texture(dirShadow[0], gl_FragCoord.xy/vec2(1920.0f, 1080.0f)).rrr, 1.0f);
 			}; break;
 		}
 	}

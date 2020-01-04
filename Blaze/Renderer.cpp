@@ -28,6 +28,7 @@ namespace blaze
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 		rebuildCommandBuffer(imageIndex);
 		set_lightUBO(shadowCaster.getLightsData());
+		set_cameraUBO(camera->getUbo());
 		updateUniformBuffer(imageIndex, rendererUBO);
 		updateUniformBuffer(imageIndex, settingsUBO);
 
@@ -350,7 +351,7 @@ namespace blaze
 			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 		}
 
-		shadowCaster.cast(context, commandBuffers[frame], drawables);
+		shadowCaster.cast(context, camera, commandBuffers[frame], drawables);
 
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

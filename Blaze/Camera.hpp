@@ -29,7 +29,7 @@ namespace blaze
 			: position(pos), target(target), up(up), fov(fov), aspect(aspect), nearPlane(nearPlane), farPlane(farPlane)
 		{
 			ubo.view = glm::lookAt(position, target + position, up);
-			ubo.projection = glm::perspective(fov, aspect, 0.1f, 10.0f);
+			ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 			ubo.viewPos = position;
 			ubo.farPlane = farPlane;
 			uboDirty = true;
@@ -62,6 +62,9 @@ namespace blaze
 		const glm::vec3& get_position() const { return position; }
 		glm::vec3& get_position() { return position; }
 		const glm::vec3& get_up() const { return up; }
+
+		const glm::mat4& get_projection() const { return ubo.projection; }
+		const glm::mat4& get_view() const { return ubo.view; }
 
 		const CameraUniformBufferObject& getUbo()
 		{

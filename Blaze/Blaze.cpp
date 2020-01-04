@@ -143,7 +143,7 @@ namespace blaze
 		IndexedVertexBuffer<Vertex> vbo;
 		Texture2D image;
 
-		Camera cam({ 0.0f, 0.0f, 4.0f }, { 0.0f, 0.0f, -4.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 1000.0f);
+		Camera cam({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);
 
 		// GLFW Setup
 		assert(glfwInit());
@@ -168,14 +168,15 @@ namespace blaze
 		{
 			throw std::runtime_error("Renderer could not be created");
 		}
+		renderer.set_camera(&cam);
 
-		auto swingingLight = renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 4.0f, true);
+		auto swingingLight = renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 3.0f, true);
 		std::vector<ShadowCaster::LightHandle> lights = {
-			renderer.get_lightSystem().addPointLight(glm::vec3{ -7.0f, 1.0f, -0.5f }, 3.f, true),
-			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 3.f, true),
-			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 3.f, true)
+			renderer.get_lightSystem().addPointLight(glm::vec3{ -7.0f, 1.0f, -0.5f }, 2.0f, true),
+			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 2.0f, true),
+			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 2.0f, true)
 		}; 
-		renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0, -1.0, -0.5), 5.0f, true);
+		renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0, -1.0, -0.5), 1.0f, true);
 
 		strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
 		strcpy_s(settings.filename, "assets/sponza/Sponza.gltf");
@@ -368,6 +369,8 @@ namespace blaze
 					}
 					ImGui::Checkbox("Enable Skybox", &settings.settingsUBO.enableSkybox.B);
 					ImGui::Checkbox("Enable IBL", &settings.settingsUBO.enableIBL.B);
+					ImGui::InputFloat("Exposure", &settings.settingsUBO.exposure);
+					ImGui::InputFloat("Gamma", &settings.settingsUBO.gamma);
 					ImGui::Checkbox("Lock Light", &settings.lockLight);
 					ImGui::SameLine();
 					ImGui::InputInt("Light to Lock", &settings.currentLight);
@@ -397,7 +400,6 @@ namespace blaze
 			{
 				model.update();
 				renderer.set_settingsUBO(settings.settingsUBO);
-				renderer.set_cameraUBO(cam.getUbo());
 				renderer.renderFrame();
 			}
 			catch (std::exception& e)
