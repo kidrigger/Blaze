@@ -9,6 +9,7 @@
 #include "DebugTimer.hpp"
 #include "util/createFunctions.hpp"
 #include <UniformBuffer.hpp>
+#include <Primitives.hpp>
 
 namespace blaze::util
 {
@@ -35,7 +36,7 @@ namespace blaze::util
 	{
 	public:
 
-		static TextureCube Process::convertDescriptorToCubemap(const Context& context, const Texture2CubemapInfo<PCB>& info)
+		static TextureCube convertDescriptorToCubemap(const Context& context, const Texture2CubemapInfo<PCB>& info)
 		{
 			auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
 			const uint32_t dim = info.cube_side;

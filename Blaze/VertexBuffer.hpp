@@ -7,6 +7,7 @@
 
 #include <stdexcept>
 #include <vector>
+#include <cstring>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -221,7 +222,7 @@ namespace blaze
 		const size_t& get_verticeSize() const { return vertexSize; }
 		const uint32_t& get_vertexCount() const { return vertexCount; }
 		const VkBuffer& get_indexBuffer() const { return indexBuffer.get().buffer; }
-		const VmaAllocation& get_indexAllocation() const { return indexMemory.get().allocation; }
+		const VmaAllocation& get_indexAllocation() const { return indexBuffer.get().allocation; }
 		const size_t& get_indiceSize() const { return indexSize; }
 		const uint32_t& get_indexCount() const { return indexCount; }
 	};

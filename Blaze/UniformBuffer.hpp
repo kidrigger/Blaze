@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <cstring>
+
 namespace blaze
 {
 	template <typename T>

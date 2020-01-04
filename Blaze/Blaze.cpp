@@ -8,6 +8,7 @@
 #include "util/Managed.hpp"
 #include "util/DeviceSelection.hpp"
 #include "util/createFunctions.hpp"
+#include "util/files.hpp"
 #include "Context.hpp"
 #include "Renderer.hpp"
 #include "Datatypes.hpp"
@@ -26,7 +27,6 @@
 #include <set>
 #include <algorithm>
 #include <string>
-#include <filesystem>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -93,7 +93,7 @@ namespace blaze
 		void submitDelta(float delta)
 		{
 			memcpy(deltaTime.data(), deltaTime.data() + 1, deltaTime.size() * sizeof(float));
-			settings.deltaTime[deltaTime.size()-1] = delta;
+			deltaTime[deltaTime.size()-1] = delta;
 		}
 	} settings{};
 
@@ -333,7 +333,7 @@ namespace blaze
 					ImGui::SameLine();
 					if (ImGui::Button("Load##Model"))
 					{
-						if (filesystem::exists(settings.filename))
+						if (fileExists(settings.filename))
 						{
 							model = loadModel(renderer, settings.filename);
 						}

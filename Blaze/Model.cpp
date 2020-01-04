@@ -4,7 +4,7 @@
 
 namespace blaze {
 
-	[[nodiscard]] Model blaze::loadModel(const Renderer& renderer, const std::string& name)
+	[[nodiscard]] Model loadModel(const Renderer& renderer, const std::string& name)
 	{
 		using namespace std;
 

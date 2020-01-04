@@ -3,8 +3,7 @@
 
 #include <set>
 #include <string>
-
-#pragma once
+#include <cstring>
 
 namespace blaze::util
 {

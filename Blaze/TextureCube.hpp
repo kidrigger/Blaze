@@ -6,6 +6,7 @@
 #include "util/createFunctions.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace blaze
 {
