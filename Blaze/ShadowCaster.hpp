@@ -9,6 +9,7 @@
 #include "Datatypes.hpp"
 #include "UniformBuffer.hpp"
 #include "Drawable.hpp"
+#include "Camera.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -519,7 +520,6 @@ namespace blaze
 			{
 				auto shade = createDirShadow(position, direction);
 				assert(shade == handle);
-				lightsData.dirLightTransform[handle] = createDirShadowPCB(dirShadows[handle]).projection;
 			}
 			else
 			{
@@ -650,21 +650,21 @@ namespace blaze
 		}
 		*/
 
-		void cast(const Context& context, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		void cast(const Context& context, Camera* camera, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
 			for (ShadowHandle handle : lightsData.shadowIdx)
 			{
 				if (handle < 0) continue;
-				cast(context, pointShadows[handle], cmdBuffer, drawables);
+				cast(context, handle, pointShadows[handle], cmdBuffer, drawables);
 			}
 
-			for (int i = 0; i < lightsData.numDirLights; i++)
+			for (ShadowHandle i = 0; i < lightsData.numDirLights; i++)
 			{
-				cast(context, dirShadows[i], cmdBuffer, drawables);
+				cast(context, i, dirShadows[i], camera, cmdBuffer, drawables);
 			}
 		}
 
-		void cast(const Context& context, PointShadow& shadow, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		void cast(const Context& context, ShadowHandle handle, PointShadow& shadow, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
 			auto shadowPCB = createOmniShadowPCB(shadow);
 
@@ -695,9 +695,10 @@ namespace blaze
 			vkCmdEndRenderPass(cmdBuffer);
 		}
 
-		void cast(const Context& context, DirectionalShadow& shadow, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+		void cast(const Context& context, ShadowHandle handle, DirectionalShadow& shadow, Camera* cam, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
-			auto shadowPCB = createDirShadowPCB(shadow);
+			auto shadowPCB = createDirShadowPCB(shadow, cam);
+			lightsData.dirLightTransform[handle] = shadowPCB.projection;
 
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -752,23 +753,59 @@ namespace blaze
 		const VkDescriptorSetLayout& get_shadowLayout() const { return shadowLayout.get(); }
 
 	private:
-		ShadowPushConstantBlock createDirShadowPCB(const DirectionalShadow& shadow) const
+		ShadowPushConstantBlock createDirShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
 		{
-			return {
-				glm::ortho(-shadow.width / 2, shadow.width / 2, -shadow.height / 2, shadow.height / 2, shadow.nearPlane, shadow.farPlane) * glm::lookAt(shadow.position, shadow.position + shadow.direction, glm::vec3(0,1,0)),
+			glm::vec4 cube[] = {
+				{-1,-1,-1,1},
+				{1,-1,-1,1},
+				{1,1,-1,1},
+				{-1,1,-1,1},
+				{-1,1,1,1},
+				{1,1,1,1},
+				{1,-1,1,1},
+				{-1,-1,1,1}
+			};
+			glm::mat4 invProj = glm::inverse(camera->get_projection() * camera->get_view());
+
+			glm::vec3 bz = glm::normalize(shadow.direction);
+			glm::vec3 bx = glm::normalize(glm::cross(bz, glm::vec3(0, 1, 0)));
+			glm::vec3 by = glm::cross(bx, bz);
+
+			glm::mat3 basis = glm::transpose(glm::mat3(bx, by, bz));
+			glm::vec3 center = glm::vec3(0.0f);
+			for (auto& vec : cube)
+			{
+				vec = invProj * vec;
+				vec /= vec.w;
+				vec = glm::vec4(basis * glm::vec3(vec), 1.0f);
+				center += glm::vec3(vec);
+			}
+			center *= 0.125;
+
+			glm::vec3 v = glm::vec3(-1);
+			for (auto& vec : cube)
+			{
+				v = glm::max(glm::abs(glm::vec3(vec) - center), v);
+			}
+
+			return
+			{
+				glm::ortho(-v.x, v.x, -v.y, v.y, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * v.z - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0,1,0)),
 				shadow.direction
 			};
 		}
 		ShadowPushConstantBlock createOmniShadowPCB(const PointShadow& shadow) const
 		{
-			return {
+			return
+			{
 				glm::perspective(glm::radians(90.0f), 1.0f, shadow.nearPlane, shadow.farPlane),
 				shadow.position
 			};
 		}
 		ShadowUniformBufferObject createOmniShadowUBO() const
 		{
-			return {
+			return
+			{
 				{
 					// POSITIVE_X (Outside in - so NEG_X face)
 					glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
