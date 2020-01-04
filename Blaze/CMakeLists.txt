@@ -30,7 +30,17 @@ include_directories (".")
 # Add source to this project's executable.
 add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
 
-target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR)
+if (WIN32)
+    target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR)
+    if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
+      set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
+    else()
+      set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe")
+    endif()
+elseif(UNIX AND NOT APPLE)
+    target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_X11_KHR)
+    find_program(GLSL_VALIDATOR NAMES "glslangValidator")
+endif()
 
 # TODO: Add tests and install targets if needed.
 # include_directories ("GLFW/include")
@@ -42,12 +52,6 @@ target_link_libraries(Blaze glm)
 target_link_libraries(Blaze Vulkan::Vulkan)
 
 # Credits vlsh https://gist.github.com/vlsh/a0d191701cb48f157b05be7f74d79396
-if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
-  set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
-else()
-  set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe")
-endif()
-
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "shaders/*.frag"
     "shaders/*.vert"

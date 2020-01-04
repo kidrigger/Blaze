@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <fstream>
+#include <sys/stat.h>
 
 namespace blaze::util
 {
@@ -21,4 +22,11 @@ namespace blaze::util
 		}
 		throw std::runtime_error("File (" + filename + ") could not be opened.");
 	}
+
+    bool fileExists(const std::string& filename)
+    {
+        struct stat s;
+        return stat(filename.c_str(), &s) == 0;
+    }
 }
+
