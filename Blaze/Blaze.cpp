@@ -178,8 +178,13 @@ namespace blaze
 		}; 
 		renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0, -1.0, -0.5), 1.0f, true);
 
-		strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
-		strcpy_s(settings.filename, "assets/sponza/Sponza.gltf");
+#ifdef _WIN32
+        strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
+        strcpy_s(settings.filename, "assets/sponza/Sponza.gltf");
+#else	
+        strcpy(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
+		strcpy(settings.filename, "assets/sponza/Sponza.gltf");
+#endif
 
 		auto skybox = loadImageCube(renderer.get_context(), settings.skybox, true);
 		vbo = getUVCube(renderer.get_context());
