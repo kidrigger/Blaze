@@ -179,16 +179,25 @@ float calculatePointShadow(int lightIdx) {
 
 float calculateDirectionalShadow(int shadowIdx) {
 	vec4 shadowCoord = lightCoord[shadowIdx];
-	float shade = 1.0f;
-	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
-	{
-		float dist = texture( dirShadow[shadowIdx], shadowCoord.st).r;
-		if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
-		{
-			return 0.0f;
-		}
-	}
-	return 1.0f;
+	float shade = 0.0f;
+    
+    vec2 texelSize = vec2(1.0f) / textureSize(dirShadow[shadowIdx], 0);
+    for (int i = -1; i <= 1; i++)
+    {
+        for (int j = -1; j <= 1; j++)
+        {
+            if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+            {
+                float dist = texture( dirShadow[shadowIdx], shadowCoord.st + vec2(i,j) * texelSize).r;
+                if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
+                {
+                    shade += 1.0f;
+                }
+            }
+        }
+    }
+    shade /= 9.0f;
+    return 1.0f - shade;
 }
 
 void main() {
@@ -273,8 +282,8 @@ void main() {
 		float cosine = max(dot(L, N), 0.0f);
 
 		float dist		  = length(-ubo.lightDir[i].xyz);
-		float attenuation = 1.0 / (dist * dist);
-		vec3 radiance	  = lightColor * attenuation * ubo.lightPos[i].w;
+		float attenuation = 1.0 / max((dist * dist), 0.001);
+		vec3 radiance	  = lightColor * attenuation * ubo.lightDir[i].w;
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G	  = GeometrySmith(N, V, L, roughness);
