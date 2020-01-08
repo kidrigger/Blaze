@@ -321,13 +321,13 @@ namespace blaze
 				pipelineOmni = Managed(
 					createGraphicsPipeline(context.get_device(), pipelineLayout.get(), renderPassOmni.get(),
 						{ POINT_SHADOW_MAP_SIZE, POINT_SHADOW_MAP_SIZE }, "shaders/vShadow.vert.spv", "shaders/fShadow.frag.spv",
-						{ VK_DYNAMIC_STATE_VIEWPORT }, VK_CULL_MODE_FRONT_BIT, VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS),
+						{ VK_DYNAMIC_STATE_VIEWPORT }, VK_CULL_MODE_BACK_BIT, VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS),
 					[dev = context.get_device()](VkPipeline& pipe){ vkDestroyPipeline(dev, pipe, nullptr); });
 
 				pipelineDirectional = Managed(
 					createGraphicsPipeline(context.get_device(), pipelineLayout.get(), renderPassDirectional.get(),
 						{ DIR_SHADOW_MAP_SIZE, DIR_SHADOW_MAP_SIZE }, "shaders/vDirShadow.vert.spv", "shaders/fDirShadow.frag.spv",
-						{ VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_DEPTH_BIAS }, VK_CULL_MODE_FRONT_BIT, VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS),
+						{ VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_DEPTH_BIAS }, VK_CULL_MODE_BACK_BIT, VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS),
 					[dev = context.get_device()](VkPipeline& pipe){ vkDestroyPipeline(dev, pipe, nullptr); });
 
 				{
@@ -714,7 +714,7 @@ namespace blaze
 
 			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDirectional.get());
-			vkCmdSetDepthBias(cmdBuffer, 1.25f, 0.0f, 1.75f);
+			vkCmdSetDepthBias(cmdBuffer, 1.75f, 0.0f, 2.25f);
 			vkCmdSetViewport(cmdBuffer, 0, 1, &shadow.viewport.get());
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, uboDescriptorSet.data(), 0, nullptr);
 			vkCmdPushConstants(cmdBuffer, pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(ModelPushConstantBlock), sizeof(ShadowPushConstantBlock), &shadowPCB);

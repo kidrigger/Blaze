@@ -1,4 +1,3 @@
-
 #include "createFunctions.hpp"
 
 #include <stdexcept>
@@ -418,7 +417,7 @@ namespace blaze::util
 		rasterizerCreateInfo.lineWidth = 1.0f;
 		rasterizerCreateInfo.cullMode = cullMode;
 		rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
+		rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 
 		VkPipelineMultisampleStateCreateInfo multisampleCreateInfo = {};
 		multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
