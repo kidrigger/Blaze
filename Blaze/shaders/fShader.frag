@@ -142,8 +142,8 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-	float r = roughness;
-	float k = (r * r) / 2.0;
+	float r = roughness + 1.0f;
+	float k = (r * r) / 8.0f;
 
 	float num   = NdotV;
 	float denom = NdotV * (1.0 - k) + k;
@@ -166,8 +166,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 }
 
 float calculatePointShadow(int lightIdx) {
-	int shadowHandle = getShadowIdx(lightIdx);
-	int shadowIdx = shadowHandle & 0xF0FFFFFF;
+	int shadowIdx = getShadowIdx(lightIdx);
 	if (shadowIdx < 0) {
 		return 1.0f;
 	}
