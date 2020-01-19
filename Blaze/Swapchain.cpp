@@ -113,4 +113,58 @@ namespace blaze
 		}
 		return swapchainImageViews;
 	}
+
+    Swapchain::Swapchain(const Context& context) noexcept
+    {
+        using namespace util;
+        auto [swapc, swapcFormat, swapcExtent] = createSwapchain(context);
+        swapchain = Managed(swapc, [dev = context.get_device()](VkSwapchainKHR& swpc){ vkDestroySwapchainKHR(dev, swpc, nullptr); });
+        format = swapcFormat;
+        extent = swapcExtent;
+
+        images = getImages(context);
+        imageViews = ManagedVector(createImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+
+        count = static_cast<uint32_t>(images.size());
+    }
+
+    void Swapchain::recreate(const Context& context) noexcept
+    {
+        using namespace util;
+        auto [swapc, swapcFormat, swapcExtent] = createSwapchain(context);
+        swapchain = Managed(swapc, [dev = context.get_device()](VkSwapchainKHR& swpc){ vkDestroySwapchainKHR(dev, swpc, nullptr); });
+        format = swapcFormat;
+        extent = swapcExtent;
+
+        images = getImages(context);
+        imageViews = ManagedVector(createImageViews(context), [dev = context.get_device()](VkImageView& view) { vkDestroyImageView(dev, view, nullptr); });
+
+        count = static_cast<uint32_t>(images.size());
+    }
+
+    Swapchain::Swapchain(Swapchain&& other) noexcept
+        : swapchain(std::move(other.swapchain)),
+        format(std::move(other.format)),
+        extent(std::move(other.extent)),
+        images(std::move(other.images)),
+        imageViews(std::move(other.imageViews)),
+        count(other.count)
+    {
+    }
+
+    Swapchain& Swapchain::operator=(Swapchain&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+        swapchain = std::move(other.swapchain);
+        format = std::move(other.format);
+        extent = std::move(other.extent);
+        images = std::move(other.images);
+        imageViews = std::move(other.imageViews);
+        count = other.count;
+
+        return *this;
+    }
 }

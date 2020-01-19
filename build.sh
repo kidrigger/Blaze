@@ -23,3 +23,13 @@ fi
 
 popd
 
+if echo $* | grep -e "-v" -q
+then
+    doxygen
+elif echo $* | grep -e "nodoc" -q
+then
+    echo "Skipping docs"
+else
+    doxygen > /dev/null
+fi
+

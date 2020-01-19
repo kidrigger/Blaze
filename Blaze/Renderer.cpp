@@ -496,7 +496,7 @@ namespace blaze
 		idc.layerSize = 4 * dim * dim;
 		idc.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		idc.format = format;
-		idc.access = VK_ACCESS_TRANSFER_WRITE_BIT;
+		idc.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		TextureCube irradianceMap(context, idc, true);
 
 		ImageData2D id2d{};
@@ -635,7 +635,7 @@ namespace blaze
 
 				fbColorAttachment.transferLayout(cmdBuffer,
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+					VK_ACCESS_TRANSFER_READ_BIT,
 					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 				VkImageCopy copyRegion = {};
@@ -663,7 +663,7 @@ namespace blaze
 
 				fbColorAttachment.transferLayout(cmdBuffer,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			}
 
@@ -672,8 +672,8 @@ namespace blaze
 
 		irradianceMap.transferLayout(cmdBuffer,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			0, VK_ACCESS_SHADER_READ_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 		context.flushCommandBuffer(cmdBuffer);
 
@@ -784,7 +784,7 @@ namespace blaze
 
 		fbColorAttachment.transferLayout(cmdBuffer,
 			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+			VK_ACCESS_TRANSFER_READ_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 		VkImageCopy copyRegion = {};
@@ -812,10 +812,187 @@ namespace blaze
 
 		lut.transferLayout(cmdBuffer,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+			VK_ACCESS_SHADER_READ_BIT);
 
 		context.flushCommandBuffer(cmdBuffer);
 
 		return lut;
 	}
+
+    Renderer::Renderer(GLFWwindow* window, bool enableValidationLayers) noexcept
+        : context(window, enableValidationLayers)
+    {
+        using namespace std;
+        using namespace util;
+
+        skyboxCommand = [](VkCommandBuffer cb, VkPipelineLayout lay, uint32_t frameCount) {};
+
+        glfwSetWindowUserPointer(window, this);
+        glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height)
+            {
+                Renderer* renderer = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
+                renderer->windowResized = true;
+            });
+
+        try
+        {
+
+            swapchain = Swapchain(context);
+
+            shadowCaster = ShadowCaster(context, 16, 16);
+            
+            depthBufferTexture = createDepthBuffer();
+            
+            renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
+
+            rendererUniformBuffers = createUniformBuffers(rendererUBO);
+            settingsUniformBuffers = createUniformBuffers(settingsUBO);
+            uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+            environmentDescriptorSetLayout = Managed(createEnvironmentDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+            materialDescriptorSetLayout = Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
+            descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+            uboDescriptorSets = createCameraDescriptorSets();
+
+            {
+                auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
+                graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+                graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+                skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+            }
+
+            renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+            commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+
+            max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
+
+            {
+                auto [startSems, endSems, fences] = createSyncObjects();
+                imageAvailableSem = ManagedVector(startSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
+                renderFinishedSem = ManagedVector(endSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
+                inFlightFences = ManagedVector(fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
+            }
+
+            gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
+
+            recordCommandBuffers();
+
+            isComplete = true;
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << "RENDERER_CREATION_FAILED: " << e.what() << std::endl;
+            isComplete = false;
+        }
+    }
+
+    Renderer::Renderer(Renderer&& other) noexcept
+        : isComplete(other.isComplete),
+        context(std::move(other.context)),
+        gui(std::move(other.gui)),
+        swapchain(std::move(other.swapchain)),
+        depthBufferTexture(std::move(other.depthBufferTexture)),
+        renderPass(std::move(other.renderPass)),
+        uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
+        environmentDescriptorSetLayout(std::move(other.environmentDescriptorSetLayout)),
+        materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
+        descriptorPool(std::move(other.descriptorPool)),
+        uboDescriptorSets(std::move(other.uboDescriptorSets)),
+        rendererUniformBuffers(std::move(other.rendererUniformBuffers)),
+        settingsUniformBuffers(std::move(other.settingsUniformBuffers)),
+        rendererUBO(other.rendererUBO),
+        settingsUBO(other.settingsUBO),
+        graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
+        graphicsPipeline(std::move(other.graphicsPipeline)),
+        skyboxPipeline(std::move(other.skyboxPipeline)),
+        renderFramebuffers(std::move(other.renderFramebuffers)),
+        commandBuffers(std::move(other.commandBuffers)),
+        imageAvailableSem(std::move(other.imageAvailableSem)),
+        renderFinishedSem(std::move(other.renderFinishedSem)),
+        inFlightFences(std::move(other.inFlightFences)),
+        skyboxCommand(std::move(other.skyboxCommand)),
+        drawables(std::move(other.drawables)),
+        environmentDescriptor(other.environmentDescriptor),
+        shadowCaster(std::move(other.shadowCaster))
+    {
+    }
+
+    Renderer& Renderer::operator=(Renderer&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+        isComplete = other.isComplete;
+        context = std::move(other.context);
+        gui = std::move(other.gui);
+        swapchain = std::move(other.swapchain);
+        depthBufferTexture = std::move(other.depthBufferTexture);
+        renderPass = std::move(other.renderPass);
+        uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
+        environmentDescriptorSetLayout = std::move(other.environmentDescriptorSetLayout);
+        materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
+        descriptorPool = std::move(other.descriptorPool);
+        uboDescriptorSets = std::move(other.uboDescriptorSets);
+        rendererUniformBuffers = std::move(other.rendererUniformBuffers);
+        settingsUniformBuffers = std::move(other.settingsUniformBuffers);
+        rendererUBO = other.rendererUBO;
+        settingsUBO = other.settingsUBO;
+        graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
+        graphicsPipeline = std::move(other.graphicsPipeline);
+        skyboxPipeline = std::move(other.skyboxPipeline);
+        renderFramebuffers = std::move(other.renderFramebuffers);
+        commandBuffers = std::move(other.commandBuffers);
+        imageAvailableSem = std::move(other.imageAvailableSem);
+        renderFinishedSem = std::move(other.renderFinishedSem);
+        inFlightFences = std::move(other.inFlightFences);
+        skyboxCommand = std::move(other.skyboxCommand);
+        drawables = std::move(other.drawables);
+        environmentDescriptor = other.environmentDescriptor;
+        shadowCaster = std::move(other.shadowCaster);
+        return *this;
+    }
+
+    void Renderer::recreateSwapchain()
+    {
+        try
+        {
+            vkDeviceWaitIdle(context.get_device());
+            auto [width, height] = get_dimensions();
+            while (width == 0 || height == 0)
+            {
+                std::tie(width, height) = get_dimensions();
+                glfwWaitEvents();
+            }
+
+            using namespace util;
+            swapchain.recreate(context);
+
+            depthBufferTexture = createDepthBuffer();
+
+            renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
+
+            rendererUniformBuffers = createUniformBuffers(rendererUBO);
+            settingsUniformBuffers = createUniformBuffers(settingsUBO);
+            descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+            uboDescriptorSets = createCameraDescriptorSets();
+
+            {
+                auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
+                graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+                graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+                skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+            }
+
+            renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+            commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
+
+            gui.recreate(context, swapchain.get_extent(), swapchain.get_imageViews());
+
+            recordCommandBuffers();
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+    }
 }

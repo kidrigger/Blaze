@@ -3,6 +3,7 @@
 
 namespace blaze::util
 {
+    /// @cond PRIVATE
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -59,4 +60,5 @@ namespace blaze::util
 			func(instance, debugMessenger, pAllocator);
 		}
 	}
+    /// @endcond
 }

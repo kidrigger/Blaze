@@ -10,6 +10,11 @@
 
 namespace blaze
 {
+    /**
+     * @struct ImageDataCube
+     *
+     * @brief Data for constructing a TextureCube
+     */
 	struct ImageDataCube
 	{
 		uint8_t* data[6] { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
@@ -25,6 +30,13 @@ namespace blaze
 		VkImageAspectFlags aspect{ VK_IMAGE_ASPECT_COLOR_BIT };
 	};
 
+    /**
+     * @class TextureCube
+     *
+     * @brief A wrapper over a vulkan texture that contains all the required data.
+     *
+     * A Cube texture that contains the image, memory, view, sampler and metadata.
+     */
 	class TextureCube
 	{
 	private:
@@ -42,266 +54,59 @@ namespace blaze
 		uint32_t miplevels{ 1 };
 		bool is_valid{ false };
 	public:
-		TextureCube() noexcept
-		{
-		}
+        /**
+         * @fn TextureCube()
+         *
+         * @brief Default Constructor.
+         */
+		TextureCube() noexcept {}
 
-		TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true)
-			: width(image_data.width),
-			height(image_data.height),
-			format(image_data.format),
-			layout(image_data.layout),
-			usage(image_data.usage),
-			access(image_data.access),
-			aspect(image_data.aspect),
-			is_valid(false)
-		{
+        /**
+         * @fn TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true)
+         *
+         * @brief Main constructor for TextureCube.
+         *
+         * @param context The current Vulkan Context.
+         * @param image_data The ImageDataCube stuct containing the initialization information.
+         * @param mipmapped Enabling mipmapping.
+         */
+		TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true);
 
-			using namespace util;
-			using std::max;
-
-			VmaAllocator allocator = context.get_allocator();
-
-			if (mipmapped)
-			{
-				miplevels = static_cast<uint32_t>(floor(log2(max(width, height)))) + 1;
-			}
-
-			if (!image_data.data[0] || !image_data.data[1] || !image_data.data[2] || !image_data.data[3] || !image_data.data[4] || !image_data.data[5])
-			{
-				image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
-
-				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
-
-				VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-				VkImageMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				barrier.newLayout = layout;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-				barrier.image = image.get().image;
-				barrier.subresourceRange.aspectMask = aspect;
-				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = miplevels;
-				barrier.subresourceRange.baseArrayLayer = 0;
-				barrier.subresourceRange.layerCount = 6;
-				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = 0;
-
-				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-				context.flushCommandBuffer(commandBuffer);
-
-				imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-				imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
-
-				imageInfo.imageView = imageView.get();
-				imageInfo.sampler = imageSampler.get();
-				imageInfo.imageLayout = layout; 
-				return;
-			}
-
-			auto [stagingBuffer, stagingAlloc] = context.createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-			auto stagingBufferRAII = Managed<BufferObject>({ stagingBuffer, stagingAlloc }, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
-
-			void* bufferdata;
-			vmaMapMemory(allocator, stagingAlloc, &bufferdata);
-			{
-				uint8_t* dest = static_cast<uint8_t*>(bufferdata);
-				for (int i = 0; i < 6; i++)
-				{
-					memcpy(dest + image_data.layerSize * i, image_data.data[i], image_data.layerSize);
-				}
-			}
-			vmaUnmapMemory(allocator, stagingAlloc);
-
-			image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
-
-			try
-			{
-				VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
-
-				VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-				VkImageMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-				barrier.image = image.get().image;
-				barrier.subresourceRange.aspectMask = aspect;
-				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = miplevels;
-				barrier.subresourceRange.baseArrayLayer = 0;
-				barrier.subresourceRange.layerCount = 6;
-				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = 0;
-
-				vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-				barrier.subresourceRange.layerCount = 1;
-
-				for (int face = 0; face < 6; face++)
-				{
-					VkBufferImageCopy region = {};
-					region.bufferOffset = face * image_data.layerSize;
-					region.bufferRowLength = 0;
-					region.bufferImageHeight = 0;
-					region.imageSubresource.aspectMask = aspect;
-					region.imageSubresource.mipLevel = 0;
-					region.imageSubresource.baseArrayLayer = face;
-					region.imageSubresource.layerCount = 1;
-
-					region.imageOffset = { 0,0 };
-					region.imageExtent = { width, height, 1 };
-
-					vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					barrier.srcAccessMask = 0;
-					barrier.dstAccessMask = 0;
-					barrier.subresourceRange.baseArrayLayer = face;
-					barrier.subresourceRange.layerCount = 1;
-					srcStage = dstStage;
-					dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-
-					vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-					// Mipmapping
-					int32_t mipwidth = static_cast<int32_t>(width);
-					int32_t mipheight = static_cast<int32_t>(height);
-					barrier.subresourceRange.levelCount = 1;
-
-					for (uint32_t i = 1; i < miplevels; i++)
-					{
-						barrier.subresourceRange.baseMipLevel = i - 1;
-						barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-						barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-						barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-						barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-						vkCmdPipelineBarrier(commandBuffer,
-							VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-							0, nullptr,
-							0, nullptr,
-							1, &barrier);
-
-						VkImageBlit blit = {};
-						blit.srcOffsets[0] = { 0, 0, 0 };
-						blit.srcOffsets[1] = { mipwidth, mipheight, 1 };
-						blit.srcSubresource.aspectMask = aspect;
-						blit.srcSubresource.mipLevel = i - 1;
-						blit.srcSubresource.baseArrayLayer = face;
-						blit.srcSubresource.layerCount = 1;
-						blit.dstOffsets[0] = { 0, 0, 0 };
-						blit.dstOffsets[1] = { mipwidth > 1 ? mipwidth / 2 : 1, mipheight > 1 ? mipheight / 2 : 1, 1 };
-						blit.dstSubresource.aspectMask = aspect;
-						blit.dstSubresource.mipLevel = i;
-						blit.dstSubresource.baseArrayLayer = face;
-						blit.dstSubresource.layerCount = 1;
-
-						vkCmdBlitImage(commandBuffer,
-							image.get().image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-							image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							1, &blit,
-							VK_FILTER_LINEAR);
-
-						barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-						barrier.newLayout = layout;
-						barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-						barrier.dstAccessMask = access;
-
-						vkCmdPipelineBarrier(commandBuffer,
-							VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-							0, nullptr,
-							0, nullptr,
-							1, &barrier);
-
-						mipwidth = max(mipwidth / 2, 1);
-						mipheight = max(mipheight / 2, 1);
-					}
-
-					barrier.subresourceRange.baseMipLevel = miplevels - 1;
-					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					barrier.newLayout = layout;
-					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-					barrier.dstAccessMask = access;
-
-					vkCmdPipelineBarrier(commandBuffer,
-						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-						0, nullptr,
-						0, nullptr,
-						1, &barrier);
-				}
-
-				context.flushCommandBuffer(commandBuffer);
-			}
-			catch (std::exception& e)
-			{
-				std::cerr << e.what() << std::endl;
-			}
-
-			imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-			imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
-
-			imageInfo.imageView = imageView.get();
-			imageInfo.sampler = imageSampler.get();
-			imageInfo.imageLayout = layout;
-
-			is_valid = true;
-		}
-
-		TextureCube(TextureCube&& other) noexcept
-			: image(std::move(other.image)),
-			imageView(std::move(other.imageView)),
-			imageSampler(std::move(other.imageSampler)),
-			imageInfo(std::move(other.imageInfo)),
-			width(other.width),
-			height(other.height),
-			format(other.format),
-			layout(other.layout),
-			usage(other.usage),
-			access(other.access),
-			aspect(other.aspect),
-			miplevels(other.miplevels),
-			is_valid(other.is_valid)
-		{
-		}
-
-		TextureCube& operator=(TextureCube&& other) noexcept
-		{
-			if (this == &other)
-			{
-				return *this;
-			}
-			image = std::move(other.image);
-			imageView = std::move(other.imageView);
-			imageSampler = std::move(other.imageSampler);
-			imageInfo = std::move(other.imageInfo);
-			width	 = other.width;
-			height	 = other.height;
-			format	 = other.format;
-			layout	 = other.layout;
-			usage	 = other.usage;
-			access	 = other.access;
-			aspect	 = other.aspect;
-			miplevels = other.miplevels;
-			is_valid = other.is_valid;
-			return *this;
-		}
-
+        /**
+         * @name Move Constructors.
+         *
+         * @brief Move only, Copy deleted.
+         *
+         * @{
+         */
+		TextureCube(TextureCube&& other) noexcept;
+		TextureCube& operator=(TextureCube&& other) noexcept;
 		TextureCube(const TextureCube& other) = delete;
 		TextureCube& operator=(const TextureCube& other) = delete;
+        /**
+         * @}
+         */
 
+        /**
+         * @fn valid()
+         *
+         * @brief Checks if a texture is valid and usable.
+         *
+         * A texture is considered valid if it is constructed using
+         * the main constructor and is initialized successfully.
+         *
+         * @returns \a true If is properly constructed.
+         * @returns \a false If is default constructed or had an error.
+         */
 		bool valid() const { return is_valid; }
 
+        /**
+         * @name Getters.
+         *
+         * @brief Getters for private variables.
+         *
+         * @{
+         */
 		const VkImage& get_image() const { return image.get().image; }
 		const VkImageView& get_imageView() const { return imageView.get(); }
 		const VkSampler& get_imageSampler() const { return imageSampler.get(); }
@@ -312,79 +117,37 @@ namespace blaze
 		const VkAccessFlags& get_access() const { return access; }
 		const VkImageAspectFlags& get_aspect() const { return aspect; }
 		uint32_t get_miplevels() const { return miplevels; }
+        /**
+         * @}
+         */
 
-		void transferLayout(VkCommandBuffer cmdbuffer,
+        /**
+         * @brief Transfers layout using a pipeline barrier.
+         *
+         * Transfer layouts use a pipeline barrier to change the layouts between the two specified stages.
+         *
+         * @param cmdbuffer The command buffer to execute the transfer on.
+         * @param newImageLayout The final image layout for the texture.
+         * @param dstAccess The access flag of the final image.
+         * @param srcStageMask The stages after which the texture can start transfer.
+         * @param dstStageMask The stages by which the texture needs to finish transfer.
+         */
+        void transferLayout(VkCommandBuffer cmdbuffer,
 			VkImageLayout newImageLayout,
-			VkAccessFlags srcAccess = 0,
 			VkAccessFlags dstAccess = 0,
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
-		{
-			auto currentLayout = layout;
+			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-			VkImageMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.oldLayout = currentLayout;
-			barrier.newLayout = newImageLayout;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-			barrier.image = image.get().image;
-			barrier.subresourceRange.aspectMask = aspect;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = miplevels;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 6;
-			barrier.srcAccessMask = srcAccess;
-			barrier.dstAccessMask = dstAccess;
-
-			vkCmdPipelineBarrier(cmdbuffer,
-				srcStageMask, dstStageMask, 
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier);
-
-			layout = newImageLayout;
-			imageInfo.imageLayout = newImageLayout;
-		}
-
-		void implicitTransferLayout(VkImageLayout newImageLayout)
-		{
-			layout = newImageLayout;
-			imageInfo.imageLayout = newImageLayout;
-		}
+        /**
+         * @brief Changes the image layout and access to note the change occuring due to a renderpass.
+         *
+         * @param newImageLayout The image layout to change to.
+         * @param dstAccess The access flag to set to.
+         */
+		void implicitTransferLayout(VkImageLayout newImageLayout, VkAccessFlags dstAccess);
 
 	private:
-		VkSampler createSampler(VkDevice device, uint32_t miplevels) const
-		{
-			VkSamplerCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			createInfo.magFilter = VK_FILTER_LINEAR;
-			createInfo.minFilter = VK_FILTER_LINEAR;
-			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			createInfo.anisotropyEnable = VK_TRUE;
-			createInfo.maxAnisotropy = 16;
-			createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-			createInfo.unnormalizedCoordinates = VK_FALSE;
-			createInfo.compareEnable = VK_FALSE;
-			createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			createInfo.mipLodBias = 0.0f;
-			createInfo.minLod = 0.0f;
-			createInfo.maxLod = static_cast<float>(miplevels);
-
-			VkSampler sampler;
-			auto result = vkCreateSampler(device, &createInfo, nullptr, &sampler);
-			if (result != VK_SUCCESS)
-			{
-				throw std::runtime_error("Sampler creation failed with " + std::to_string(result));
-			}
-
-			return sampler;
-		}
+		VkSampler createSampler(VkDevice device, uint32_t miplevels) const;
 	};
 
 	[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_fbudrl, bool mipmapped = true);

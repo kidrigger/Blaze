@@ -42,6 +42,12 @@
 #endif
 #endif
 
+/**
+ * @namespace blaze
+ * @brief Main namespace for the blaze project.
+ *
+ * Everything in the renderer project should be under the blaze namespace.
+ */
 namespace blaze
 {
 	// Constants
@@ -64,6 +70,11 @@ namespace blaze
 
 	glm::vec3 cameraFront{ 0.0f, 0.0f, 1.0f };
 
+    /**
+     * @struct DebugRenderSettings
+     *
+     * @brief Settings exposed during run using the GUI.
+     */
 	struct DebugRenderSettings
 	{
 		std::array<float, 300> deltaTime { 0 };
@@ -75,9 +86,23 @@ namespace blaze
 		bool lockLight{ false };
 		int currentLight{ 0 };
 
-		struct {
-			std::array<std::string, 9> labels{ "Full Render", "Diffuse Map", "Normal Map", "Metallic Map", "Roughness Map", "AO Map", "Emission Map", "Position", "Distance" };
+		struct TextureViewMenuControl {
+			std::array<std::string, 9> labels{
+                "Full Render",
+                "Diffuse Map",
+                "Normal Map",
+                "Metallic Map",
+                "Roughness Map",
+                "AO Map",
+                "Emission Map",
+                "Position",
+                "Distance" };
 			int currentValue = 0;
+            /**
+             * @fn value()
+             *
+             * @brief Gets the selected option as Enum instead of internal int.
+             */
 			SettingsUniformBufferObject::ViewTextureMap value() const
 			{
 				return static_cast<SettingsUniformBufferObject::ViewTextureMap>(currentValue);
@@ -130,6 +155,12 @@ namespace blaze
 		cameraFront = glm::normalize(front);
 	}
 
+    /**
+     * @brief Entrypoint for the renderer application.
+     * 
+     * The main driver code for the entire blaze rendering application
+     * including the setup, loading, main loop and the teardown.
+     */
 	void run()
 	{
 		// Usings
@@ -176,7 +207,7 @@ namespace blaze
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 2.0f, true),
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 2.0f, true)
 		}; 
-		renderer.get_lightSystem().addDirLight(glm::vec3{ 25.0 }, glm::vec3(-1.0, -1.0, -0.5), 1.0f, true);
+		renderer.get_lightSystem().addDirLight(glm::vec3(-1.0, -1.0, -0.5), 1.0f, true);
 
 #ifdef _WIN32
         strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
@@ -425,6 +456,9 @@ namespace blaze
 	}
 }
 
+/**
+ * @brief Entrypoint for the binary executable.
+ */
 int main(int argc, char* argv[])
 {
 	try

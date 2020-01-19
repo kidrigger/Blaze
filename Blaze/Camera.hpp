@@ -10,6 +10,10 @@
 
 namespace blaze
 {
+    /**
+     * @class Camera
+     * @brief Utility class enclosing the UBO and associated calculations.
+     */
 	class Camera
 	{
 		CameraUniformBufferObject ubo;
@@ -35,37 +39,49 @@ namespace blaze
 			uboDirty = true;
 		}
 
+        /// @brief Moves the camera by the offset.
 		void moveBy(const glm::vec3& offset)
 		{
 			position += offset;
 			uboDirty = true;
 		}
 
+        /// @brief Moves the camera to the location.
 		void moveTo(const glm::vec3& pos)
 		{
 			position = pos;
 			uboDirty = true;
 		}
 		
+        /**
+         * @brief Rotates the camera to face the given rotation.
+         *
+         * @param up The altitude of the look vector (in radians)
+         * @param right The rotation of the look vector on Y axis.
+         */
 		void rotateTo(const float up, const float right)
 		{
 			target = glm::vec3(glm::sin(right) * glm::cos(up), glm::sin(up), glm::cos(right) * glm::cos(up));
 			uboDirty = true;
 		}
 
+        /**
+         * @brief Rotates the camera to face the given direction.
+         *
+         * @param direction The direction to look into.
+         */
 		void lookTo(const glm::vec3& direction)
 		{
 			target = direction;
 			uboDirty = true;
 		}
 
-		const glm::vec3& get_position() const { return position; }
-		glm::vec3& get_position() { return position; }
-		const glm::vec3& get_up() const { return up; }
-
-		const glm::mat4& get_projection() const { return ubo.projection; }
-		const glm::mat4& get_view() const { return ubo.view; }
-
+        /**
+         * @brief Get the CameraUBO from the camera.
+         *
+         * If the data has been changed, recalculate the UBO.
+         * Else only return a reference.
+         */
 		const CameraUniformBufferObject& getUbo()
 		{
 			if (uboDirty)
@@ -78,5 +94,25 @@ namespace blaze
 			}
 			return ubo;
 		}
+
+        /**
+         * @name getters
+         *
+         * @brief Getters for private fields.
+         *
+         * Each getter returns the private field.
+         * The fields are borrowed from Context and must not be deleted.
+         *
+         * @{
+         */
+		inline const glm::vec3& get_position() const { return position; }
+		inline glm::vec3& get_position() { return position; }
+		inline const glm::vec3& get_up() const { return up; }
+
+		inline const glm::mat4& get_projection() const { return ubo.projection; }
+		inline const glm::mat4& get_view() const { return ubo.view; }
+        /**
+         * @}
+         */
 	};
 }

@@ -13,29 +13,69 @@
 
 namespace blaze::util
 {
+    /**
+     * @class Texture2CubemapInfo
+     *
+     * @tparam PCB The type of the struct used for PCB.
+     *
+     * @brief The information to use for the processing.
+     */
 	template <typename PCB>
 	struct Texture2CubemapInfo
 	{
+        /// @brief The vertex shader to use.
 		std::string vert_shader;
+
+        /// @brief The fragment shader to use.
 		std::string frag_shader;
+
+        /// @brief The descriptor to use.
 		VkDescriptorSet descriptor;
+
+        /// @brief The layout of the descriptor in use/
 		VkDescriptorSetLayout layout;
+
+        /// @brief The size of the side of the cubemap.
 		uint32_t cube_side{ 512 };
+
+        /// @brief The push constant block to push into the pipeline.
 		PCB pcb{};
 	};
 
+    /**
+     * @name Ignorable typing.
+     *
+     * @brief The struct and templated functions to use for ignoring type based parameter.
+     *
+     * @cond PRIVATE
+     */
 	struct Ignore {};
 
 	template <typename T>
 	constexpr bool is_ignore(const T& _x) { return false; }
 	template <>
 	constexpr bool is_ignore<Ignore>(const Ignore& _x) { return true; }
+    /**
+     * @endcond
+     */
 
+    /**
+     * @class Process
+     *
+     * @tparam PCB The type of the struct used for PCB.
+     *
+     * @brief The static processing class for converting from a descriptor to a cubemap.
+     */
 	template <typename PCB>
 	class Process
 	{
 	public:
-
+        /**
+         * @brief Converts the descriptor to a cubemap.
+         *
+         * @param context The current Vulkan Context.
+         * @param info The Texture2CubemapInfo to configure the type.
+         */
 		static TextureCube convertDescriptorToCubemap(const Context& context, const Texture2CubemapInfo<PCB>& info)
 		{
 			auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
@@ -237,8 +277,8 @@ namespace blaze::util
 
 			irradianceMap.transferLayout(cmdBuffer,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				0, VK_ACCESS_SHADER_READ_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 			context.flushCommandBuffer(cmdBuffer);
 

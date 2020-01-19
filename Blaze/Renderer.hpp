@@ -22,9 +22,16 @@
 
 namespace blaze
 {
-	class Renderer;
 	using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout, uint32_t frameCount)>;
 
+    /**
+     * @class Renderer
+     *
+     * @brief Contains entire rendering logic.
+     *
+     * This class contains the main drawing logic and all the related components.
+     * This is a forward renderer that supports PBR rendering.
+     */
 	class Renderer
 	{
 	private:
@@ -72,152 +79,65 @@ namespace blaze
 		uint32_t currentFrame{ 0 };
 
 	public:
-		Renderer() noexcept
-		{
-		}
+        /**
+         * @fn Renderer()
+         *
+         * @brief Default empty constructor.
+         */
+		Renderer() noexcept {}
 
-		Renderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept
-			: context(window, enableValidationLayers)
-		{
-			using namespace std;
-			using namespace util;
+        /**
+         * @fn Renderer(GLFWwindow* window, bool enableValidationLayers = true)
+         *
+         * @brief Actual constructor
+         *
+         * @param window The GLFW window pointer.
+         * @param enableValidationLayers Enable for Debugging.
+         */
+		Renderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept;
 
-			skyboxCommand = [](VkCommandBuffer cb, VkPipelineLayout lay, uint32_t frameCount) {};
-
-			glfwSetWindowUserPointer(window, this);
-			glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height)
-				{
-					Renderer* renderer = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
-					renderer->windowResized = true;
-				});
-
-			try
-			{
-
-				swapchain = Swapchain(context);
-
-				shadowCaster = ShadowCaster(context, 16, 16);
-				
-				depthBufferTexture = createDepthBuffer();
-				
-				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
-
-				rendererUniformBuffers = createUniformBuffers(rendererUBO);
-				settingsUniformBuffers = createUniformBuffers(settingsUBO);
-				uboDescriptorSetLayout = Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
-				environmentDescriptorSetLayout = Managed(createEnvironmentDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
-				materialDescriptorSetLayout = Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) { vkDestroyDescriptorSetLayout(dev, lay, nullptr); });
-				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-				uboDescriptorSets = createCameraDescriptorSets();
-
-				{
-					auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
-					graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
-					graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-					skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-				}
-
-				renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-				commandBuffers = ManagedVector<VkCommandBuffer,false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
-
-				max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
-
-				{
-					auto [startSems, endSems, fences] = createSyncObjects();
-					imageAvailableSem = ManagedVector(startSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-					renderFinishedSem = ManagedVector(endSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-					inFlightFences = ManagedVector(fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
-				}
-
-				gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
-
-				recordCommandBuffers();
-
-				isComplete = true;
-			}
-			catch (std::exception& e)
-			{
-				std::cerr << "RENDERER_CREATION_FAILED: " << e.what() << std::endl;
-				isComplete = false;
-			}
-		}
-
-		Renderer(Renderer&& other) noexcept
-			: isComplete(other.isComplete),
-			context(std::move(other.context)),
-			gui(std::move(other.gui)),
-			swapchain(std::move(other.swapchain)),
-			depthBufferTexture(std::move(other.depthBufferTexture)),
-			renderPass(std::move(other.renderPass)),
-			uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
-			environmentDescriptorSetLayout(std::move(other.environmentDescriptorSetLayout)),
-			materialDescriptorSetLayout(std::move(other.materialDescriptorSetLayout)),
-			descriptorPool(std::move(other.descriptorPool)),
-			uboDescriptorSets(std::move(other.uboDescriptorSets)),
-			rendererUniformBuffers(std::move(other.rendererUniformBuffers)),
-			settingsUniformBuffers(std::move(other.settingsUniformBuffers)),
-			rendererUBO(other.rendererUBO),
-			settingsUBO(other.settingsUBO),
-			graphicsPipelineLayout(std::move(other.graphicsPipelineLayout)),
-			graphicsPipeline(std::move(other.graphicsPipeline)),
-			skyboxPipeline(std::move(other.skyboxPipeline)),
-			renderFramebuffers(std::move(other.renderFramebuffers)),
-			commandBuffers(std::move(other.commandBuffers)),
-			imageAvailableSem(std::move(other.imageAvailableSem)),
-			renderFinishedSem(std::move(other.renderFinishedSem)),
-			inFlightFences(std::move(other.inFlightFences)),
-			skyboxCommand(std::move(other.skyboxCommand)),
-			drawables(std::move(other.drawables)),
-			environmentDescriptor(other.environmentDescriptor),
-			shadowCaster(std::move(other.shadowCaster))
-		{
-		}
-
-		Renderer& operator=(Renderer&& other) noexcept
-		{
-			if (this == &other)
-			{
-				return *this;
-			}
-			isComplete = other.isComplete;
-			context = std::move(other.context);
-			gui = std::move(other.gui);
-			swapchain = std::move(other.swapchain);
-			depthBufferTexture = std::move(other.depthBufferTexture);
-			renderPass = std::move(other.renderPass);
-			uboDescriptorSetLayout = std::move(other.uboDescriptorSetLayout);
-			environmentDescriptorSetLayout = std::move(other.environmentDescriptorSetLayout);
-			materialDescriptorSetLayout = std::move(other.materialDescriptorSetLayout);
-			descriptorPool = std::move(other.descriptorPool);
-			uboDescriptorSets = std::move(other.uboDescriptorSets);
-			rendererUniformBuffers = std::move(other.rendererUniformBuffers);
-			settingsUniformBuffers = std::move(other.settingsUniformBuffers);
-			rendererUBO = other.rendererUBO;
-			settingsUBO = other.settingsUBO;
-			graphicsPipelineLayout = std::move(other.graphicsPipelineLayout);
-			graphicsPipeline = std::move(other.graphicsPipeline);
-			skyboxPipeline = std::move(other.skyboxPipeline);
-			renderFramebuffers = std::move(other.renderFramebuffers);
-			commandBuffers = std::move(other.commandBuffers);
-			imageAvailableSem = std::move(other.imageAvailableSem);
-			renderFinishedSem = std::move(other.renderFinishedSem);
-			inFlightFences = std::move(other.inFlightFences);
-			skyboxCommand = std::move(other.skyboxCommand);
-			drawables = std::move(other.drawables);
-			environmentDescriptor = other.environmentDescriptor;
-			shadowCaster = std::move(other.shadowCaster);
-			return *this;
-		}
-
+        /**
+         * @name Move Constructors.
+         *
+         * @brief Move only, Copy is deleted.
+         * @{
+         */
+		Renderer(Renderer&& other) noexcept;
+		Renderer& operator=(Renderer&& other) noexcept;
 		Renderer(const Renderer& other) = delete;
 		Renderer& operator=(const Renderer& other) = delete;
+        /**
+         * @}
+         */
 
+        /**
+         * @fn renderFrame()
+         *
+         * @brief Actually rendering a frame and submitting to the present queue.
+         */
 		void renderFrame();
 
+        /**
+         * @name Environment Mapping
+         *
+         * @brief Creates maps for the environment based on the skybox.
+         *
+         * @{
+         */
 		TextureCube createIrradianceCube(VkDescriptorSet environment) const;
 		TextureCube createPrefilteredCube(VkDescriptorSet environment) const;
 		Texture2D	createBrdfLut() const;
+        /**
+         * @}
+         */
 
+        /**
+         * @name Getters
+         *
+         * @brief Getters for private members.
+         *
+         * @{
+         */
 		std::pair<uint32_t, uint32_t> get_dimensions() const
 		{
 			int x, y;
@@ -246,13 +166,27 @@ namespace blaze
 		VkQueue get_transferQueue() const { return context.get_transferQueue(); }
 		VkCommandPool get_transferCommandPool() const { return context.get_transferCommandPool(); }
 		const Context& get_context() const { return context; }
+        /**
+         * @}
+         */
 
-		// Submit
+		/**
+         * @fn submit
+         *
+         * @brief Submits a Drawable to draw to screen.
+         */
 		void submit(Drawable* cmd)
 		{
 			drawables.push_back(cmd);
 		}
 
+        /**
+         * @name Setters
+         *
+         * @brief Setters for various properties.
+         *
+         * @{
+         */
 		void set_environmentDescriptor(VkDescriptorSet envDS)
 		{
 			environmentDescriptor = envDS;
@@ -283,53 +217,24 @@ namespace blaze
 		{
 			memcpy(&settingsUBO, &ubo, sizeof(ubo));
 		}
+        /**
+         * @}
+         */
 
+        /**
+         * @fn complete()
+         *
+         * @brief Checks if the renderer is complete.
+         *
+         * A Renderer is considered complete if and only if every member is initialized.
+         * 
+         * @returns \a true If the renderer sucessfully initialized
+         * @returns \a false If the renderer was empty or had initialization errors.
+         */
 		bool complete() const { return isComplete; }
-	private:
-
-		void recreateSwapchain()
-		{
-			try
-			{
-				vkDeviceWaitIdle(context.get_device());
-				auto [width, height] = get_dimensions();
-				while (width == 0 || height == 0)
-				{
-					std::tie(width, height) = get_dimensions();
-					glfwWaitEvents();
-				}
-
-				using namespace util;
-				swapchain.recreate(context);
-
-				depthBufferTexture = createDepthBuffer();
-
-				renderPass = Managed(createRenderPass(), [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
-
-				rendererUniformBuffers = createUniformBuffers(rendererUBO);
-				settingsUniformBuffers = createUniformBuffers(settingsUBO);
-				descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-				uboDescriptorSets = createCameraDescriptorSets();
-
-				{
-					auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
-					graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
-					graphicsPipeline = Managed(gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-					skyboxPipeline = Managed(sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-				}
-
-				renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
-				commandBuffers = ManagedVector<VkCommandBuffer, false>(allocateCommandBuffers(), [dev = context.get_device(), pool = context.get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) { vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data()); });
-
-				gui.recreate(context, swapchain.get_extent(), swapchain.get_imageViews());
-
-				recordCommandBuffers();
-			}
-			catch (std::exception& e)
-			{
-				std::cerr << e.what() << std::endl;
-			}
-		}
+	
+    private:
+		void recreateSwapchain();
 
 		VkRenderPass createRenderPass() const;
 		VkDescriptorSetLayout createUBODescriptorSetLayout() const;

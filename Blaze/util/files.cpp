@@ -7,7 +7,7 @@
 
 namespace blaze::util
 {
-	std::vector<char> loadBinaryFile(const std::string& filename)
+ 	std::vector<char> loadBinaryFile(const std::string& filename)
 	{
 		using namespace std;
 		ifstream file(filename, ios::ate | ios::binary);

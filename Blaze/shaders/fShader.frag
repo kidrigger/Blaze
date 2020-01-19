@@ -51,8 +51,8 @@ layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
 layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
 layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
 
-layout(set = 3, binding = 0) uniform samplerCube shadow[16];
-layout(set = 3, binding = 1) uniform sampler2D dirShadow[1];
+layout(set = 3, binding = 0) uniform samplerCube shadow[MAX_POINT_LIGHTS];
+layout(set = 3, binding = 1) uniform sampler2D dirShadow[MAX_DIR_LIGHTS];
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
