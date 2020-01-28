@@ -11,6 +11,10 @@
 #include <array>
 #include <vk_mem_alloc.h>
 
+const int32_t MAX_DIR_LIGHTS = 1;
+const int32_t MAX_POINT_LIGHTS = 16;
+const int32_t MAX_CSM_SPLITS = 4;
+
 namespace blaze
 {
     /**
@@ -134,7 +138,7 @@ namespace blaze
 	struct LightsUniformBufferObject
 	{
         /// The transformation matrix to directional light space coordinates.
-		alignas(16) glm::mat4 dirLightTransform[4];
+		alignas(16) glm::mat4 dirLightTransform[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
         
         /**
          * @brief The direction of the directional light.
@@ -144,7 +148,17 @@ namespace blaze
          * @arg xyz should be normalized.
          *
          */
-		alignas(16) glm::vec4 lightDir[4];
+		alignas(16) glm::vec4 lightDir[MAX_DIR_LIGHTS];
+
+        /**
+         * @brief The Cascade split distances of the directional light.
+         *
+         * @arg idx = 0 refers to first split
+         * @arg idx = 1 refers to second split
+         * @arg idx = 2 refers to third split
+         * @arg idx = 3 is the number of splits
+         */
+        alignas(16) glm::vec4 csmSplits[MAX_CSM_SPLITS];
         
         /**
          * @brief The position of the point light.
@@ -153,7 +167,7 @@ namespace blaze
          * @arg w coordinate is the brightness.
          *
          */
-		alignas(16) glm::vec4 lightPos[16];
+		alignas(16) glm::vec4 lightPos[MAX_POINT_LIGHTS];
 	
         /** 
          * @brief Indices of shadowMaps associated with the point lights.
@@ -161,7 +175,7 @@ namespace blaze
          * Valid shadow indices must be in range [0,MAX_SHADOWS)
          * Shadow index -1 denotes that there is no shadow.
          */
-        alignas(16) int shadowIdx[16];
+        alignas(16) int shadowIdx[MAX_POINT_LIGHTS];
 
         /// Number of point lights.
 		int numPointLights;
@@ -191,10 +205,11 @@ namespace blaze
 		alignas(16) glm::mat4 projection;
 		alignas(16) glm::vec3 viewPos;
 		alignas(4)  float	  farPlane;
-		alignas(16) glm::mat4 dirLightTransform[4];
-		alignas(16) glm::vec4 lightDir[4];
-		alignas(16) glm::vec4 lightPos[16];
-		alignas(16) int shadowIdx[16];
+		alignas(16) glm::mat4 dirLightTransform[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
+		alignas(16) glm::vec4 lightDir[MAX_DIR_LIGHTS];
+        alignas(16) glm::vec4 csmSplits[MAX_CSM_SPLITS];
+		alignas(16) glm::vec4 lightPos[MAX_POINT_LIGHTS];
+		alignas(16) int shadowIdx[MAX_POINT_LIGHTS];
 		int numLights;
 		int numDirLights;
 	};
@@ -232,6 +247,24 @@ namespace blaze
 	{
         /// View matrices to look at each direction.
 		alignas(16) glm::mat4 view[6];
+	};
+    /// @}
+
+    /**
+     * @struct CascadeShadowUniformBufferObject
+     *
+     * @brief The data sent to the cascaded shadow shaders.
+     *
+     * @addtogroup UniformBufferObjects
+     * @{
+     */
+	struct CascadeUniformBufferObject
+	{
+        /// Projection matrices to look at each cascade.
+		alignas(16) glm::mat4 view[4];
+        
+        /// Number of cascades.
+        alignas(4) int numCascades;
 	};
     /// @}
 

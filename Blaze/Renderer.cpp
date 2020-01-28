@@ -839,7 +839,7 @@ namespace blaze
 
             swapchain = Swapchain(context);
 
-            shadowCaster = ShadowCaster(context, 16, 16);
+            shadowCaster = ShadowCaster(context);
             
             depthBufferTexture = createDepthBuffer();
             

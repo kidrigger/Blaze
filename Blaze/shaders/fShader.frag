@@ -1,7 +1,8 @@
 #version 450
 
 #define MAX_POINT_LIGHTS 16
-#define MAX_DIR_LIGHTS 4
+#define MAX_DIR_LIGHTS 1
+#define MAX_CSM_SPLITS 4
 
 #define MANUAL_SRGB 1
 
@@ -11,21 +12,16 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoords0;
 layout(location = 3) in vec2 texCoords1;
-layout(location = 4) in vec4 lightCoord[MAX_DIR_LIGHTS];
-
-struct Light {
-	vec3 position;
-	int type;
-	vec3 direction;
-};
+layout(location = 4) in vec4 lightCoord[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
 
 layout(set = 0, binding = 0) uniform CameraBufferObject {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
 	float farPlane;
-	mat4 lightDirPV[MAX_DIR_LIGHTS];
+	mat4 lightDirPV[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
 	vec4 lightDir[MAX_DIR_LIGHTS];
+    vec4 csmSplits[MAX_CSM_SPLITS];
 	vec4 lightPos[MAX_POINT_LIGHTS];
 	ivec4 shadowIdx[MAX_POINT_LIGHTS/4];
 	int numLights;
@@ -178,7 +174,7 @@ float calculatePointShadow(int lightIdx) {
 }
 
 float calculateDirectionalShadow(int shadowIdx) {
-	vec4 shadowCoord = lightCoord[shadowIdx];
+	vec4 shadowCoord = lightCoord[shadowIdx][0];
 	float shade = 0.0f;
     
     vec2 texelSize = vec2(1.0f) / textureSize(dirShadow[shadowIdx], 0);

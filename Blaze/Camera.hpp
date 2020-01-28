@@ -30,7 +30,7 @@ namespace blaze
 
 	public:
 		Camera(const glm::vec3& pos, const glm::vec3& target, const glm::vec3& up, float fov, float aspect, float nearPlane = 0.1f, float farPlane = 10.0f)
-			: position(pos), target(target), up(up), fov(fov), aspect(aspect), nearPlane(nearPlane), farPlane(farPlane)
+			: position(pos), target(glm::normalize(target)), up(up), fov(fov), aspect(aspect), nearPlane(nearPlane), farPlane(farPlane)
 		{
 			ubo.view = glm::lookAt(position, target + position, up);
 			ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
@@ -61,7 +61,7 @@ namespace blaze
          */
 		void rotateTo(const float up, const float right)
 		{
-			target = glm::vec3(glm::sin(right) * glm::cos(up), glm::sin(up), glm::cos(right) * glm::cos(up));
+			target = glm::normalize(glm::vec3(glm::sin(right) * glm::cos(up), glm::sin(up), glm::cos(right) * glm::cos(up)));
 			uboDirty = true;
 		}
 
@@ -72,7 +72,7 @@ namespace blaze
          */
 		void lookTo(const glm::vec3& direction)
 		{
-			target = direction;
+			target = glm::normalize(direction);
 			uboDirty = true;
 		}
 
@@ -107,10 +107,16 @@ namespace blaze
          */
 		inline const glm::vec3& get_position() const { return position; }
 		inline glm::vec3& get_position() { return position; }
-		inline const glm::vec3& get_up() const { return up; }
+        inline const glm::vec3& get_direction() { return target; }
+        inline const glm::vec3& get_up() const { return up; }
 
 		inline const glm::mat4& get_projection() const { return ubo.projection; }
 		inline const glm::mat4& get_view() const { return ubo.view; }
+
+        inline float get_nearPlane() const { return nearPlane; }
+        inline float get_farPlane() const { return farPlane; }
+        inline float get_fov() const { return fov; }
+        inline float get_aspect() const { return aspect; }
         /**
          * @}
          */

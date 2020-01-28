@@ -119,7 +119,7 @@ namespace blaze
      */
     
     /**
-     * @class DirShadow
+     * @class DirectionalShadow
      *
      * @brief Encapsulates the attachments and framebuffer for a directional light shadow.
      *
@@ -151,17 +151,17 @@ namespace blaze
 
 		DirectionalShadow(const Context& context, VkRenderPass renderPass) noexcept
 		{
-			ImageData2D idc{};
-			idc.height = DIR_SHADOW_MAP_SIZE;
-			idc.width = DIR_SHADOW_MAP_SIZE;
-			idc.numChannels = 1;
-			idc.size = DIR_SHADOW_MAP_SIZE * DIR_SHADOW_MAP_SIZE;
-			idc.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-			idc.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			idc.format = VK_FORMAT_D32_SFLOAT;
-			idc.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-            idc.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			shadowMap = Texture2D(context, idc, false);
+			ImageData2D id2d{};
+			id2d.height = DIR_SHADOW_MAP_SIZE;
+			id2d.width = DIR_SHADOW_MAP_SIZE;
+			id2d.numChannels = 1;
+			id2d.size = DIR_SHADOW_MAP_SIZE * DIR_SHADOW_MAP_SIZE;
+			id2d.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			id2d.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			id2d.format = VK_FORMAT_D32_SFLOAT;
+			id2d.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+            id2d.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			shadowMap = Texture2D(context, id2d, false);
 
 			viewport = VkViewport{
 				0.0f,
@@ -229,6 +229,7 @@ namespace blaze
 		util::Unmanaged<VkDescriptorSet> uboDescriptorSet;
 		util::Unmanaged<VkDescriptorSet> shadowDescriptorSet;
 		UniformBuffer<ShadowUniformBufferObject> viewsUBO;
+		UniformBuffer<CascadeUniformBufferObject> csmUBO;
 
 		static const uint32_t LIGHT_MASK_INDEX = 0xF0FFFFFF;
 		static const uint32_t LIGHT_MASK_TYPE  = 0x0F000000;
@@ -244,10 +245,6 @@ namespace blaze
 		std::vector<bool> dirShadowHandleValidity;
 
 		LightsUniformBufferObject lightsData;
-		uint32_t MAX_POINT_SHADOWS;
-		uint32_t MAX_DIR_SHADOWS;
-		uint32_t MAX_POINT_LIGHTS;
-		uint32_t MAX_DIR_LIGHTS;
 
 	public:
         /**
@@ -258,15 +255,13 @@ namespace blaze
 		ShadowCaster() noexcept {}
 
         /**
-         * @fn ShadowCaster(const Context& context, uint32_t maxLights, uint32_t maxShadows)
+         * @fn ShadowCaster(const Context& context)
          *
          * @brief Actual constructor for shadow caster.
          *
          * @param context The currect Vulkan Context
-         * @param maxLights The number of point lights to allocate.
-         * @param maxShadows The number of shadows to allocate.
          */
-		ShadowCaster(const Context& context, uint32_t maxLights = 16, uint32_t maxShadows = 16) noexcept;
+		ShadowCaster(const Context& context) noexcept;
 	
         /**
          * @name Move Constructors.
@@ -312,8 +307,6 @@ namespace blaze
          * 
          * @{
          */
-
-        
         /// @brief Set Position for point lights.
 		void setLightPosition(LightHandle handle, const glm::vec3& position);
         /// @brief Set Direction for directional lights.
@@ -352,6 +345,7 @@ namespace blaze
 			{
 				throw std::out_of_range("Invalid Shadow Handle.");
 			}
+??? from here until ???END lines may have been inserted/deleted
 
 			auto shadowType = handle & SHADOW_HANDLE_TYPE_MASK;
 			auto handleIdx = handle & SHADOW_HANDLE_INDEX_MASK;
@@ -416,47 +410,113 @@ namespace blaze
          */
 
 	private:
-		ShadowPushConstantBlock createDirShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
-		{
-			glm::vec4 cube[] = {
-				{-1,-1,-1,1},
-				{1,-1,-1,1},
-				{1,1,-1,1},
-				{-1,1,-1,1},
-				{-1,1,1,1},
-				{1,1,1,1},
-				{1,-1,1,1},
-				{-1,-1,1,1}
+        std::vector<float> createCSMSplits(int numSplits, float nearPlane, float farPlane, float lambda = 0.5f) const
+        {
+            std::vector<float> splits(numSplits);
+            // Ref: https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-10-parallel-split-shadow-maps-programmable-gpus
+            float _m = 1.0f/static_cast<float>(numSplits);
+            for (int i = 0; i < numSplits; i++)
+            {
+                float c_log = nearPlane * pow(farPlane / nearPlane, i * _m);
+                float c_uni = nearPlane + (farPlane - nearPlane) * i * _m;
+
+                splits[i] = (lambda * c_log + (1.0f - lambda) * c_uni);
+            }
+
+            return splits;
+        }
+
+        float centerDist(float n, float f, float cosine) const
+        {
+            float secTheta = 1.0f / cosine;
+            return 0.5f * (f + n) * secTheta * secTheta;
+        }
+
+        std::vector<ShadowPushConstantBlock> createCSMShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
+        {
+            glm::vec4 frustumCorners[] = {
+				{-1,-1,-1, 1},  // ---
+				{-1, 1,-1, 1},  // -+-
+				{ 1,-1,-1, 1},  // +--
+				{ 1, 1,-1, 1},  // ++-
+				{-1,-1, 1, 1},  // --+
+				{-1, 1, 1, 1},  // -++
+				{ 1,-1, 1, 1},  // +-+
+				{ 1, 1, 1, 1}   // +++
 			};
 			glm::mat4 invProj = glm::inverse(camera->get_projection() * camera->get_view());
 
-			glm::vec3 bz = glm::normalize(shadow.direction);
-			glm::vec3 bx = glm::normalize(glm::cross(bz, glm::vec3(0, 1, 0)));
-			glm::vec3 by = glm::cross(bx, bz);
+            for (auto& vert : frustumCorners)
+            {
+                vert = invProj * vert;
+                vert /= vert.w;
+            }
 
-			glm::mat3 basis = glm::transpose(glm::mat3(bx, by, bz));
-			glm::vec3 center = glm::vec3(0.0f);
-			for (auto& vec : cube)
+            // TODO: Num Splits.
+            auto splits = createCSMSplits(4, shadow.nearPlane, shadow.farPlane);
+
+            float cosine = glm::dot(glm::normalize(glm::vec3(frustumCorners[4]) - camera->get_position()), camera->get_direction());
+            glm::vec3 cornerRay = glm::normalize(glm::vec3(frustumCorners[4] - frustumCorners[0]));
+
+            std::vector<ShadowPushConstantBlock> pcbs = {};
+
+            float prevPlane = camera->get_nearPlane();
+            for (float plane : splits)
+            {
+                auto center = camera->get_direction() * centerDist(prevPlane, plane, cosine);
+
+                float nearRatio = (prevPlane / camera->get_farPlane());
+                auto corner = cornerRay * nearRatio;
+
+                float r = glm::distance(center, corner);
+                auto& bz = shadow.direction;
+
+                pcbs.push_back({
+                    glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0,1,0)),
+                    shadow.direction
+			    });
+
+                prevPlane = plane;
+            }
+
+            return pcbs;
+        }
+
+		ShadowPushConstantBlock createDirShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
+		{
+			glm::vec4 frustumCorners[] = {
+				{-1,-1,-1, 1},  // ---
+				{-1, 1,-1, 1},  // -+-
+				{ 1,-1,-1, 1},  // +--
+				{ 1, 1,-1, 1},  // ++-
+				{-1,-1, 1, 1},  // --+
+				{-1, 1, 1, 1},  // -++
+				{ 1,-1, 1, 1},  // +-+
+				{ 1, 1, 1, 1}   // +++			
+            };
+
+			glm::mat4 invProj = glm::inverse(camera->get_projection() * camera->get_view());
+
+            for (auto& vec : frustumCorners)
 			{
-				vec = invProj * vec;
-				vec /= vec.w;
-				vec = glm::vec4(basis * glm::vec3(vec), 1.0f);
-				center += glm::vec3(vec);
-			}
-			center *= 0.125;
+                vec = invProj * vec;
+                vec /= vec.w;
+            }
 
-			glm::vec3 v = glm::vec3(-1);
-			for (auto& vec : cube)
-			{
-				v = glm::max(glm::abs(glm::vec3(vec) - center), v);
-			}
+            float cosine = glm::dot(glm::normalize(glm::vec3(frustumCorners[4]) - camera->get_position()), camera->get_direction());
 
+            glm::vec3 center = camera->get_direction() * centerDist(camera->get_nearPlane(), camera->get_farPlane(), cosine);
+
+            float r = glm::distance(glm::vec3(frustumCorners[0]), center);
+
+            auto& bz = shadow.direction;
 			return
 			{
-				glm::ortho(-v.x, v.x, -v.y, v.y, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * v.z - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0,1,0)),
+				glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0,1,0)),
 				shadow.direction
 			};
 		}
+
 		ShadowPushConstantBlock createOmniShadowPCB(const PointShadow& shadow) const
 		{
 			return
@@ -465,6 +525,7 @@ namespace blaze
 				shadow.position
 			};
 		}
+
 		ShadowUniformBufferObject createOmniShadowUBO() const
 		{
 			return
@@ -510,7 +571,7 @@ namespace blaze
 			auto handle = dirShadowFreeStack.back();
 			dirShadowFreeStack.pop_back();
 			dirShadowHandleValidity[handle] = true;
-			dirShadows[handle].direction = direction;
+			dirShadows[handle].direction = glm::normalize(direction);
 			dirShadows[handle].width = width;
 			dirShadows[handle].height = height;
 			dirShadows[handle].nearPlane = nearPlane;
@@ -552,7 +613,7 @@ namespace blaze
 		void cast(const Context& context, ShadowHandle handle, DirectionalShadow& shadow, Camera* cam, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
 			auto shadowPCB = createDirShadowPCB(shadow, cam);
-			lightsData.dirLightTransform[handle] = shadowPCB.projection;
+			lightsData.dirLightTransform[handle][0] = shadowPCB.projection;
 
             shadow.get_shadowMap().implicitTransferLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 

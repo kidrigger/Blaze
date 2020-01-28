@@ -3,11 +3,7 @@
 
 namespace blaze
 {
-    ShadowCaster::ShadowCaster(const Context& context, uint32_t maxLights, uint32_t maxShadows) noexcept
-        : MAX_POINT_LIGHTS(maxLights),
-        MAX_DIR_LIGHTS(4),
-        MAX_POINT_SHADOWS(maxShadows),
-        MAX_DIR_SHADOWS(4)
+    ShadowCaster::ShadowCaster(const Context& context) noexcept
     {
         using namespace util;
 
@@ -16,24 +12,25 @@ namespace blaze
         memset(&lightsData, 0, sizeof(lightsData));
         memset(lightsData.shadowIdx, -1, sizeof(lightsData.shadowIdx));
 
-        pointShadowHandleValidity = std::vector<bool>(MAX_POINT_SHADOWS, false);
-        pointShadowFreeStack.reserve(MAX_POINT_SHADOWS);
-        for (uint32_t i = 0; i < MAX_POINT_SHADOWS; i++)
+        pointShadowHandleValidity = std::vector<bool>(MAX_POINT_LIGHTS, false);
+        pointShadowFreeStack.reserve(MAX_POINT_LIGHTS);
+        for (uint32_t i = 0; i < MAX_POINT_LIGHTS; i++)
         {
-            pointShadowFreeStack.push_back(MAX_POINT_SHADOWS - i - 1);
+            pointShadowFreeStack.push_back(MAX_POINT_LIGHTS - i - 1);
         }
 
-        dirShadowHandleValidity = std::vector<bool>(MAX_DIR_SHADOWS, false);
-        dirShadowFreeStack.reserve(MAX_DIR_SHADOWS);
-        for (uint32_t i = 0; i < MAX_DIR_SHADOWS; i++)
+        dirShadowHandleValidity = std::vector<bool>(MAX_DIR_LIGHTS, false);
+        dirShadowFreeStack.reserve(MAX_DIR_LIGHTS);
+        for (uint32_t i = 0; i < MAX_DIR_LIGHTS; i++)
         {
-            dirShadowFreeStack.push_back(MAX_DIR_SHADOWS - i - 1);
+            dirShadowFreeStack.push_back(MAX_DIR_LIGHTS - i - 1);
         }
 
         renderPassOmni = Managed(createRenderPassMultiView(context.get_device(), 0b00111111, format, VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
         renderPassDirectional = Managed(createShadowRenderPass(context.get_device()), [dev = context.get_device()](VkRenderPass& rp){ vkDestroyRenderPass(dev, rp, nullptr); });
 
         viewsUBO = UniformBuffer(context, createOmniShadowUBO());
+        csmUBO = UniformBuffer(context, CascadeUniformBufferObject{});
 
         try
         {
@@ -41,17 +38,24 @@ namespace blaze
                 std::vector<VkDescriptorPoolSize> poolSizes = {
                     {
                         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        1
+                        2 // Omni Views + Cascade Projections
                     },
                     {
                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        MAX_POINT_SHADOWS + MAX_DIR_SHADOWS
+                        MAX_POINT_LIGHTS + MAX_DIR_LIGHTS
                     }
                 };
                 dsPool = util::Managed(util::createDescriptorPool(context.get_device(), poolSizes, 17), [dev = context.get_device()](VkDescriptorPool& descPool){vkDestroyDescriptorPool(dev, descPool, nullptr); });
                 std::vector<VkDescriptorSetLayoutBinding> bindings = {
                     {
                         0,
+                        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        1,
+                        VK_SHADER_STAGE_VERTEX_BIT,
+                        nullptr
+                    },
+                    {
+                        1,
                         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         1,
                         VK_SHADER_STAGE_VERTEX_BIT,
@@ -65,14 +69,14 @@ namespace blaze
                     {
                         0,
                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        MAX_POINT_SHADOWS,
+                        MAX_POINT_LIGHTS,
                         VK_SHADER_STAGE_FRAGMENT_BIT,
                         nullptr
                     },
                     {
                         1,
                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        MAX_DIR_SHADOWS,
+                        MAX_DIR_LIGHTS,
                         VK_SHADER_STAGE_FRAGMENT_BIT,
                         nullptr
                     }
@@ -121,29 +125,50 @@ namespace blaze
                 }
                 uboDescriptorSet = dSet;
 
-                VkDescriptorBufferInfo info = {};
-                info.buffer = viewsUBO.get_buffer();
-                info.offset = 0;
-                info.range = sizeof(ShadowUniformBufferObject);
+                {
+                    VkDescriptorBufferInfo info = {};
+                    info.buffer = viewsUBO.get_buffer();
+                    info.offset = 0;
+                    info.range = sizeof(ShadowUniformBufferObject);
 
-                VkWriteDescriptorSet write = {};
-                write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                write.descriptorCount = 1;
-                write.dstSet = uboDescriptorSet.get();
-                write.dstBinding = 0;
-                write.dstArrayElement = 0;
-                write.pBufferInfo = &info;
+                    VkWriteDescriptorSet write = {};
+                    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                    write.descriptorCount = 1;
+                    write.dstSet = uboDescriptorSet.get();
+                    write.dstBinding = 0;
+                    write.dstArrayElement = 0;
+                    write.pBufferInfo = &info;
 
-                vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
-                viewsUBO.write(context, createOmniShadowUBO());
+                    vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+                    viewsUBO.write(context, createOmniShadowUBO());
+                }
+
+                {
+                    VkDescriptorBufferInfo info = {};
+                    info.buffer = csmUBO.get_buffer();
+                    info.offset = 0;
+                    info.range = sizeof(CascadeUniformBufferObject);
+
+                    VkWriteDescriptorSet write = {};
+                    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                    write.descriptorCount = 1;
+                    write.dstSet = uboDescriptorSet.get();
+                    write.dstBinding = 1;
+                    write.dstArrayElement = 0;
+                    write.pBufferInfo = &info;
+
+                    vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+                    // csmUBO.write(context, createOmniShadowUBO());
+                }
             }
 
-            for (uint32_t i = 0; i < MAX_POINT_SHADOWS; i++)
+            for (uint32_t i = 0; i < MAX_POINT_LIGHTS; i++)
             {
                 pointShadows.emplace_back(context, renderPassOmni.get());
             }
-            for (uint32_t i = 0; i < MAX_DIR_SHADOWS; i++)
+            for (uint32_t i = 0; i < MAX_DIR_LIGHTS; i++)
             {
                 dirShadows.emplace_back(context, renderPassDirectional.get());
             }
@@ -174,7 +199,7 @@ namespace blaze
                 writes[0] = {};
                 writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                 writes[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                writes[0].descriptorCount = MAX_POINT_SHADOWS;
+                writes[0].descriptorCount = MAX_POINT_LIGHTS;
                 writes[0].dstSet = descriptorSet;
                 writes[0].dstBinding = 0;
                 writes[0].dstArrayElement = 0;
@@ -189,7 +214,7 @@ namespace blaze
                 writes[1] = {};
                 writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                 writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                writes[1].descriptorCount = MAX_DIR_SHADOWS;
+                writes[1].descriptorCount = MAX_DIR_LIGHTS;
                 writes[1].dstSet = descriptorSet;
                 writes[1].dstBinding = 1;
                 writes[1].dstArrayElement = 0;
@@ -221,11 +246,7 @@ namespace blaze
         pointShadowHandleValidity(std::move(other.pointShadowHandleValidity)),
         dirShadows(std::move(other.dirShadows)),
         dirShadowFreeStack(std::move(other.dirShadowFreeStack)),
-        dirShadowHandleValidity(std::move(other.dirShadowHandleValidity)),
-        MAX_POINT_SHADOWS(other.MAX_POINT_SHADOWS),
-        MAX_DIR_SHADOWS(other.MAX_DIR_SHADOWS),
-        MAX_POINT_LIGHTS(other.MAX_POINT_LIGHTS),
-        MAX_DIR_LIGHTS(other.MAX_DIR_LIGHTS)
+        dirShadowHandleValidity(std::move(other.dirShadowHandleValidity))
     {
         memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
     }
@@ -254,10 +275,6 @@ namespace blaze
         dirShadowFreeStack = std::move(other.dirShadowFreeStack);
         dirShadowHandleValidity = std::move(other.dirShadowHandleValidity);
         memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
-        MAX_POINT_SHADOWS = other.MAX_POINT_SHADOWS;
-        MAX_DIR_SHADOWS = other.MAX_DIR_SHADOWS;
-        MAX_POINT_LIGHTS = other.MAX_POINT_LIGHTS;
-        MAX_DIR_LIGHTS = other.MAX_DIR_LIGHTS;
         return *this;
     }
 
