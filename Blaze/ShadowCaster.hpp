@@ -21,7 +21,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 const int32_t POINT_SHADOW_MAP_SIZE = 512;
-const int32_t DIR_SHADOW_MAP_SIZE = 2048;
+const int32_t DIR_SHADOW_MAP_SIZE = 1024;
 
 namespace blaze
 {
@@ -138,10 +138,11 @@ namespace blaze
 		float width{ 512 };
 		float height{ 512 };
 		glm::vec3 direction{ 0.0f };
+		uint32_t numCascades{ 1 };
 
 	private:
 		Texture2D shadowMap;
-		util::Managed<VkFramebuffer> framebuffer;
+		util::ManagedVector<VkFramebuffer> framebuffers;
 		util::Unmanaged<VkViewport> viewport;
 
 	public:
@@ -161,6 +162,7 @@ namespace blaze
 			id2d.format = VK_FORMAT_D32_SFLOAT;
 			id2d.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
             id2d.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			id2d.layerCount = MAX_CSM_SPLITS;
 			shadowMap = Texture2D(context, id2d, false);
 
 			viewport = VkViewport{
@@ -172,9 +174,12 @@ namespace blaze
 				1.0f
 			};
 
+			std::vector<VkFramebuffer> fbos;
+			fbos.reserve(MAX_CSM_SPLITS);
+			for (int i = 0; i < MAX_CSM_SPLITS; i++)
 			{
 				std::vector<VkImageView> attachments = {
-					shadowMap.get_imageView()
+					shadowMap.get_imageView(i)
 				};
 
 				VkFramebuffer fbo = VK_NULL_HANDLE;
@@ -187,11 +192,12 @@ namespace blaze
 				fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 				fbCreateInfo.pAttachments = attachments.data();
 				vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
-				framebuffer = util::Managed(fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+				fbos.push_back(fbo);
 			}
+			framebuffers = util::ManagedVector(fbos, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
 		}
 
-		const VkFramebuffer& get_framebuffer() const { return framebuffer.get(); }
+		const VkFramebuffer& get_framebuffer(uint32_t idx) const { return framebuffers.get(idx); }
 		const VkViewport& get_viewport() const { return viewport.get(); }
 		const Texture2D& get_shadowMap() const { return shadowMap; }
 		Texture2D& get_shadowMap() { return shadowMap; }
@@ -337,6 +343,20 @@ namespace blaze
 		{
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set, 1, &shadowDescriptorSet.get(), 0, nullptr);
 		}
+
+		/**
+		 * @fn update
+		 * 
+		 * @brief Updates the uniform buffer data.
+		 */
+		inline void update(Camera* camera)
+		{
+			for (int i = 0; i < lightsData.numDirLights; i++) {
+				auto csmPCBs = createCSMShadowPCB(dirShadows[i], camera);
+				memcpy(lightsData.dirLightTransform[i], csmPCBs.pvs, MAX_CSM_SPLITS * sizeof(glm::mat4));
+				lightsData.csmSplits[i] = csmPCBs.splits;
+			}
+		}
 		
         /*
 		void freeShadow(ShadowHandle handle)
@@ -410,17 +430,18 @@ namespace blaze
          */
 
 	private:
-        std::vector<float> createCSMSplits(int numSplits, float nearPlane, float farPlane, float lambda = 0.5f) const
+        glm::vec3 createCSMSplits(int numSplits, float nearPlane, float farPlane, float lambda = 0.5f) const
         {
-            std::vector<float> splits(numSplits);
+			static_assert(MAX_CSM_SPLITS <= 4);
+			glm::vec3 splits(farPlane);
             // Ref: https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-10-parallel-split-shadow-maps-programmable-gpus
             float _m = 1.0f/static_cast<float>(numSplits);
-            for (int i = 0; i < numSplits; i++)
+            for (int i = 1; i < numSplits; i++)
             {
                 float c_log = nearPlane * pow(farPlane / nearPlane, i * _m);
                 float c_uni = nearPlane + (farPlane - nearPlane) * i * _m;
 
-                splits[i] = (lambda * c_log + (1.0f - lambda) * c_uni);
+                splits[i-1] = (lambda * c_log + (1.0f - lambda) * c_uni);
             }
 
             return splits;
@@ -428,12 +449,14 @@ namespace blaze
 
         float centerDist(float n, float f, float cosine) const
         {
+			// TODO: FIX: Min waste
             float secTheta = 1.0f / cosine;
             return 0.5f * (f + n) * secTheta * secTheta;
         }
 
-        std::vector<ShadowPushConstantBlock> createCSMShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
+        CascadeBlock createCSMShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
         {
+			// TODO: Recheck
             glm::vec4 frustumCorners[] = {
 				{-1,-1,-1, 1},  // ---
 				{-1, 1,-1, 1},  // -+-
@@ -452,34 +475,49 @@ namespace blaze
                 vert /= vert.w;
             }
 
-            // TODO: Num Splits.
-            auto splits = createCSMSplits(4, shadow.nearPlane, shadow.farPlane);
+            auto splits = createCSMSplits(shadow.numCascades, camera->get_nearPlane(), camera->get_farPlane());
 
             float cosine = glm::dot(glm::normalize(glm::vec3(frustumCorners[4]) - camera->get_position()), camera->get_direction());
             glm::vec3 cornerRay = glm::normalize(glm::vec3(frustumCorners[4] - frustumCorners[0]));
 
-            std::vector<ShadowPushConstantBlock> pcbs = {};
-
+			CascadeBlock cb;
+			cb.splits = glm::vec4(splits, shadow.numCascades);
+			
+			int idx;
             float prevPlane = camera->get_nearPlane();
-            for (float plane : splits)
+            for (idx = 0; idx < shadow.numCascades-1; idx++)
             {
-                auto center = camera->get_direction() * centerDist(prevPlane, plane, cosine);
+				float plane = splits[idx];
+				float cDist = centerDist(prevPlane, plane, cosine);
+                auto center = camera->get_direction() * cDist + camera->get_position();
 
                 float nearRatio = (prevPlane / camera->get_farPlane());
-                auto corner = cornerRay * nearRatio;
+                auto corner = cornerRay * nearRatio + camera->get_position();
 
                 float r = glm::distance(center, corner);
                 auto& bz = shadow.direction;
 
-                pcbs.push_back({
-                    glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0,1,0)),
-                    shadow.direction
-			    });
+				cb.pvs[idx] = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
 
                 prevPlane = plane;
             }
+			{
+				float plane = camera->get_farPlane();
+				float cDist = centerDist(prevPlane, plane, cosine);
+				auto center = camera->get_direction() * cDist;
 
-            return pcbs;
+				float nearRatio = (prevPlane / camera->get_farPlane());
+				auto corner = cornerRay * nearRatio;
+
+				float r = glm::distance(center, corner);
+				auto& bz = shadow.direction;
+
+				cb.pvs[idx] = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
+
+				prevPlane = plane;
+			}
+
+            return cb;
         }
 
 		ShadowPushConstantBlock createDirShadowPCB(const DirectionalShadow& shadow, Camera* camera) const
@@ -576,6 +614,7 @@ namespace blaze
 			dirShadows[handle].height = height;
 			dirShadows[handle].nearPlane = nearPlane;
 			dirShadows[handle].farPlane = farPlane;
+			dirShadows[handle].numCascades = 4;
 			return handle;
 		}
 
@@ -612,37 +651,43 @@ namespace blaze
 
 		void cast(const Context& context, ShadowHandle handle, DirectionalShadow& shadow, Camera* cam, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
-			auto shadowPCB = createDirShadowPCB(shadow, cam);
-			lightsData.dirLightTransform[handle][0] = shadowPCB.projection;
+			// auto shadowPCB = createDirShadowPCB(shadow, cam);
+			// auto csmPCBs = createCSMShadowPCB(shadow, cam);
+
+			// printf("%f %f %f %f\n", csmPCBs.splits[0], csmPCBs.splits[1], csmPCBs.splits[2], csmPCBs.splits[3]);
 
             shadow.get_shadowMap().implicitTransferLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
-			VkRenderPassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderPassDirectional.get();
-			renderpassBeginInfo.framebuffer = shadow.framebuffer.get();
-			renderpassBeginInfo.renderArea.offset = { 0, 0 };
-			renderpassBeginInfo.renderArea.extent = { DIR_SHADOW_MAP_SIZE, DIR_SHADOW_MAP_SIZE };
+			ShadowPushConstantBlock shadowPCB{};
 
+			for (int i = 0; i < shadow.numCascades; i++) {
 
-			std::array<VkClearValue, 1> clearColor;
-			clearColor[0].depthStencil = { 1.0f, 0 };
-			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-			renderpassBeginInfo.pClearValues = clearColor.data();
+				shadowPCB.projection = lightsData.dirLightTransform[handle][i];
+				VkRenderPassBeginInfo renderpassBeginInfo = {};
+				renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderpassBeginInfo.renderPass = renderPassDirectional.get();
+				renderpassBeginInfo.framebuffer = shadow.framebuffers.get(i);
+				renderpassBeginInfo.renderArea.offset = { 0, 0 };
+				renderpassBeginInfo.renderArea.extent = { DIR_SHADOW_MAP_SIZE, DIR_SHADOW_MAP_SIZE };
+				std::array<VkClearValue, 1> clearColor;
+				clearColor[0].depthStencil = { 1.0f, 0 };
+				renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+				renderpassBeginInfo.pClearValues = clearColor.data();
 
-			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDirectional.get());
-			vkCmdSetDepthBias(cmdBuffer, 1.75f, 0.0f, 2.25f);
-			vkCmdSetViewport(cmdBuffer, 0, 1, &shadow.viewport.get());
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, uboDescriptorSet.data(), 0, nullptr);
-			vkCmdPushConstants(cmdBuffer, pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(ModelPushConstantBlock), sizeof(ShadowPushConstantBlock), &shadowPCB);
+				vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineDirectional.get());
+				vkCmdSetDepthBias(cmdBuffer, 1.75f, 0.0f, 2.25f);
+				vkCmdSetViewport(cmdBuffer, 0, 1, &shadow.viewport.get());
+				vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout.get(), 0, 1, uboDescriptorSet.data(), 0, nullptr);
+				vkCmdPushConstants(cmdBuffer, pipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, sizeof(ModelPushConstantBlock), sizeof(ShadowPushConstantBlock), &shadowPCB);
 
-			for (Drawable* d : drawables)
-			{
-				d->drawGeometry(cmdBuffer, pipelineLayout.get());
+				for (Drawable* d : drawables)
+				{
+					d->drawGeometry(cmdBuffer, pipelineLayout.get());
+				}
+
+				vkCmdEndRenderPass(cmdBuffer);
 			}
-
-			vkCmdEndRenderPass(cmdBuffer);
 
 			shadow.get_shadowMap().transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}

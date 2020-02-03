@@ -87,7 +87,7 @@ namespace blaze
 		int currentLight{ 0 };
 
 		struct TextureViewMenuControl {
-			std::array<std::string, 9> labels{
+			std::array<std::string, 10> labels{
                 "Full Render",
                 "Diffuse Map",
                 "Normal Map",
@@ -96,7 +96,8 @@ namespace blaze
                 "AO Map",
                 "Emission Map",
                 "Position",
-                "Distance" };
+                "Cascade Overlay",
+				"Miscellaneous" };
 			int currentValue = 0;
             /**
              * @fn value()
@@ -207,7 +208,7 @@ namespace blaze
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 2.0f, true),
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 2.0f, true)
 		}; 
-		renderer.get_lightSystem().addDirLight(glm::vec3(-1.0, -1.0, -0.5), 1.0f, true);
+		renderer.get_lightSystem().addDirLight(glm::vec3(-0.7, -1.0, -0.5), 1.0f, true);
 
 #ifdef _WIN32
         strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");

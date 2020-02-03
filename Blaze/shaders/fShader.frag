@@ -10,9 +10,10 @@ const float shadow_bias = 0.05f;
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
-layout(location = 2) in vec2 texCoords0;
-layout(location = 3) in vec2 texCoords1;
-layout(location = 4) in vec4 lightCoord[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
+layout(location = 2) in vec3 viewPosition;
+layout(location = 3) in vec2 texCoords0;
+layout(location = 4) in vec2 texCoords1;
+layout(location = 5) in vec4 lightCoord[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
 
 layout(set = 0, binding = 0) uniform CameraBufferObject {
 	mat4 view;
@@ -21,7 +22,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 	float farPlane;
 	mat4 lightDirPV[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
 	vec4 lightDir[MAX_DIR_LIGHTS];
-    vec4 csmSplits[MAX_CSM_SPLITS];
+    vec4 csmSplits[MAX_DIR_LIGHTS];
 	vec4 lightPos[MAX_POINT_LIGHTS];
 	ivec4 shadowIdx[MAX_POINT_LIGHTS/4];
 	int numLights;
@@ -48,7 +49,7 @@ layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
 layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
 
 layout(set = 3, binding = 0) uniform samplerCube shadow[MAX_POINT_LIGHTS];
-layout(set = 3, binding = 1) uniform sampler2D dirShadow[MAX_DIR_LIGHTS];
+layout(set = 3, binding = 1) uniform sampler2DArray dirShadow[MAX_DIR_LIGHTS];
 
 layout(push_constant) uniform MaterialData {
 	layout(offset = 64) vec4 baseColorFactor;
@@ -174,17 +175,24 @@ float calculatePointShadow(int lightIdx) {
 }
 
 float calculateDirectionalShadow(int shadowIdx) {
-	vec4 shadowCoord = lightCoord[shadowIdx][0];
+	int cascade = 0;
+	for (int i = 0; i < MAX_CSM_SPLITS-1; i++) {
+		if (-viewPosition.z > ubo.csmSplits[shadowIdx][i]) {
+			cascade = i+1;
+		}
+	}
+
+	vec4 shadowCoord = lightCoord[shadowIdx][cascade];
 	float shade = 0.0f;
     
-    vec2 texelSize = vec2(1.0f) / textureSize(dirShadow[shadowIdx], 0);
+    vec2 texelSize = vec2(1.0f) / textureSize(dirShadow[shadowIdx], 0).xy;
     for (int i = -1; i <= 1; i++)
     {
         for (int j = -1; j <= 1; j++)
         {
             if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
             {
-                float dist = texture( dirShadow[shadowIdx], shadowCoord.st + vec2(i,j) * texelSize).r;
+                float dist = texture( dirShadow[shadowIdx], vec3(shadowCoord.st + vec2(i,j) * texelSize, cascade)).r;
                 if ( shadowCoord.w > 0.0 && dist < shadowCoord.z ) 
                 {
                     shade += 1.0f;
@@ -265,7 +273,6 @@ void main() {
 
 		float NdotL = max(dot(N, L), 0.0f);
 		
-
 		float shade = calculatePointShadow(i);
 
 		L0 += shade * (kd * albedo / PI + specular) * radiance * NdotL;
@@ -347,13 +354,20 @@ void main() {
 				outColor = vec4(position.xyz * 0.1f, 1.0f);
 			}; break;
 			case 8: {
-				// float v = texture(dirShadow[0], lightCoord[0].st).r;
-				// float r = clamp(v * 3.0f - 6.0f, 0.0f, 1.0f);
-				// float g = clamp(v * 3.0f - 7.0f, 0.0f, 1.0f);
-				// float b = clamp(v * 3.0f - 8.0f, 0.0f, 1.0f);
-				// outColor = vec4(r,g,b, 1.0f);
-				outColor = vec4(texture(dirShadow[0], gl_FragCoord.xy/vec2(1920.0f, 1080.0f)).rrr, 1.0f);
+				float d = -viewPosition.z;
+				if (d < ubo.csmSplits[0][0]) {
+					outColor = outColor * 0.7f + 0.3f * vec4(1.0f, 0.0f, 0.0f, 1.0f);
+				} else if (ubo.csmSplits[0][3] > 1 && d < ubo.csmSplits[0][1]) {
+					outColor = outColor * 0.7f + 0.3f * vec4(0.0f, 1.0f, 0.0f, 1.0f);
+				} else if (ubo.csmSplits[0][3] > 2 && d < ubo.csmSplits[0][2]) {
+					outColor = outColor * 0.7f + 0.3f * vec4(0.0f, 0.0f, 1.0f, 1.0f);
+				} else {
+					outColor = outColor * 0.7f + 0.3f * vec4(1.0f, 0.0f, 1.0f, 1.0f);
+				}
 			}; break;
+			default: {
+				outColor = vec4(albedo, 1.0f);
+			}
 		}
 	}
 }

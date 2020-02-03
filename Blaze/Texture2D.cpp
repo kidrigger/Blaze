@@ -24,7 +24,7 @@ namespace blaze {
 		return std::move(ti);
 	}
 
-	Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool mipmapped)
+    Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool mipmapped)
         : width(image_data.width),
         height(image_data.height),
         format(image_data.format),
@@ -33,6 +33,7 @@ namespace blaze {
         access(image_data.access),
         aspect(image_data.aspect),
         tiling(image_data.tiling),
+        layerCount(image_data.layerCount),
         is_valid(false)
     {
         using namespace util;
@@ -47,7 +48,7 @@ namespace blaze {
 
         if (!image_data.data)
         {
-            image = Managed(context.createImage(width, height, miplevels, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+            image = Managed(context.createImage(width, height, miplevels, layerCount, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
             VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
 
@@ -66,17 +67,25 @@ namespace blaze {
             barrier.subresourceRange.baseMipLevel = 0;
             barrier.subresourceRange.levelCount = miplevels;
             barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.layerCount = layerCount;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = 0;
 
             vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
             context.flushCommandBuffer(commandBuffer);
 
-            imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+            allViews = Managed(createImageView(context.get_device(), get_image(), (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D) , format, aspect, miplevels, layerCount), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+            std::vector<VkImageView> views(layerCount);
+            uint32_t index = 0;
+            for (auto& view : views)
+            {
+                view = createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels, 1, index);
+                index++;
+            }
+            imageViews = ManagedVector(views, [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
             imageSampler = Managed(createSampler(context.get_device(), miplevels, image_data.samplerAddressMode), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
-            imageInfo.imageView = imageView.get();
+            imageInfo.imageView = allViews.get();
             imageInfo.sampler = imageSampler.get();
             imageInfo.imageLayout = layout;
 
@@ -93,7 +102,7 @@ namespace blaze {
         memcpy(bufferdata, image_data.data, image_data.size);
         vmaUnmapMemory(allocator, stagingAlloc);
 
-        image = Managed(context.createImage(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+        image = Managed(context.createImage(width, height, miplevels, layerCount, format, VK_IMAGE_TILING_OPTIMAL, usage, VMA_MEMORY_USAGE_GPU_ONLY), [allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
         try
         {
@@ -114,7 +123,7 @@ namespace blaze {
             barrier.subresourceRange.baseMipLevel = 0;
             barrier.subresourceRange.levelCount = miplevels;
             barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.layerCount = layerCount;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = 0;
 
@@ -127,7 +136,7 @@ namespace blaze {
             region.imageSubresource.aspectMask = aspect;
             region.imageSubresource.mipLevel = 0;
             region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
+            region.imageSubresource.layerCount = layerCount;
 
             region.imageOffset = { 0,0 };
             region.imageExtent = { width, height, 1 };
@@ -172,7 +181,7 @@ namespace blaze {
                 blit.dstSubresource.aspectMask = aspect;
                 blit.dstSubresource.mipLevel = i;
                 blit.dstSubresource.baseArrayLayer = 0;
-                blit.dstSubresource.layerCount = 1;
+                blit.dstSubresource.layerCount = layerCount;
 
                 vkCmdBlitImage(commandBuffer,
                     image.get().image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -214,10 +223,18 @@ namespace blaze {
             std::cerr << e.what() << std::endl;
         }
 
-        imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+        allViews = Managed(createImageView(context.get_device(), get_image(), (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D), format, aspect, miplevels, layerCount), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+        std::vector<VkImageView> views(layerCount);
+        uint32_t index = 0;
+        for (auto& view : views)
+        {
+            view = createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels, 1, index);
+            index++;
+        }
+        imageViews = ManagedVector(views, [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
         imageSampler = Managed(createSampler(context.get_device(), miplevels, image_data.samplerAddressMode), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
-        imageInfo.imageView = imageView.get();
+        imageInfo.imageView = allViews.get();
         imageInfo.sampler = imageSampler.get();
         imageInfo.imageLayout = layout;
 
@@ -226,7 +243,8 @@ namespace blaze {
 
     Texture2D::Texture2D(Texture2D&& other) noexcept
         : image(std::move(other.image)),
-        imageView(std::move(other.imageView)),
+        imageViews(std::move(other.imageViews)),
+        allViews(std::move(other.allViews)),
         imageSampler(std::move(other.imageSampler)),
         imageInfo(std::move(other.imageInfo)),
         width(other.width),
@@ -238,6 +256,7 @@ namespace blaze {
         aspect(other.aspect),
         tiling(other.tiling),
         miplevels(other.miplevels),
+        layerCount(other.layerCount),
         is_valid(other.is_valid)
     {
     }
@@ -249,7 +268,8 @@ namespace blaze {
             return *this;
         }
         image		 = std::move(other.image);
-        imageView	 = std::move(other.imageView);
+        imageViews	 = std::move(other.imageViews);
+        allViews     = std::move(other.allViews);
         imageSampler = std::move(other.imageSampler);
         imageInfo	 = std::move(other.imageInfo);
         width	 = other.width;
@@ -261,6 +281,7 @@ namespace blaze {
         aspect	 = other.aspect;
         tiling	 = other.tiling;
         miplevels = other.miplevels;
+        layerCount = other.layerCount;
         is_valid = other.is_valid;
         return *this;
     }
@@ -285,7 +306,7 @@ namespace blaze {
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = miplevels;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = layerCount;
         barrier.srcAccessMask = access;
         barrier.dstAccessMask = dstAccess;
 

@@ -158,7 +158,7 @@ namespace blaze
          * @arg idx = 2 refers to third split
          * @arg idx = 3 is the number of splits
          */
-        alignas(16) glm::vec4 csmSplits[MAX_CSM_SPLITS];
+        alignas(16) glm::vec4 csmSplits[MAX_DIR_LIGHTS];
         
         /**
          * @brief The position of the point light.
@@ -292,7 +292,8 @@ namespace blaze
 			VTM_AO,         /// < Show only the ambient occlusion maps.
 			VTM_EMISSION,   /// < Show only the emissions.
 			VTM_POSITION,   /// < Show position coordinates normalized by far plane.
-			VTM_MISC,       /// < Show a miscellaneous/in test visualization.
+			VTM_CASCADE,    /// < Show the CSM splits overlay on the render.
+            VTM_MISC,       /// < Misc
 			VTM_MAX_COUNT
 		} textureMap;
         
@@ -373,6 +374,19 @@ namespace blaze
 		glm::vec3 position;
 	};
     /// @}
+
+    /**
+    * @struct CascadeBlock
+    * 
+    * @brief A struct to return cascaded shadow PCB data.
+    */
+    struct CascadeBlock
+    {
+        /// @brief The PV transformation of each cascade.
+        glm::mat4 pvs[MAX_CSM_SPLITS];
+        /// @brief The split distances of the cascade.
+        glm::vec4 splits;
+    };
 
     /**
      * @struct BufferObject

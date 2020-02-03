@@ -43,8 +43,10 @@ namespace blaze::util
      * @param format The format of the image.
      * @param aspect The aspect to use the image as.
      * @param miplevels The number of levels of mipmapping in the image.
+     * @param numLayers The number of layers in the image to construct a view for.
+     * @param baseLayer The first layer from which to construct views.
      */
-	VkImageView createImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t miplevels);
+	VkImageView createImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t miplevels, uint32_t numLayers, uint32_t baseLayer = 0);
 
     /**
      * @brief Creates a new descriptor pool as per the poolsizes.

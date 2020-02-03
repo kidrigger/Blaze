@@ -14,7 +14,7 @@ Made by Anish Bhobe
   - [ ] Support Specular Materials
 - [x] PBR
 - [x] IBL
-- [ ] Shadows
+- [x] Shadows
 - [ ] Forward+ Rendering
 - [ ] Deferred Rendering
 - [ ] Global Illumination

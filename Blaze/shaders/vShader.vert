@@ -5,15 +5,18 @@
 #define MAX_DIR_LIGHTS 1
 #define MAX_CSM_SPLITS 4
 
-layout(set = 0, binding = 0) uniform UniformBufferObject
-{
+layout(set = 0, binding = 0) uniform CameraBufferObject {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
+	float farPlane;
 	mat4 dirLightPV[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
 	vec4 lightDir[MAX_DIR_LIGHTS];
-	vec4 csmSplits[MAX_CSM_SPLITS];
+    vec4 csmSplits[MAX_DIR_LIGHTS];
 	vec4 lightPos[MAX_POINT_LIGHTS];
+	ivec4 shadowIdx[MAX_POINT_LIGHTS/4];
+	int numLights;
+	int numDirLights;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
@@ -27,10 +30,10 @@ layout(push_constant) uniform TRS {
 
 layout(location = 0) out vec3 outPosition;
 layout(location = 1) out vec3 normals;
-layout(location = 2) out vec2 texCoords0;
-layout(location = 3) out vec2 texCoords1;
-
-layout(location = 4) out vec4 lightCoord[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
+layout(location = 2) out vec3 viewPosition;
+layout(location = 3) out vec2 texCoords0;
+layout(location = 4) out vec2 texCoords1;
+layout(location = 5) out vec4 lightCoord[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
 
 const mat4 biasMat = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -44,6 +47,7 @@ void main() {
 	normals = mat3(transpose(inverse(trs.model))) * inNormal;
 	texCoords0 = inTexCoords0;
 	texCoords1 = inTexCoords1;
+	viewPosition = (ubo.view * vec4(outPosition, 1.0f)).xyz;
 
 	for (int i = 0; i < MAX_DIR_LIGHTS; i++) {
         for (int j = 0; j < MAX_CSM_SPLITS; j++) {

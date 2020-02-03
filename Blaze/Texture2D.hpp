@@ -52,6 +52,9 @@ namespace blaze
 
         /// @brief Address mode for the sampler.
 		VkSamplerAddressMode samplerAddressMode{ VK_SAMPLER_ADDRESS_MODE_REPEAT };
+
+        /// @brief Number of layers in the image.
+        uint32_t layerCount{ 1 };
 	};
 
     /**
@@ -65,7 +68,8 @@ namespace blaze
 	{
 	private:
 		util::Managed<ImageObject> image;
-		util::Managed<VkImageView> imageView;
+        util::Managed<VkImageView> allViews;
+		util::ManagedVector<VkImageView> imageViews;
 		util::Managed<VkSampler> imageSampler;
 		uint32_t width{ 0 };
 		uint32_t height{ 0 };
@@ -77,6 +81,7 @@ namespace blaze
 		VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
 		VkDescriptorImageInfo imageInfo{};
 		uint32_t miplevels{ 1 };
+        uint32_t layerCount{ 1 };
 		bool is_valid{ false };
 	public:
 		/**
@@ -135,7 +140,8 @@ namespace blaze
          * @{
          */
 		const VkImage& get_image() const { return image.get().image; }
-		const VkImageView& get_imageView() const { return imageView.get(); }
+        const VkImageView& get_allImageViews() const { return allViews.get(); }
+		const VkImageView& get_imageView(uint32_t index = 0) const { return imageViews.get(index); }
 		const VkSampler& get_imageSampler() const { return imageSampler.get(); }
 		const VkDescriptorImageInfo& get_imageInfo() const { return imageInfo; }
 		const VkFormat& get_format() const { return format; }
@@ -144,6 +150,7 @@ namespace blaze
 		const VkAccessFlags& get_access() const { return access; }
 		const VkImageAspectFlags& get_aspect() const { return aspect; }
 		uint32_t get_miplevels() const { return miplevels; }
+        uint32_t get_layerCount() const { return layerCount; }
         /**
          * @}
          */

@@ -197,7 +197,7 @@ namespace blaze {
             vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
             context.flushCommandBuffer(commandBuffer);
 
-            imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+            imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
             imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
             imageInfo.imageView = imageView.get();
@@ -350,7 +350,7 @@ namespace blaze {
             std::cerr << e.what() << std::endl;
         }
 
-        imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+        imageView = Managed(createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6), [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
         imageSampler = Managed(createSampler(context.get_device(), miplevels), [dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
         imageInfo.imageView = imageView.get();

@@ -26,11 +26,12 @@ namespace blaze
 		auto result = vkAcquireNextImageKHR(context.get_device(), swapchain.get_swapchain(), numeric_limits<uint64_t>::max(), imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
-		rebuildCommandBuffer(imageIndex);
-		set_lightUBO(shadowCaster.getLightsData());
 		set_cameraUBO(camera->getUbo());
+		shadowCaster.update(camera);
+		set_lightUBO(shadowCaster.getLightsData());
 		updateUniformBuffer(imageIndex, rendererUBO);
 		updateUniformBuffer(imageIndex, settingsUBO);
+		rebuildCommandBuffer(imageIndex);
 
 		if (result != VK_SUCCESS)
 		{

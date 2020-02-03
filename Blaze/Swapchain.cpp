@@ -109,7 +109,7 @@ namespace blaze
 		std::vector<VkImageView> swapchainImageViews(images.size());
 		for (size_t i = 0; i < images.size(); i++)
 		{
-			swapchainImageViews[i] = util::createImageView(context.get_device(), images[i], VK_IMAGE_VIEW_TYPE_2D, format.get(), VK_IMAGE_ASPECT_COLOR_BIT, 1);
+			swapchainImageViews[i] = util::createImageView(context.get_device(), images[i], VK_IMAGE_VIEW_TYPE_2D, format.get(), VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
 		}
 		return swapchainImageViews;
 	}
