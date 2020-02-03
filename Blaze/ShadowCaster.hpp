@@ -497,7 +497,24 @@ namespace blaze
                 float r = glm::distance(center, corner);
                 auto& bz = shadow.direction;
 
-				cb.pvs[idx] = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
+				auto lightOrthoMatrix = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane);
+				auto lightViewMatrix = glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
+				glm::mat4 shadowMatrix = lightOrthoMatrix * lightViewMatrix;
+				glm::vec4 shadowOrigin = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+				shadowOrigin = shadowMatrix * shadowOrigin;
+				shadowOrigin = shadowOrigin * (float)DIR_SHADOW_MAP_SIZE / 2.0f;
+
+				glm::vec4 roundedOrigin = glm::round(shadowOrigin);
+				glm::vec4 roundOffset = roundedOrigin - shadowOrigin;
+				roundOffset = roundOffset * 2.0f / (float)DIR_SHADOW_MAP_SIZE;
+				roundOffset.z = 0.0f;
+				roundOffset.w = 0.0f;
+
+				glm::mat4 shadowProj = lightOrthoMatrix;
+				shadowProj[3] += roundOffset;
+				lightOrthoMatrix = shadowProj;
+
+				cb.pvs[idx] = lightOrthoMatrix * lightViewMatrix;
 
                 prevPlane = plane;
             }
@@ -512,7 +529,24 @@ namespace blaze
 				float r = glm::distance(center, corner);
 				auto& bz = shadow.direction;
 
-				cb.pvs[idx] = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane) * glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
+				auto lightOrthoMatrix = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane);
+				auto lightViewMatrix = glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
+				glm::mat4 shadowMatrix = lightOrthoMatrix * lightViewMatrix;
+				glm::vec4 shadowOrigin = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+				shadowOrigin = shadowMatrix * shadowOrigin;
+				shadowOrigin = shadowOrigin * (float)DIR_SHADOW_MAP_SIZE / 2.0f;
+
+				glm::vec4 roundedOrigin = glm::round(shadowOrigin);
+				glm::vec4 roundOffset = roundedOrigin - shadowOrigin;
+				roundOffset = roundOffset * 2.0f / (float)DIR_SHADOW_MAP_SIZE;
+				roundOffset.z = 0.0f;
+				roundOffset.w = 0.0f;
+
+				glm::mat4 shadowProj = lightOrthoMatrix;
+				shadowProj[3] += roundOffset;
+				lightOrthoMatrix = shadowProj;
+
+				cb.pvs[idx] = lightOrthoMatrix * lightViewMatrix;
 
 				prevPlane = plane;
 			}
