@@ -27,8 +27,8 @@ namespace blaze
 
 		vkWaitForFences(context.get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 		set_cameraUBO(camera->getUbo());
-		shadowCaster.update(camera);
-		set_lightUBO(shadowCaster.getLightsData());
+		lightSystem.update(camera);
+		set_lightUBO(lightSystem.getLightsData());
 		updateUniformBuffer(imageIndex, rendererUBO);
 		updateUniformBuffer(imageIndex, settingsUBO);
 		rebuildCommandBuffer(imageIndex);
@@ -249,7 +249,7 @@ namespace blaze
 				uboDescriptorSetLayout.get(),
 				materialDescriptorSetLayout.get(),
 				environmentDescriptorSetLayout.get(),
-				shadowCaster.get_shadowLayout()
+				lightSystem.get_shadowLayout()
 			};
 
 			std::vector<VkPushConstantRange> pushConstantRanges;
@@ -352,7 +352,7 @@ namespace blaze
 			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 		}
 
-		shadowCaster.cast(context, camera, commandBuffers[frame], drawables);
+		lightSystem.cast(context, camera, commandBuffers[frame], drawables);
 
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -375,7 +375,7 @@ namespace blaze
 		{
 			vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout.get(), 2, 1, &environmentDescriptor, 0, nullptr);
 		}
-		shadowCaster.bind(commandBuffers[frame], graphicsPipelineLayout.get(), 3);
+		lightSystem.bind(commandBuffers[frame], graphicsPipelineLayout.get(), 3);
 
 		for (Drawable* cmd : drawables)
 		{
@@ -840,7 +840,7 @@ namespace blaze
 
             swapchain = Swapchain(context);
 
-            shadowCaster = ShadowCaster(context);
+            lightSystem = LightSystem(context);
             
             depthBufferTexture = createDepthBuffer();
             
@@ -913,7 +913,7 @@ namespace blaze
         skyboxCommand(std::move(other.skyboxCommand)),
         drawables(std::move(other.drawables)),
         environmentDescriptor(other.environmentDescriptor),
-        shadowCaster(std::move(other.shadowCaster))
+        lightSystem(std::move(other.lightSystem))
     {
     }
 
@@ -949,7 +949,7 @@ namespace blaze
         skyboxCommand = std::move(other.skyboxCommand);
         drawables = std::move(other.drawables);
         environmentDescriptor = other.environmentDescriptor;
-        shadowCaster = std::move(other.shadowCaster);
+        lightSystem = std::move(other.lightSystem);
         return *this;
     }
 

@@ -1,9 +1,9 @@
 
-#include "ShadowCaster.hpp"
+#include "LightSystem.hpp"
 
 namespace blaze
 {
-    ShadowCaster::ShadowCaster(const Context& context) noexcept
+    LightSystem::LightSystem(const Context& context) noexcept
     {
         using namespace util;
 
@@ -229,7 +229,7 @@ namespace blaze
         }
     }
 
-    ShadowCaster::ShadowCaster(ShadowCaster&& other) noexcept
+    LightSystem::LightSystem(LightSystem&& other) noexcept
         : renderPassOmni(std::move(other.renderPassOmni)),
         renderPassDirectional(std::move(other.renderPassDirectional)),
         pipelineLayout(std::move(other.pipelineLayout)),
@@ -251,7 +251,7 @@ namespace blaze
         memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
     }
 
-    ShadowCaster& ShadowCaster::operator=(ShadowCaster&& other) noexcept
+    LightSystem& LightSystem::operator=(LightSystem&& other) noexcept
     {
         if (this == &other)
         {
@@ -278,7 +278,7 @@ namespace blaze
         return *this;
     }
 
-    ShadowCaster::LightHandle ShadowCaster::addPointLight(const glm::vec3& position, float brightness, bool hasShadow)
+    LightSystem::LightHandle LightSystem::addPointLight(const glm::vec3& position, float brightness, bool hasShadow)
     {
         if (lightsData.numPointLights >= (int)MAX_POINT_LIGHTS)
         {
@@ -298,7 +298,7 @@ namespace blaze
         return handle | LIGHT_TYPE_POINT;
     }
 
-    ShadowCaster::LightHandle ShadowCaster::addDirLight(const glm::vec3& direction, float brightness, bool hasShadow)
+    LightSystem::LightHandle LightSystem::addDirLight(const glm::vec3& direction, float brightness, bool hasShadow)
     {
         if (lightsData.numDirLights >= (int)MAX_DIR_LIGHTS)
         {
@@ -319,7 +319,7 @@ namespace blaze
         return handle | LIGHT_TYPE_DIR;
     }
 
-    void ShadowCaster::setLightPosition(LightHandle handle, const glm::vec3& position)
+    void LightSystem::setLightPosition(LightHandle handle, const glm::vec3& position)
     {
         assert((handle & LIGHT_MASK_TYPE) == LIGHT_TYPE_POINT);
         int handleIdx = handle & LIGHT_MASK_INDEX;
@@ -335,7 +335,7 @@ namespace blaze
         }
     }
 
-    void ShadowCaster::setLightDirection(LightHandle handle, const glm::vec3& direction)
+    void LightSystem::setLightDirection(LightHandle handle, const glm::vec3& direction)
     {
         assert((handle & LIGHT_MASK_TYPE) == LIGHT_TYPE_DIR);
         int handleIdx = handle & LIGHT_MASK_INDEX;
@@ -351,7 +351,7 @@ namespace blaze
         }
     }
 
-    void ShadowCaster::setLightBrightness(LightHandle handle, float brightness)
+    void LightSystem::setLightBrightness(LightHandle handle, float brightness)
     {
         int handleIdx = handle & LIGHT_MASK_INDEX;
         switch (handle & LIGHT_MASK_TYPE)
@@ -377,7 +377,7 @@ namespace blaze
         }
     }
 
-    void ShadowCaster::cast(const Context& context, Camera* camera, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
+    void LightSystem::cast(const Context& context, Camera* camera, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
     {
         for (ShadowHandle handle : lightsData.shadowIdx)
         {

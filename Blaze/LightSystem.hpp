@@ -25,8 +25,6 @@ const int32_t DIR_SHADOW_MAP_SIZE = 1024;
 
 namespace blaze
 {
-	class ShadowCaster;
-	
     /**
      * @class PointShadow
      *
@@ -112,7 +110,7 @@ namespace blaze
 		const TextureCube& get_shadowMap() const { return shadowMap; }
 		TextureCube& get_shadowMap() { return shadowMap; }
 
-		friend class ShadowCaster;
+		friend class LightSystem;
 	};
     /**
      * @endcond
@@ -202,21 +200,21 @@ namespace blaze
 		const Texture2D& get_shadowMap() const { return shadowMap; }
 		Texture2D& get_shadowMap() { return shadowMap; }
 
-		friend class ShadowCaster;
+		friend class LightSystem;
 	};
     /**
      * @endcond
      */
 
     /**
-     * @class ShadowCaster
+     * @class LightSystem
      *
      * @brief The system responsible for lights and shadows.
      *
-     * ShadowCaster contains info and buffers related to lights and shadow indices as well
+     * LightSystem contains info and buffers related to lights and shadow indices as well
      * as the shadow descriptor set.
      */
-	class ShadowCaster
+	class LightSystem
 	{
 	public:
 		const VkFormat format{ VK_FORMAT_R32_SFLOAT };
@@ -254,32 +252,32 @@ namespace blaze
 
 	public:
         /**
-         * @fn ShadowCaster()
+         * @fn LightSystem()
          *
          * @brief Default empty constructor.
          */
-		ShadowCaster() noexcept {}
+		LightSystem() noexcept {}
 
         /**
-         * @fn ShadowCaster(const Context& context)
+         * @fn LightSystem(const Context& context)
          *
          * @brief Actual constructor for shadow caster.
          *
          * @param context The currect Vulkan Context
          */
-		ShadowCaster(const Context& context) noexcept;
+		LightSystem(const Context& context) noexcept;
 	
         /**
          * @name Move Constructors.
          *
-         * @brief ShadowCaster is move only. Copy is deleted.
+         * @brief LightSystem is move only. Copy is deleted.
          *
          * @{
          */
-		ShadowCaster(ShadowCaster&& other) noexcept;
-		ShadowCaster& operator=(ShadowCaster&& other) noexcept;
-		ShadowCaster(const ShadowCaster& other) = delete;
-		ShadowCaster& operator=(const ShadowCaster& other) = delete;
+		LightSystem(LightSystem&& other) noexcept;
+		LightSystem& operator=(LightSystem&& other) noexcept;
+		LightSystem(const LightSystem& other) = delete;
+		LightSystem& operator=(const LightSystem& other) = delete;
         /**
          * @}
          */
@@ -483,7 +481,7 @@ namespace blaze
 			CascadeBlock cb;
 			cb.splits = glm::vec4(splits, shadow.numCascades);
 			
-			int idx;
+			uint32_t idx;
             float prevPlane = camera->get_nearPlane();
             for (idx = 0; idx < shadow.numCascades-1; idx++)
             {
@@ -685,16 +683,11 @@ namespace blaze
 
 		void cast(const Context& context, ShadowHandle handle, DirectionalShadow& shadow, Camera* cam, VkCommandBuffer cmdBuffer, const std::vector<Drawable*>& drawables)
 		{
-			// auto shadowPCB = createDirShadowPCB(shadow, cam);
-			// auto csmPCBs = createCSMShadowPCB(shadow, cam);
-
-			// printf("%f %f %f %f\n", csmPCBs.splits[0], csmPCBs.splits[1], csmPCBs.splits[2], csmPCBs.splits[3]);
-
             shadow.get_shadowMap().implicitTransferLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
 			ShadowPushConstantBlock shadowPCB{};
 
-			for (int i = 0; i < shadow.numCascades; i++) {
+			for (uint32_t i = 0; i < shadow.numCascades; i++) {
 
 				shadowPCB.projection = lightsData.dirLightTransform[handle][i];
 				VkRenderPassBeginInfo renderpassBeginInfo = {};

@@ -171,9 +171,7 @@ namespace blaze
 		// Variables
 		GLFWwindow* window = nullptr;
 		Renderer renderer;
-		GUI gui;
 		IndexedVertexBuffer<Vertex> vbo;
-		Texture2D image;
 
 		Camera cam({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f }, glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);
 
@@ -203,7 +201,7 @@ namespace blaze
 		renderer.set_camera(&cam);
 
 		auto swingingLight = renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 3.0f, true);
-		std::vector<ShadowCaster::LightHandle> lights = {
+		std::vector<LightSystem::LightHandle> lights = {
 			renderer.get_lightSystem().addPointLight(glm::vec3{ -7.0f, 1.0f, -0.5f }, 2.0f, true),
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 7.0f, 1.0f, -0.5f }, 2.0f, true),
 			renderer.get_lightSystem().addPointLight(glm::vec3{ 0.0f, 1.0f, -0.5f }, 2.0f, true)

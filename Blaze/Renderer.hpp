@@ -10,7 +10,7 @@
 #include "Texture2D.hpp"
 #include "GUI.hpp"
 #include "Swapchain.hpp"
-#include "ShadowCaster.hpp"
+#include "LightSystem.hpp"
 #include "Drawable.hpp"
 
 #include <map>
@@ -42,7 +42,7 @@ namespace blaze
 		Context context;
 		Swapchain swapchain;
 		GUI gui;
-		ShadowCaster shadowCaster;
+		LightSystem lightSystem;
 		Camera* camera;
 
 		util::Managed<VkRenderPass> renderPass;
@@ -158,7 +158,7 @@ namespace blaze
 		const VkDescriptorSetLayout& get_uboLayout() const { return uboDescriptorSetLayout.get(); }
 		const VkDescriptorSetLayout& get_materialLayout() const { return materialDescriptorSetLayout.get(); }
 		const VkDescriptorSetLayout& get_environmentLayout() const { return environmentDescriptorSetLayout.get(); }
-		ShadowCaster& get_lightSystem() { return shadowCaster; }
+		LightSystem& get_lightSystem() { return lightSystem; }
 
 		// Context forwarding
 		VkDevice get_device() const { return context.get_device(); }
