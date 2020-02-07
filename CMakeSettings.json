@@ -30,8 +30,14 @@
           "name": "CMAKE_EXE_LINKER_FLAGS_DEBUG",
           "value": "/debug /INCREMENTAL",
           "type": "STRING"
+        },
+        {
+          "name": "GLM_TEST_ENABLE",
+          "value": "False",
+          "type": "BOOL"
         }
-      ]
+      ],
+      "intelliSenseMode": "windows-msvc-x64"
     }
   ]
 }

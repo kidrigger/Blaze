@@ -1,47 +1,60 @@
 ﻿# CMakeList.txt : CMake project for Blaze, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required( VERSION 3.13 )
 
-find_package(Vulkan REQUIRED)
+find_package( Vulkan REQUIRED )
 
-file(GLOB_RECURSE SOURCE_FILES
-	"*.cpp"
-	"util/*.cpp"
-	"vma/*.cpp"
-	"gltf/*.cpp"
-	"gui/*.cpp"
-	)
+set( SOURCE_FILES
+        "TextureCube.cpp"
+        "Texture2D.cpp"
+        "Swapchain.cpp"
+        "Primitives.cpp"
+        "Model.cpp"
+        "Renderer.cpp"
+        "LightSystem.cpp"
+        "GUI.cpp" )
 
-file(GLOB_RECURSE HEADER_FILES
-	"*.hpp"
-	"util/*.hpp"
-	"vma/*.h"
-	"gltf/*.h"
-	"gui/*.h"
-	"gui/*.hpp"
-	"gltf/*.hpp"
-	)
+set( HEADER_FILES
+        "Camera.hpp"
+        "Datatypes.hpp"
+        "Drawable.hpp"
+        "GUI.hpp"
+        "LightSystem.hpp"
+        "Model.hpp"
+        "Primitives.hpp"
+        "Renderer.hpp"
+        "Swapchain.hpp"
+        "Texture2D.hpp"
+        "TextureCube.hpp"
+        "UniformBuffer.hpp"
+        "VertexBuffer.hpp" )
 
-include_directories ("vma")
-include_directories ("gltf")
-include_directories (".")
+include_directories( "vma" )
+include_directories( "gltf" )
+include_directories( "." )
 
-include_directories ("../spirv-cross")
+include_directories( "../spirv-cross" )
 
 # Add source to this project's executable.
-add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
+add_executable( Blaze "Blaze.hpp" "Blaze.cpp" ${SOURCE_FILES} ${HEADER_FILES} )
 
-if (WIN32)
-    target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR)
-    if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
-      set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
+add_subdirectory( "core" )
+add_subdirectory( "gltf" )
+add_subdirectory( "gui" )
+add_subdirectory( "util" )
+add_subdirectory( "vma" )
+
+if( WIN32 )
+    target_compile_definitions( Blaze PRIVATE VK_USE_PLATFORM_WIN32_KHR )
+    if( ${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
+      set( GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe" )
     else()
-      set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe")
+      set( GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe" )
     endif()
-elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(Blaze PRIVATE VK_USE_PLATFORM_X11_KHR)
-    find_program(GLSL_VALIDATOR NAMES "glslangValidator")
+elseif( UNIX AND NOT APPLE )
+    target_compile_definitions( Blaze PRIVATE VK_USE_PLATFORM_X11_KHR )
+    find_program( GLSL_VALIDATOR NAMES "glslangValidator" )
 endif()
 
 # TODO: Add tests and install targets if needed.
@@ -92,24 +105,6 @@ add_custom_command(TARGET Blaze PRE_BUILD
         "${PROJECT_BINARY_DIR}/shaders"
         "$<TARGET_FILE_DIR:Blaze>/shaders"
 )
-
-#file (GLOB TEXTURES "assets/container2.png")
-#add_custom_command(TARGET Blaze POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/"
-#	COMMAND ${CMAKE_COMMAND} -E copy "${TEXTURES}" "$<TARGET_FILE_DIR:Blaze>/assets/"
-#)
-
-#file (GLOB_RECURSE SPONZA "assets/sponza/*")
-#add_custom_command(TARGET Blaze POST_BUILD
-#	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/sponza"
-#	COMMAND ${CMAKE_COMMAND} -E copy "${SPONZA}" "$<TARGET_FILE_DIR:Blaze>/assets/sponza"
-#)
-
-#file (GLOB_RECURSE SPONZA "assets/helmet/*")
-#add_custom_command(TARGET Blaze POST_BUILD
-#	COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/assets/helmet"
-#	COMMAND ${CMAKE_COMMAND} -E copy "${SPONZA}" "$<TARGET_FILE_DIR:Blaze>/assets/helmet"
-#)
 
 file (MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/assets")
 file (COPY "${PROJECT_SOURCE_DIR}/Blaze/assets/" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/assets")
