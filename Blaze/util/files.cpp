@@ -7,16 +7,16 @@
 
 namespace blaze::util
 {
- 	std::vector<char> loadBinaryFile(const std::string& filename)
+ 	std::vector<uint32_t> loadBinaryFile(const std::string& filename)
 	{
 		using namespace std;
 		ifstream file(filename, ios::ate | ios::binary);
 		if (file.is_open())
 		{
 			size_t filesize = file.tellg();
-			vector<char> filedata(filesize);
+			vector<uint32_t> filedata(filesize / sizeof(uint32_t));
 			file.seekg(0);
-			file.read(filedata.data(), filesize);
+			file.read((char*)filedata.data(), filesize);
 			file.close();
 			return filedata;
 		}

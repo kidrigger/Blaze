@@ -32,5 +32,5 @@ namespace blaze::util
      *
      * @returns The binary data loaded from the file as \a vector<char>
      */
-	std::vector<char> loadBinaryFile(const std::string& filename);
+	std::vector<uint32_t> loadBinaryFile(const std::string& filename);
 }

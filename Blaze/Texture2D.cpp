@@ -34,6 +34,7 @@ namespace blaze {
         aspect(image_data.aspect),
         tiling(image_data.tiling),
         layerCount(image_data.layerCount),
+        anisotropy(image_data.anisotropy),
         is_valid(false)
     {
         using namespace util;
@@ -257,6 +258,7 @@ namespace blaze {
         tiling(other.tiling),
         miplevels(other.miplevels),
         layerCount(other.layerCount),
+        anisotropy(other.anisotropy),
         is_valid(other.is_valid)
     {
     }
@@ -282,6 +284,7 @@ namespace blaze {
         tiling	 = other.tiling;
         miplevels = other.miplevels;
         layerCount = other.layerCount;
+        anisotropy = other.anisotropy;
         is_valid = other.is_valid;
         return *this;
     }
@@ -338,7 +341,7 @@ namespace blaze {
         createInfo.addressModeU = addressMode;
         createInfo.addressModeV = addressMode;
         createInfo.addressModeW = addressMode;
-        createInfo.anisotropyEnable = VK_TRUE;
+        createInfo.anisotropyEnable = anisotropy;
         createInfo.maxAnisotropy = 16;
         createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         createInfo.unnormalizedCoordinates = VK_FALSE;

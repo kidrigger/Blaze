@@ -16,9 +16,9 @@ namespace blaze::util
      * @brief Creates a shader module from the code.
      *
      * @param device The logical device used.
-     * @param shaderCode The code as a vector<char>
+     * @param shaderCode The code as a vector<uint32_t>
      */
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& shaderCode);
+	VkShaderModule createShaderModule(VkDevice device, const std::vector<uint32_t>& shaderCode);
 
     /**
      * @brief Creates a semaphore on the device.

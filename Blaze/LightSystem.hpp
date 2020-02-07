@@ -161,6 +161,8 @@ namespace blaze
 			id2d.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
             id2d.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			id2d.layerCount = MAX_CSM_SPLITS;
+			id2d.anisotropy = VK_FALSE;
+			id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 			shadowMap = Texture2D(context, id2d, false);
 
 			viewport = VkViewport{
@@ -428,10 +430,10 @@ namespace blaze
          */
 
 	private:
-        glm::vec3 createCSMSplits(int numSplits, float nearPlane, float farPlane, float lambda = 0.5f) const
+        glm::vec4 createCSMSplits(int numSplits, float nearPlane, float farPlane, float lambda = 0.5f) const
         {
 			static_assert(MAX_CSM_SPLITS <= 4);
-			glm::vec3 splits(farPlane);
+			glm::vec4 splits(farPlane);
             // Ref: https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-10-parallel-split-shadow-maps-programmable-gpus
             float _m = 1.0f/static_cast<float>(numSplits);
             for (int i = 1; i < numSplits; i++)
@@ -441,6 +443,7 @@ namespace blaze
 
                 splits[i-1] = (lambda * c_log + (1.0f - lambda) * c_uni);
             }
+			splits[3] = farPlane;
 
             return splits;
         }
@@ -479,13 +482,16 @@ namespace blaze
             glm::vec3 cornerRay = glm::normalize(glm::vec3(frustumCorners[4] - frustumCorners[0]));
 
 			CascadeBlock cb;
-			cb.splits = glm::vec4(splits, shadow.numCascades);
+			cb.splits = splits;
+			cb.splits[3] = shadow.numCascades;
+
+			std::vector<float> cascadeSplits(((float*)&splits), ((float*)&splits) + 3);
+			cascadeSplits.push_back(camera->get_farPlane());
 			
-			uint32_t idx;
+			uint32_t idx = 0;
             float prevPlane = camera->get_nearPlane();
-            for (idx = 0; idx < shadow.numCascades-1; idx++)
+            for (float plane : cascadeSplits)
             {
-				float plane = splits[idx];
 				float cDist = centerDist(prevPlane, plane, cosine);
                 auto center = camera->get_direction() * cDist + camera->get_position();
 
@@ -515,39 +521,8 @@ namespace blaze
 				cb.pvs[idx] = lightOrthoMatrix * lightViewMatrix;
 
                 prevPlane = plane;
+				idx++;
             }
-			{
-				float plane = camera->get_farPlane();
-				float cDist = centerDist(prevPlane, plane, cosine);
-				auto center = camera->get_direction() * cDist;
-
-				float nearRatio = (prevPlane / camera->get_farPlane());
-				auto corner = cornerRay * nearRatio;
-
-				float r = glm::distance(center, corner);
-				auto& bz = shadow.direction;
-
-				auto lightOrthoMatrix = glm::ortho(-r, r, -r, r, shadow.nearPlane, shadow.farPlane);
-				auto lightViewMatrix = glm::lookAt(center + 2.0f * bz * r - bz * (shadow.nearPlane + shadow.farPlane), center, glm::vec3(0, 1, 0));
-				glm::mat4 shadowMatrix = lightOrthoMatrix * lightViewMatrix;
-				glm::vec4 shadowOrigin = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-				shadowOrigin = shadowMatrix * shadowOrigin;
-				shadowOrigin = shadowOrigin * (float)DIR_SHADOW_MAP_SIZE / 2.0f;
-
-				glm::vec4 roundedOrigin = glm::round(shadowOrigin);
-				glm::vec4 roundOffset = roundedOrigin - shadowOrigin;
-				roundOffset = roundOffset * 2.0f / (float)DIR_SHADOW_MAP_SIZE;
-				roundOffset.z = 0.0f;
-				roundOffset.w = 0.0f;
-
-				glm::mat4 shadowProj = lightOrthoMatrix;
-				shadowProj[3] += roundOffset;
-				lightOrthoMatrix = shadowProj;
-
-				cb.pvs[idx] = lightOrthoMatrix * lightViewMatrix;
-
-				prevPlane = plane;
-			}
 
             return cb;
         }

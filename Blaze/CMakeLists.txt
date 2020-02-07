@@ -27,6 +27,8 @@ include_directories ("vma")
 include_directories ("gltf")
 include_directories (".")
 
+include_directories ("../spirv-cross")
+
 # Add source to this project's executable.
 add_executable (Blaze ${SOURCE_FILES} ${HEADER_FILES})
 
@@ -50,6 +52,13 @@ endif()
 target_link_libraries(Blaze glfw ${GLFW_LIBRARIES})
 target_link_libraries(Blaze glm)
 target_link_libraries(Blaze Vulkan::Vulkan)
+target_link_libraries(Blaze spirv-cross-glsl
+			spirv-cross-hlsl
+			spirv-cross-cpp
+			spirv-cross-reflect
+			spirv-cross-msl
+			spirv-cross-util
+			spirv-cross-core)
 
 # Credits vlsh https://gist.github.com/vlsh/a0d191701cb48f157b05be7f74d79396
 file(GLOB_RECURSE GLSL_SOURCE_FILES

@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Include sub-projects.
 add_subdirectory ("Blaze")
 add_subdirectory ("glfw")
+add_subdirectory ("spirv-cross")
 
 set(GLM_TEST_ENABLE OFF)
 add_subdirectory ("glm")

@@ -55,6 +55,9 @@ namespace blaze
 
         /// @brief Number of layers in the image.
         uint32_t layerCount{ 1 };
+
+        /// @brief Activate Anisotropy
+        VkBool32 anisotropy{ VK_TRUE };
 	};
 
     /**
@@ -82,6 +85,7 @@ namespace blaze
 		VkDescriptorImageInfo imageInfo{};
 		uint32_t miplevels{ 1 };
         uint32_t layerCount{ 1 };
+        VkBool32 anisotropy{ VK_TRUE };
 		bool is_valid{ false };
 	public:
 		/**

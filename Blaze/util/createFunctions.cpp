@@ -10,12 +10,12 @@
 
 namespace blaze::util
 {
-	VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& shaderCode)
+	VkShaderModule createShaderModule(VkDevice device, const std::vector<uint32_t>& shaderCode)
 	{
 		VkShaderModuleCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.codeSize = shaderCode.size();
-		createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+		createInfo.codeSize = sizeof(uint32_t) * shaderCode.size();
+		createInfo.pCode = shaderCode.data();
 		VkShaderModule shaderModule = VK_NULL_HANDLE;
 		auto result = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
 		if (result == VK_SUCCESS)
