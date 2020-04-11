@@ -22,17 +22,43 @@
 
 namespace blaze
 {
+const float PI = 3.1415926535897932384626433f;
 using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout layout, uint32_t frameCount)>;
 
+class Renderer
+{
+public:
+
+	virtual void submit(Drawable* drawable) = 0;
+	virtual void renderFrame() = 0;
+
+	virtual void set_environmentDescriptor(VkDescriptorSet envDS) = 0;
+	virtual void set_skyboxCommand(const RenderCommand& cmd) = 0;
+	virtual void set_cameraUBO(const CameraUniformBufferObject& ubo) = 0;
+	virtual void set_camera(Camera* cam) = 0;
+	virtual void set_lightUBO(const LightsUniformBufferObject& ubo) = 0;
+	virtual void set_settingsUBO(const SettingsUniformBufferObject& ubo) = 0;
+
+	virtual const VkDescriptorSetLayout& get_materialLayout() const = 0;
+	virtual const VkDescriptorSetLayout& get_environmentLayout() const = 0;
+	virtual LightSystem& get_lightSystem() = 0;
+
+	// Context forwarding
+	virtual VkDevice get_device() const = 0;
+	virtual const Context& get_context() const = 0;
+
+	virtual bool complete() const = 0;
+};
+
 /**
- * @class Renderer
+ * @class ForwardRenderer
  *
  * @brief Contains entire rendering logic.
  *
  * This class contains the main drawing logic and all the related components.
  * This is a forward renderer that supports PBR rendering.
  */
-class Renderer
+class ForwardRenderer : public Renderer
 {
 private:
 	uint32_t max_frames_in_flight{2};
@@ -80,23 +106,23 @@ private:
 
 public:
 	/**
-	 * @fn Renderer()
+	 * @fn ForwardRenderer()
 	 *
 	 * @brief Default empty constructor.
 	 */
-	Renderer() noexcept
+	ForwardRenderer() noexcept
 	{
 	}
 
 	/**
-	 * @fn Renderer(GLFWwindow* window, bool enableValidationLayers = true)
+	 * @fn ForwardRenderer(GLFWwindow* window, bool enableValidationLayers = true)
 	 *
 	 * @brief Actual constructor
 	 *
 	 * @param window The GLFW window pointer.
 	 * @param enableValidationLayers Enable for Debugging.
 	 */
-	Renderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept;
+	ForwardRenderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept;
 
 	/**
 	 * @name Move Constructors.
@@ -104,10 +130,10 @@ public:
 	 * @brief Move only, Copy is deleted.
 	 * @{
 	 */
-	Renderer(Renderer&& other) noexcept;
-	Renderer& operator=(Renderer&& other) noexcept;
-	Renderer(const Renderer& other) = delete;
-	Renderer& operator=(const Renderer& other) = delete;
+	ForwardRenderer(ForwardRenderer&& other) noexcept;
+	ForwardRenderer& operator=(ForwardRenderer&& other) noexcept;
+	ForwardRenderer(const ForwardRenderer& other) = delete;
+	ForwardRenderer& operator=(const ForwardRenderer& other) = delete;
 	/**
 	 * @}
 	 */
@@ -118,20 +144,6 @@ public:
 	 * @brief Actually rendering a frame and submitting to the present queue.
 	 */
 	void renderFrame();
-
-	/**
-	 * @name Environment Mapping
-	 *
-	 * @brief Creates maps for the environment based on the skybox.
-	 *
-	 * @{
-	 */
-	TextureCube createIrradianceCube(VkDescriptorSet environment) const;
-	TextureCube createPrefilteredCube(VkDescriptorSet environment) const;
-	Texture2D createBrdfLut() const;
-	/**
-	 * @}
-	 */
 
 	/**
 	 * @name Getters
@@ -254,8 +266,7 @@ public:
 		environmentDescriptor = envDS;
 	}
 
-	template <class RNDRCMD>
-	void set_skyboxCommand(const RNDRCMD& cmd)
+	void set_skyboxCommand(const RenderCommand& cmd)
 	{
 		skyboxCommand = cmd;
 	}
@@ -288,7 +299,7 @@ public:
 	 *
 	 * @brief Checks if the renderer is complete.
 	 *
-	 * A Renderer is considered complete if and only if every member is initialized.
+	 * A ForwardRenderer is considered complete if and only if every member is initialized.
 	 *
 	 * @returns \a true If the renderer sucessfully initialized
 	 * @returns \a false If the renderer was empty or had initialization errors.

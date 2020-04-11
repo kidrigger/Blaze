@@ -20,6 +20,7 @@
 #include <util/Managed.hpp>
 #include <util/createFunctions.hpp>
 #include <util/files.hpp>
+#include <util/Environment.hpp>
 
 #include <util/ShaderUtils.hpp>
 
@@ -162,7 +163,7 @@ void run()
 
 	// Variables
 	GLFWwindow* window = nullptr;
-	Renderer renderer;
+	std::unique_ptr<Renderer> renderer;
 	IndexedVertexBuffer<Vertex> vbo;
 
 	Camera cam({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
@@ -186,19 +187,19 @@ void run()
 	// glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	renderer = Renderer(window, enableValidationLayers);
-	if (!renderer.complete())
+	renderer = std::make_unique<ForwardRenderer>(window, enableValidationLayers);
+	if (!renderer->complete())
 	{
 		throw std::runtime_error("Renderer could not be created");
 	}
-	renderer.set_camera(&cam);
+	renderer->set_camera(&cam);
 
-	auto swingingLight = renderer.get_lightSystem().addPointLight(glm::vec3(0.0f), 3.0f, true);
+	auto swingingLight = renderer->get_lightSystem().addPointLight(glm::vec3(0.0f), 3.0f, true);
 	std::vector<LightSystem::LightHandle> lights = {
-		renderer.get_lightSystem().addPointLight(glm::vec3{-7.0f, 1.0f, -0.5f}, 2.0f, true),
-		renderer.get_lightSystem().addPointLight(glm::vec3{7.0f, 1.0f, -0.5f}, 2.0f, true),
-		renderer.get_lightSystem().addPointLight(glm::vec3{0.0f, 1.0f, -0.5f}, 2.0f, true)};
-	renderer.get_lightSystem().addDirLight(glm::vec3(-0.7, -1.0, -0.5), 1.0f, true);
+		renderer->get_lightSystem().addPointLight(glm::vec3{-7.0f, 1.0f, -0.5f}, 2.0f, true),
+		renderer->get_lightSystem().addPointLight(glm::vec3{7.0f, 1.0f, -0.5f}, 2.0f, true),
+		renderer->get_lightSystem().addPointLight(glm::vec3{0.0f, 1.0f, -0.5f}, 2.0f, true)};
+	renderer->get_lightSystem().addDirLight(glm::vec3(-0.7, -1.0, -0.5), 1.0f, true);
 
 #ifdef _WIN32
 	strcpy_s(settings.skybox, "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr");
@@ -208,10 +209,10 @@ void run()
 	strcpy(settings.filename, "assets/sponza/Sponza.gltf");
 #endif
 
-	auto skybox = loadImageCube(renderer.get_context(), settings.skybox, true);
-	vbo = getUVCube(renderer.get_context());
+	auto skybox = loadImageCube(renderer->get_context(), settings.skybox, true);
+	vbo = getUVCube(renderer->get_context());
 
-	auto createDescriptorSet = [device = renderer.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool) {
+	auto createDescriptorSet = [device = renderer->get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool) {
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = pool;
@@ -229,7 +230,7 @@ void run()
 	};
 
 	auto writeToDescriptor = [device =
-								  renderer.get_device()](VkDescriptorSet descriptorSet,
+								  renderer->get_device()](VkDescriptorSet descriptorSet,
 														 const vector<pair<uint32_t, VkDescriptorImageInfo>>& images) {
 		vector<VkWriteDescriptorSet> writes;
 		for (auto& image : images)
@@ -253,26 +254,26 @@ void run()
 	poolSize.descriptorCount = 1;
 	vector<VkDescriptorPoolSize> poolSizes = {poolSize};
 	Managed<VkDescriptorPool> dsPool =
-		Managed(createDescriptorPool(renderer.get_device(), poolSizes, 1),
-				[dev = renderer.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-	Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer.get_environmentLayout(), dsPool.get()),
-										  [dev = renderer.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) {
+		Managed(createDescriptorPool(renderer->get_device(), poolSizes, 1),
+				[dev = renderer->get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+	Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer->get_environmentLayout(), dsPool.get()),
+										  [dev = renderer->get_device(), pool = dsPool.get()](VkDescriptorSet& dset) {
 											  vkFreeDescriptorSets(dev, pool, 1, &dset);
 										  });
 	writeToDescriptor(ds.get(), {{0, skybox.get_imageInfo()}});
 
-	auto irradMap = renderer.createIrradianceCube(ds.get());
+	auto irradMap = createIrradianceCube(*renderer, ds.get());
 	writeToDescriptor(ds.get(), {{1, irradMap.get_imageInfo()}});
 
-	auto prefilt = renderer.createPrefilteredCube(ds.get());
+	auto prefilt = createPrefilteredCube(*renderer, ds.get());
 	writeToDescriptor(ds.get(), {{2, prefilt.get_imageInfo()}});
 
-	auto brdfLut = renderer.createBrdfLut();
+	auto brdfLut = createBrdfLut(renderer->get_context());
 	writeToDescriptor(ds.get(), {{3, brdfLut.get_imageInfo()}});
 
-	auto model = loadModel(renderer, settings.filename);
+	auto model = loadModel(*renderer, settings.filename);
 
-	renderer.set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) {
+	renderer->set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) {
 		VkBuffer vbufs[] = {vbo.get_vertexBuffer()};
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
@@ -288,8 +289,8 @@ void run()
 	int intermittence = 0;
 	double elapsed = 0.0;
 
-	renderer.set_environmentDescriptor(ds.get());
-	renderer.submit(&model);
+	renderer->set_environmentDescriptor(ds.get());
+	renderer->submit(&model);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -333,10 +334,10 @@ void run()
 		}
 		cam.lookTo(cameraFront);
 
-		renderer.get_lightSystem().setLightPosition(swingingLight, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
+		renderer->get_lightSystem().setLightPosition(swingingLight, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
 		if (settings.lockLight)
 		{
-			renderer.get_lightSystem().setLightPosition(lights[settings.currentLight], cam.get_position());
+			renderer->get_lightSystem().setLightPosition(lights[settings.currentLight], cam.get_position());
 		}
 
 		if (settings.rotate)
@@ -367,7 +368,7 @@ void run()
 				{
 					if (fileExists(settings.filename))
 					{
-						model = loadModel(renderer, settings.filename);
+						model = loadModel(*renderer, settings.filename);
 					}
 				}
 				if (ImGui::InputFloat3("Scale##Model", &settings.scale[0]))
@@ -434,8 +435,8 @@ void run()
 		try
 		{
 			model.update();
-			renderer.set_settingsUBO(settings.settingsUBO);
-			renderer.renderFrame();
+			renderer->set_settingsUBO(settings.settingsUBO);
+			renderer->renderFrame();
 		}
 		catch (std::exception& e)
 		{
@@ -448,7 +449,7 @@ void run()
 	cout << endl;
 
 	// Wait for all commands to finish
-	vkDeviceWaitIdle(renderer.get_device());
+	vkDeviceWaitIdle(renderer->get_device());
 
 	glfwDestroyWindow(window);
 	glfwTerminate();

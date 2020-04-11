@@ -17,9 +17,8 @@
 
 namespace blaze
 {
-const float PI = 3.1415926535897932384626433f;
 
-void Renderer::renderFrame()
+void ForwardRenderer::renderFrame()
 {
 	using namespace std;
 
@@ -90,12 +89,12 @@ void Renderer::renderFrame()
 	currentFrame = (currentFrame + 1) % max_frames_in_flight;
 }
 
-VkRenderPass Renderer::createRenderPass() const
+VkRenderPass ForwardRenderer::createRenderPass() const
 {
 	return util::createRenderPass(context.get_device(), swapchain.get_format(), VK_FORMAT_D32_SFLOAT);
 }
 
-VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
+VkDescriptorSetLayout ForwardRenderer::createUBODescriptorSetLayout() const
 {
 	std::vector<VkDescriptorSetLayoutBinding> uboLayoutBindings = {
 		{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
@@ -104,7 +103,7 @@ VkDescriptorSetLayout Renderer::createUBODescriptorSetLayout() const
 	return util::createDescriptorSetLayout(context.get_device(), uboLayoutBindings);
 }
 
-VkDescriptorSetLayout Renderer::createEnvironmentDescriptorSetLayout() const
+VkDescriptorSetLayout ForwardRenderer::createEnvironmentDescriptorSetLayout() const
 {
 	std::vector<VkDescriptorSetLayoutBinding> envLayoutBindings;
 	for (uint32_t i = 0; i < 4; i++)
@@ -116,7 +115,7 @@ VkDescriptorSetLayout Renderer::createEnvironmentDescriptorSetLayout() const
 	return util::createDescriptorSetLayout(context.get_device(), envLayoutBindings);
 }
 
-VkDescriptorSetLayout Renderer::createMaterialDescriptorSetLayout() const
+VkDescriptorSetLayout ForwardRenderer::createMaterialDescriptorSetLayout() const
 {
 	std::vector<VkDescriptorSetLayoutBinding> samplerLayoutBindings;
 
@@ -129,13 +128,13 @@ VkDescriptorSetLayout Renderer::createMaterialDescriptorSetLayout() const
 	return util::createDescriptorSetLayout(context.get_device(), samplerLayoutBindings);
 };
 
-VkDescriptorPool Renderer::createDescriptorPool() const
+VkDescriptorPool ForwardRenderer::createDescriptorPool() const
 {
 	std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}};
 	return util::createDescriptorPool(context.get_device(), poolSizes, 2u * swapchain.get_imageCount());
 }
 
-std::vector<VkDescriptorSet> Renderer::createCameraDescriptorSets() const
+std::vector<VkDescriptorSet> ForwardRenderer::createCameraDescriptorSets() const
 {
 	std::vector<VkDescriptorSetLayout> layouts(swapchain.get_imageCount(), uboDescriptorSetLayout.get());
 	VkDescriptorSetAllocateInfo allocInfo = {};
@@ -192,7 +191,7 @@ std::vector<VkDescriptorSet> Renderer::createCameraDescriptorSets() const
 	return descriptorSets;
 }
 
-std::vector<UniformBuffer<RendererUniformBufferObject>> Renderer::createUniformBuffers(
+std::vector<UniformBuffer<RendererUniformBufferObject>> ForwardRenderer::createUniformBuffers(
 	const RendererUniformBufferObject& ubo) const
 {
 	std::vector<UniformBuffer<RendererUniformBufferObject>> ubos;
@@ -204,7 +203,7 @@ std::vector<UniformBuffer<RendererUniformBufferObject>> Renderer::createUniformB
 	return std::move(ubos);
 }
 
-std::vector<UniformBuffer<SettingsUniformBufferObject>> Renderer::createUniformBuffers(
+std::vector<UniformBuffer<SettingsUniformBufferObject>> ForwardRenderer::createUniformBuffers(
 	const SettingsUniformBufferObject& ubo) const
 {
 	std::vector<UniformBuffer<SettingsUniformBufferObject>> ubos;
@@ -216,7 +215,7 @@ std::vector<UniformBuffer<SettingsUniformBufferObject>> Renderer::createUniformB
 	return std::move(ubos);
 }
 
-std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> Renderer::createGraphicsPipeline() const
+std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> ForwardRenderer::createGraphicsPipeline() const
 {
 	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 
@@ -254,7 +253,7 @@ std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> Renderer::createGraphicsPip
 	return std::make_tuple(pipelineLayout, graphicsPipeline, skyboxPipeline);
 }
 
-std::vector<VkFramebuffer> Renderer::createRenderFramebuffers() const
+std::vector<VkFramebuffer> ForwardRenderer::createRenderFramebuffers() const
 {
 	using namespace std;
 
@@ -285,7 +284,7 @@ std::vector<VkFramebuffer> Renderer::createRenderFramebuffers() const
 	return frameBuffers;
 }
 
-std::vector<VkCommandBuffer> Renderer::allocateCommandBuffers() const
+std::vector<VkCommandBuffer> ForwardRenderer::allocateCommandBuffers() const
 {
 	std::vector<VkCommandBuffer> commandBuffers(swapchain.get_imageCount());
 
@@ -302,7 +301,7 @@ std::vector<VkCommandBuffer> Renderer::allocateCommandBuffers() const
 	throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
 }
 
-void Renderer::recordCommandBuffers()
+void ForwardRenderer::recordCommandBuffers()
 {
 	for (int i = 0; i < commandBuffers.size(); i++)
 	{
@@ -310,7 +309,7 @@ void Renderer::recordCommandBuffers()
 	}
 }
 
-void Renderer::rebuildCommandBuffer(int frame)
+void ForwardRenderer::rebuildCommandBuffer(int frame)
 {
 	vkWaitForFences(context.get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 
@@ -370,7 +369,7 @@ void Renderer::rebuildCommandBuffer(int frame)
 	}
 }
 
-std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> Renderer::createSyncObjects() const
+std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFence>> ForwardRenderer::createSyncObjects() const
 {
 	using namespace std;
 
@@ -396,7 +395,7 @@ std::tuple<std::vector<VkSemaphore>, std::vector<VkSemaphore>, std::vector<VkFen
 	return make_tuple(startSems, endSems, blockeFences);
 }
 
-Texture2D Renderer::createDepthBuffer() const
+Texture2D ForwardRenderer::createDepthBuffer() const
 {
 	VkFormat format = util::findSupportedFormat(
 		context.get_physicalDevice(), {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
@@ -415,386 +414,7 @@ Texture2D Renderer::createDepthBuffer() const
 	return Texture2D(context, imageData);
 }
 
-TextureCube Renderer::createIrradianceCube(VkDescriptorSet environment) const
-{
-	struct PCB
-	{
-		float deltaPhi{(2.0f * PI) / 180.0f};
-		float deltaTheta{(0.5f * PI) / 64.0f};
-	} pcb = {};
-
-	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/vIrradianceMultiview.vert.spv",
-		"shaders/fIrradiance.frag.spv",
-		environment,
-		get_environmentLayout(),
-		64u,
-		pcb,
-	};
-
-	return util::Process<PCB>::convertDescriptorToCubemap(context, info);
-}
-
-TextureCube Renderer::createPrefilteredCube(VkDescriptorSet environment) const
-{
-	struct PCB
-	{
-		float roughness;
-		float miplevel;
-	};
-
-	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/vIrradiance.vert.spv",
-		"shaders/fPrefilter.frag.spv",
-		environment,
-		get_environmentLayout(),
-		128u,
-		{0, 0},
-	};
-
-	const uint32_t dim = info.cube_side;
-
-	util::Managed<VkPipelineLayout> irPipelineLayout;
-	util::Managed<VkPipeline> irPipeline;
-	util::Managed<VkRenderPass> irRenderPass;
-	util::Managed<VkFramebuffer> irFramebuffer;
-
-	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
-
-	// Setup the TextureCube
-	ImageDataCube idc{};
-	idc.height = dim;
-	idc.width = dim;
-	idc.numChannels = 4;
-	idc.size = 4 * 6 * dim * dim;
-	idc.layerSize = 4 * dim * dim;
-	idc.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	idc.format = format;
-	idc.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	TextureCube irradianceMap(context, idc, true);
-
-	ImageData2D id2d{};
-	id2d.height = dim;
-	id2d.width = dim;
-	id2d.numChannels = 4;
-	id2d.size = 4 * dim * dim;
-	id2d.format = format;
-	id2d.usage = id2d.usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	id2d.access = VK_ACCESS_SHADER_WRITE_BIT;
-	Texture2D fbColorAttachment(context, id2d, false);
-
-	struct CubePushConstantBlock
-	{
-		glm::mat4 mvp;
-	};
-
-	{
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {info.layout};
-
-		std::vector<VkPushConstantRange> pushConstantRanges;
-		{
-			VkPushConstantRange pushConstantRange = {};
-			pushConstantRange.offset = 0;
-			pushConstantRange.size = sizeof(CubePushConstantBlock);
-			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstantRanges.push_back(pushConstantRange);
-			pushConstantRange.offset = sizeof(CubePushConstantBlock);
-			pushConstantRange.size = sizeof(PCB);
-			pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			pushConstantRanges.push_back(pushConstantRange);
-		}
-
-		irPipelineLayout = util::Managed(
-			util::createPipelineLayout(context.get_device(), descriptorSetLayouts, pushConstantRanges),
-			[dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
-	}
-
-	irRenderPass =
-		util::Managed(util::createRenderPass(context.get_device(), format),
-					  [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
-
-	{
-		std::vector<VkDynamicState> dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT};
-
-		VkPipeline tPipeline = util::createGraphicsPipeline(
-			context.get_device(), irPipelineLayout.get(), irRenderPass.get(), {dim, dim}, info.vert_shader,
-			info.frag_shader, dynamicStateEnables, VK_CULL_MODE_FRONT_BIT);
-		irPipeline = util::Managed(
-			tPipeline, [dev = context.get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
-	}
-
-	{
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = dim;
-		fbCreateInfo.height = dim;
-		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = irRenderPass.get();
-		fbCreateInfo.attachmentCount = 1;
-		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
-		vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
-		irFramebuffer = util::Managed(
-			fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
-	}
-
-	auto cube = getUVCube(context);
-
-	glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f);
-
-	std::vector<glm::mat4> matrices = {
-		// POSITIVE_X (Outside in - so NEG_X face)
-		glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		// NEGATIVE_X (Outside in - so POS_X face)
-		glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		// POSITIVE_Y
-		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-		// NEGATIVE_Y
-		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-		// POSITIVE_Z
-		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		// NEGATIVE_Z
-		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	};
-
-	CubePushConstantBlock pcb{};
-
-	uint32_t totalMips = irradianceMap.get_miplevels();
-	uint32_t mipsize = dim;
-	auto cmdBuffer = context.startCommandBufferRecord();
-	for (uint32_t miplevel = 0; miplevel < totalMips; miplevel++)
-	{
-		for (int face = 0; face < 6; face++)
-		{
-
-			// RENDERPASSES
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = static_cast<float>(mipsize);
-			viewport.width = static_cast<float>(mipsize);
-			viewport.height = -static_cast<float>(mipsize);
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
-
-			vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-			VkRenderPassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = irRenderPass.get();
-			renderpassBeginInfo.framebuffer = irFramebuffer.get();
-			renderpassBeginInfo.renderArea.offset = {0, 0};
-			renderpassBeginInfo.renderArea.extent = {mipsize, mipsize};
-
-			std::vector<VkClearValue> clearColor(1);
-			clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-			renderpassBeginInfo.pClearValues = clearColor.data();
-
-			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 0, 1,
-									&info.descriptor, 0, nullptr);
-
-			pcb.mvp = proj * matrices[face];
-			info.pcb.roughness = (float)miplevel / (float)(totalMips - 1);
-			info.pcb.miplevel = static_cast<float>(miplevel);
-			vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0,
-							   sizeof(CubePushConstantBlock), &pcb);
-			vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_FRAGMENT_BIT,
-							   sizeof(CubePushConstantBlock), sizeof(PCB), &info.pcb);
-
-			VkDeviceSize offsets = {0};
-
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &cube.get_vertexBuffer(), &offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, cube.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
-
-			vkCmdEndRenderPass(cmdBuffer);
-
-			fbColorAttachment.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-											 VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-											 VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-			VkImageCopy copyRegion = {};
-
-			copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			copyRegion.srcSubresource.baseArrayLayer = 0;
-			copyRegion.srcSubresource.mipLevel = 0;
-			copyRegion.srcSubresource.layerCount = 1;
-			copyRegion.srcOffset = {0, 0, 0};
-
-			copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			copyRegion.dstSubresource.baseArrayLayer = face;
-			copyRegion.dstSubresource.mipLevel = miplevel;
-			copyRegion.dstSubresource.layerCount = 1;
-			copyRegion.dstOffset = {0, 0, 0};
-
-			copyRegion.extent.width = static_cast<uint32_t>(mipsize);
-			copyRegion.extent.height = static_cast<uint32_t>(mipsize);
-			copyRegion.extent.depth = 1;
-
-			vkCmdCopyImage(cmdBuffer, fbColorAttachment.get_image(), fbColorAttachment.get_imageInfo().imageLayout,
-						   irradianceMap.get_image(), irradianceMap.get_imageInfo().imageLayout, 1, &copyRegion);
-
-			fbColorAttachment.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-											 VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-											 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-		}
-
-		mipsize /= 2;
-	}
-
-	irradianceMap.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
-								 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-	context.flushCommandBuffer(cmdBuffer);
-
-	return irradianceMap;
-}
-
-Texture2D Renderer::createBrdfLut() const
-{
-	const uint32_t dim = 512;
-
-	util::Managed<VkPipelineLayout> irPipelineLayout;
-	util::Managed<VkPipeline> irPipeline;
-	util::Managed<VkRenderPass> irRenderPass;
-	util::Managed<VkFramebuffer> irFramebuffer;
-
-	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
-
-	ImageData2D id2d{};
-	id2d.height = dim;
-	id2d.width = dim;
-	id2d.numChannels = 4;
-	id2d.size = 4 * dim * dim;
-	id2d.format = format;
-	id2d.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	id2d.access = VK_ACCESS_TRANSFER_WRITE_BIT;
-	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	Texture2D lut(context, id2d, false);
-
-	id2d.usage = id2d.usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	id2d.access = VK_ACCESS_SHADER_WRITE_BIT;
-	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	Texture2D fbColorAttachment(context, id2d, false);
-
-	struct CubePushConstantBlock
-	{
-		glm::mat4 mvp;
-	};
-
-	{
-		VkPushConstantRange pcr = {};
-		pcr.offset = 0;
-		pcr.size = sizeof(CubePushConstantBlock);
-		pcr.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		irPipelineLayout = util::Managed(
-			util::createPipelineLayout(context.get_device(), std::vector<VkDescriptorSetLayout>(),
-									   std::vector<VkPushConstantRange>{pcr}),
-			[dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
-	}
-
-	irRenderPass =
-		util::Managed(util::createRenderPass(context.get_device(), format),
-					  [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
-
-	{
-		auto tPipeline = util::createGraphicsPipeline(context.get_device(), irPipelineLayout.get(), irRenderPass.get(),
-													  {dim, dim}, "shaders/vBrdfLut.vert.spv",
-													  "shaders/fBrdfLut.frag.spv", {}, VK_CULL_MODE_FRONT_BIT);
-		irPipeline = util::Managed(
-			tPipeline, [dev = context.get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
-	}
-
-	{
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = dim;
-		fbCreateInfo.height = dim;
-		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = irRenderPass.get();
-		fbCreateInfo.attachmentCount = 1;
-		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
-		vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
-		irFramebuffer = util::Managed(
-			fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
-	}
-
-	auto rect = getUVRect(context);
-
-	glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f);
-
-	CubePushConstantBlock pcb{glm::mat4(1.0f)};
-
-	auto cmdBuffer = context.startCommandBufferRecord();
-
-	// RENDERPASSES
-
-	VkRenderPassBeginInfo renderpassBeginInfo = {};
-	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderpassBeginInfo.renderPass = irRenderPass.get();
-	renderpassBeginInfo.framebuffer = irFramebuffer.get();
-	renderpassBeginInfo.renderArea.offset = {0, 0};
-	renderpassBeginInfo.renderArea.extent = {dim, dim};
-
-	std::array<VkClearValue, 1> clearColor;
-	clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-	renderpassBeginInfo.pClearValues = clearColor.data();
-
-	vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
-
-	vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(CubePushConstantBlock),
-					   &pcb);
-
-	VkDeviceSize offsets = {0};
-
-	vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &rect.get_vertexBuffer(), &offsets);
-	vkCmdBindIndexBuffer(cmdBuffer, rect.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(cmdBuffer, rect.get_indexCount(), 1, 0, 0, 0);
-
-	vkCmdEndRenderPass(cmdBuffer);
-
-	fbColorAttachment.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_TRANSFER_READ_BIT,
-									 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-	VkImageCopy copyRegion = {};
-
-	copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copyRegion.srcSubresource.baseArrayLayer = 0;
-	copyRegion.srcSubresource.mipLevel = 0;
-	copyRegion.srcSubresource.layerCount = 1;
-	copyRegion.srcOffset = {0, 0, 0};
-
-	copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copyRegion.dstSubresource.baseArrayLayer = 0;
-	copyRegion.dstSubresource.mipLevel = 0;
-	copyRegion.dstSubresource.layerCount = 1;
-	copyRegion.dstOffset = {0, 0, 0};
-
-	copyRegion.extent.width = static_cast<uint32_t>(dim);
-	copyRegion.extent.height = static_cast<uint32_t>(dim);
-	copyRegion.extent.depth = 1;
-
-	vkCmdCopyImage(cmdBuffer, fbColorAttachment.get_image(), fbColorAttachment.get_imageInfo().imageLayout,
-				   lut.get_image(), lut.get_imageInfo().imageLayout, 1, &copyRegion);
-
-	lut.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
-
-	context.flushCommandBuffer(cmdBuffer);
-
-	return lut;
-}
-
-Renderer::Renderer(GLFWwindow* window, bool enableValidationLayers) noexcept : context(window, enableValidationLayers)
+ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept : context(window, enableValidationLayers)
 {
 	using namespace std;
 	using namespace util;
@@ -803,7 +423,7 @@ Renderer::Renderer(GLFWwindow* window, bool enableValidationLayers) noexcept : c
 
 	glfwSetWindowUserPointer(window, this);
 	glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height) {
-		Renderer* renderer = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
+		ForwardRenderer* renderer = reinterpret_cast<ForwardRenderer*>(glfwGetWindowUserPointer(window));
 		renderer->windowResized = true;
 	});
 
@@ -883,7 +503,7 @@ Renderer::Renderer(GLFWwindow* window, bool enableValidationLayers) noexcept : c
 	}
 }
 
-Renderer::Renderer(Renderer&& other) noexcept
+ForwardRenderer::ForwardRenderer(ForwardRenderer&& other) noexcept
 	: isComplete(other.isComplete), context(std::move(other.context)), gui(std::move(other.gui)),
 	  swapchain(std::move(other.swapchain)), depthBufferTexture(std::move(other.depthBufferTexture)),
 	  renderPass(std::move(other.renderPass)), uboDescriptorSetLayout(std::move(other.uboDescriptorSetLayout)),
@@ -902,7 +522,7 @@ Renderer::Renderer(Renderer&& other) noexcept
 {
 }
 
-Renderer& Renderer::operator=(Renderer&& other) noexcept
+ForwardRenderer& ForwardRenderer::operator=(ForwardRenderer&& other) noexcept
 {
 	if (this == &other)
 	{
@@ -938,7 +558,7 @@ Renderer& Renderer::operator=(Renderer&& other) noexcept
 	return *this;
 }
 
-void Renderer::recreateSwapchain()
+void ForwardRenderer::recreateSwapchain()
 {
 	try
 	{

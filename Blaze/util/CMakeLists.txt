@@ -9,13 +9,15 @@ set( HEADER_FILES
 	"files.hpp"
 	"Managed.hpp"
 	"processing.hpp"
-	"ShaderUtils.hpp")
+	"ShaderUtils.hpp"
+	"Environment.hpp")
 
 set( SOURCE_FILES
 	"createFunctions.cpp"
 	"debugMessenger.cpp"
 	"DeviceSelection.cpp"
 	"files.cpp"
-	"processing.cpp")
+	"processing.cpp"
+	"Environment.cpp")
 
 target_sources( Blaze PRIVATE ${HEADER_FILES} ${SOURCE_FILES} )
