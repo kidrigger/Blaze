@@ -26,14 +26,9 @@ ARenderer::ARenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 
 	max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
 
-	imageAvailableSem =
-		ManagedVector(createSemaphores(swapchain->get_imageCount()),
-					  [dev = context->get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-	renderFinishedSem =
-		ManagedVector(createSemaphores(swapchain->get_imageCount()),
-					  [dev = context->get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-	inFlightFences = ManagedVector(createFences(swapchain->get_imageCount()),
-								   [dev = context->get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
+	imageAvailableSem = createSemaphores(swapchain->get_imageCount());
+	renderFinishedSem = createSemaphores(swapchain->get_imageCount());
+	inFlightFences = createFences(swapchain->get_imageCount());
 
 	gui = make_unique<GUI>(*context, swapchain->get_extent(), swapchain->get_format(), swapchain->get_imageViews());
 }
@@ -104,7 +99,7 @@ void ARenderer::render()
 	currentFrame = (currentFrame + 1) % max_frames_in_flight;
 }
 
-std::vector<VkSemaphore> ARenderer::createSemaphores(uint32_t imageCount) const
+vkw::SemaphoreVector ARenderer::createSemaphores(uint32_t imageCount) const
 {
 	std::vector<VkSemaphore> sems(imageCount);
 	for (auto& sem : sems)
@@ -112,10 +107,10 @@ std::vector<VkSemaphore> ARenderer::createSemaphores(uint32_t imageCount) const
 		sem = util::createSemaphore(context->get_device());
 	}
 
-	return sems;
+	return vkw::SemaphoreVector(std::move(sems), context->get_device());
 }
 
-std::vector<VkFence> ARenderer::createFences(uint32_t imageCount) const
+vkw::FenceVector ARenderer::createFences(uint32_t imageCount) const
 {
 	std::vector<VkFence> fences(imageCount);
 	for (auto& fence : fences)
@@ -123,7 +118,7 @@ std::vector<VkFence> ARenderer::createFences(uint32_t imageCount) const
 		fence = util::createFence(context->get_device());
 	}
 
-	return fences;
+	return vkw::FenceVector(std::move(fences), context->get_device());
 }
 
 std::vector<VkCommandBuffer> ARenderer::allocateCommandBuffers(uint32_t imageCount) const
@@ -166,15 +161,9 @@ void ARenderer::recreateSwapchain()
 
 		max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
 
-		imageAvailableSem = ManagedVector(
-			createSemaphores(swapchain->get_imageCount()),
-			[dev = context->get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-		renderFinishedSem = ManagedVector(
-			createSemaphores(swapchain->get_imageCount()),
-			[dev = context->get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-		inFlightFences = ManagedVector(
-			createFences(swapchain->get_imageCount()),
-			[dev = context->get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
+		imageAvailableSem = createSemaphores(swapchain->get_imageCount());
+		renderFinishedSem = createSemaphores(swapchain->get_imageCount());
+		inFlightFences = createFences(swapchain->get_imageCount());
 
 		// Recreate all number based
 		recreateSwapchainDependents();

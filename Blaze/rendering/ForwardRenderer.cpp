@@ -430,37 +430,22 @@ ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers
 
 		depthBufferTexture = createDepthBuffer();
 
-		renderPass = Managed(createRenderPass(),
-							 [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
+		renderPass = vkw::RenderPass(createRenderPass(), context.get_device());
 
 		rendererUniformBuffers = createUniformBuffers(rendererUBO);
 		settingsUniformBuffers = createUniformBuffers(settingsUBO);
-		uboDescriptorSetLayout =
-			Managed(createUBODescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) {
-				vkDestroyDescriptorSetLayout(dev, lay, nullptr);
-			});
-		environmentDescriptorSetLayout =
-			Managed(createEnvironmentDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) {
-				vkDestroyDescriptorSetLayout(dev, lay, nullptr);
-			});
-		materialDescriptorSetLayout =
-			Managed(createMaterialDescriptorSetLayout(), [dev = context.get_device()](VkDescriptorSetLayout& lay) {
-				vkDestroyDescriptorSetLayout(dev, lay, nullptr);
-			});
-		descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) {
-			vkDestroyDescriptorPool(dev, pool, nullptr);
-		});
+		uboDescriptorSetLayout = vkw::DescriptorSetLayout(createUBODescriptorSetLayout(), context.get_device());
+		environmentDescriptorSetLayout = vkw::DescriptorSetLayout(createEnvironmentDescriptorSetLayout(), context.get_device());
+		materialDescriptorSetLayout = vkw::DescriptorSetLayout(createMaterialDescriptorSetLayout(), context.get_device());
+
+		descriptorPool = vkw::DescriptorPool(createDescriptorPool(), context.get_device());
 		uboDescriptorSets = createCameraDescriptorSets();
 
 		{
 			auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
-			graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) {
-				vkDestroyPipelineLayout(dev, lay, nullptr);
-			});
-			graphicsPipeline = Managed(
-				gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-			skyboxPipeline = Managed(
-				sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+			graphicsPipelineLayout = vkw::PipelineLayout(gPipelineLayout, context.get_device());
+			graphicsPipeline = vkw::Pipeline(gPipeline, context.get_device());
+			skyboxPipeline = vkw::Pipeline(sbPipeline, context.get_device());
 		}
 
 		renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) {
@@ -476,12 +461,9 @@ ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers
 
 		{
 			auto [startSems, endSems, fences] = createSyncObjects();
-			imageAvailableSem = ManagedVector(
-				startSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-			renderFinishedSem = ManagedVector(
-				endSems, [dev = context.get_device()](VkSemaphore& sem) { vkDestroySemaphore(dev, sem, nullptr); });
-			inFlightFences = ManagedVector(
-				fences, [dev = context.get_device()](VkFence& sem) { vkDestroyFence(dev, sem, nullptr); });
+			imageAvailableSem = vkw::SemaphoreVector(std::move(startSems), context.get_device());
+			renderFinishedSem = vkw::SemaphoreVector(std::move(endSems), context.get_device());
+			inFlightFences = vkw::FenceVector(std::move(fences), context.get_device());
 		}
 
 		gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
@@ -569,25 +551,18 @@ void ForwardRenderer::recreateSwapchain()
 
 		depthBufferTexture = createDepthBuffer();
 
-		renderPass = Managed(createRenderPass(),
-							 [dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
+		renderPass = vkw::RenderPass(createRenderPass(), context.get_device());
 
 		rendererUniformBuffers = createUniformBuffers(rendererUBO);
 		settingsUniformBuffers = createUniformBuffers(settingsUBO);
-		descriptorPool = Managed(createDescriptorPool(), [dev = context.get_device()](VkDescriptorPool& pool) {
-			vkDestroyDescriptorPool(dev, pool, nullptr);
-		});
+		descriptorPool = vkw::DescriptorPool(createDescriptorPool(), context.get_device());
 		uboDescriptorSets = createCameraDescriptorSets();
 
 		{
 			auto [gPipelineLayout, gPipeline, sbPipeline] = createGraphicsPipeline();
-			graphicsPipelineLayout = Managed(gPipelineLayout, [dev = context.get_device()](VkPipelineLayout& lay) {
-				vkDestroyPipelineLayout(dev, lay, nullptr);
-			});
-			graphicsPipeline = Managed(
-				gPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
-			skyboxPipeline = Managed(
-				sbPipeline, [dev = context.get_device()](VkPipeline& lay) { vkDestroyPipeline(dev, lay, nullptr); });
+			graphicsPipelineLayout = vkw::PipelineLayout(gPipelineLayout, context.get_device());
+			graphicsPipeline = vkw::Pipeline(gPipeline, context.get_device());
+			skyboxPipeline = vkw::Pipeline(sbPipeline, context.get_device());
 		}
 
 		renderFramebuffers = ManagedVector(createRenderFramebuffers(), [dev = context.get_device()](VkFramebuffer& fb) {

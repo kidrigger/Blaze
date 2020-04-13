@@ -36,6 +36,7 @@ add_executable( Blaze "Blaze.hpp" "Blaze.cpp" ${SOURCE_FILES} ${HEADER_FILES} )
 
 add_subdirectory( "core" )
 add_subdirectory( "rendering" )
+add_subdirectory( "vkwrap" )
 add_subdirectory( "gltf" )
 add_subdirectory( "gui" )
 add_subdirectory( "util" )

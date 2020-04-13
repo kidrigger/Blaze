@@ -7,6 +7,7 @@
 #include <core/Camera.hpp>
 #include "Renderer.hpp"
 #include <util/Managed.hpp>
+#include <vkwrap/VkWrap.hpp>
 
 namespace blaze
 {
@@ -26,9 +27,9 @@ protected:
 
 	util::ManagedVector<VkCommandBuffer, false> commandBuffers;
 
-	util::ManagedVector<VkSemaphore> imageAvailableSem;
-	util::ManagedVector<VkSemaphore> renderFinishedSem;
-	util::ManagedVector<VkFence> inFlightFences;
+	vkw::SemaphoreVector imageAvailableSem;
+	vkw::SemaphoreVector renderFinishedSem;
+	vkw::FenceVector inFlightFences;
 
 	std::vector<Drawable*> drawables;
 
@@ -74,8 +75,8 @@ protected:
 	virtual void rebuildCommandBuffer(VkCommandBuffer cmd) = 0;
 
 private:
-	std::vector<VkSemaphore> createSemaphores(uint32_t imageCount) const;
-	std::vector<VkFence> createFences(uint32_t imageCount) const;
+	vkw::SemaphoreVector createSemaphores(uint32_t imageCount) const;
+	vkw::FenceVector createFences(uint32_t imageCount) const;
 	std::vector<VkCommandBuffer> allocateCommandBuffers(uint32_t imageCount) const;
 };
 } // namespace blaze

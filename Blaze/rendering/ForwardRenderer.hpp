@@ -13,6 +13,7 @@
 #include <core/Context.hpp>
 #include <util/Managed.hpp>
 #include <util/createFunctions.hpp>
+#include <vkwrap/VkWrap.hpp>
 
 #include <map>
 #include <string>
@@ -42,30 +43,30 @@ private:
 	LightSystem lightSystem;
 	Camera* camera;
 
-	util::Managed<VkRenderPass> renderPass;
+	vkw::RenderPass renderPass;
 
-	util::Managed<VkDescriptorSetLayout> uboDescriptorSetLayout;
-	util::Managed<VkDescriptorSetLayout> environmentDescriptorSetLayout;
-	util::Managed<VkDescriptorSetLayout> materialDescriptorSetLayout;
+	vkw::DescriptorSetLayout uboDescriptorSetLayout;
+	vkw::DescriptorSetLayout environmentDescriptorSetLayout;
+	vkw::DescriptorSetLayout materialDescriptorSetLayout;
 
-	util::Managed<VkDescriptorPool> descriptorPool;
-	util::UnmanagedVector<VkDescriptorSet> uboDescriptorSets;
+	vkw::DescriptorPool descriptorPool;
+	std::vector<VkDescriptorSet> uboDescriptorSets;
 
 	std::vector<UBO<RendererUBlock>> rendererUniformBuffers;
 	RendererUBlock rendererUBO{};
 	std::vector<UBO<SettingsUBlock>> settingsUniformBuffers;
 	SettingsUBlock settingsUBO{};
 
-	util::Managed<VkPipelineLayout> graphicsPipelineLayout;
-	util::Managed<VkPipeline> graphicsPipeline;
-	util::Managed<VkPipeline> skyboxPipeline;
+	vkw::PipelineLayout graphicsPipelineLayout;
+	vkw::Pipeline graphicsPipeline;
+	vkw::Pipeline skyboxPipeline;
 
 	util::ManagedVector<VkFramebuffer> renderFramebuffers;
 	util::ManagedVector<VkCommandBuffer, false> commandBuffers;
 
-	util::ManagedVector<VkSemaphore> imageAvailableSem;
-	util::ManagedVector<VkSemaphore> renderFinishedSem;
-	util::ManagedVector<VkFence> inFlightFences;
+	vkw::SemaphoreVector imageAvailableSem;
+	vkw::SemaphoreVector renderFinishedSem;
+	vkw::FenceVector inFlightFences;
 
 	std::vector<Drawable*> drawables;
 	VkDescriptorSet environmentDescriptor{VK_NULL_HANDLE};

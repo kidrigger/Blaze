@@ -5,12 +5,15 @@
 #include <GLFW/glfw3.h>
 
 #include <rendering/ARenderer.hpp>
+#include <vkwrap/VkWrap.hpp>
 
 namespace blaze
 {
-class FwdRenderer : public ARenderer
+class FwdRenderer final : public ARenderer
 {
 private:
+	vkw::RenderPass renderPass;
+
 public:
 	/**
 	 * @fn FwdRenderer()
