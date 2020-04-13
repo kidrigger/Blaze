@@ -4,7 +4,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <Camera.hpp>
+#include <core/Camera.hpp>
 #include <Datatypes.hpp>
 #include <Drawable.hpp>
 #include <Texture2D.hpp>

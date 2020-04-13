@@ -6,23 +6,22 @@
 
 #include "Blaze.hpp"
 
-#include <Camera.hpp>
+#include <core/Camera.hpp>
 #include <Datatypes.hpp>
-#include <GUI.hpp>
+#include <gui/GUI.hpp>
 #include <Model.hpp>
 #include <Primitives.hpp>
-#include <Renderer.hpp>
 #include <Texture2D.hpp>
 #include <TextureCube.hpp>
 #include <VertexBuffer.hpp>
 #include <core/Context.hpp>
+#include <rendering/ForwardRenderer.hpp>
+#include <rendering/Renderer.hpp>
 #include <util/DeviceSelection.hpp>
+#include <util/Environment.hpp>
 #include <util/Managed.hpp>
 #include <util/createFunctions.hpp>
 #include <util/files.hpp>
-#include <util/Environment.hpp>
-
-#include <util/ShaderUtils.hpp>
 
 #include <algorithm>
 #include <deque>
@@ -64,15 +63,91 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = false;
 #endif
 
-bool firstMouse = true;
-bool mouseEnabled = false;
-double lastX = 0.0;
-double lastY = 0.0;
+struct CameraControlInfo
+{
+	bool firstMouse = true;
+	bool mouseEnabled = false;
+	double lastX = 0.0;
+	double lastY = 0.0;
 
-double yaw = -90.0;
-double pitch = 0.0;
+	double yaw = -90.0;
+	double pitch = 0.0;
+	glm::vec3 cameraFront{0.0f, 0.0f, 1.0f};
 
-glm::vec3 cameraFront{0.0f, 0.0f, 1.0f};
+	static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+	void update(GLFWwindow* window, Camera& cam, double deltaTime);
+} camControlInfo;
+
+void CameraControlInfo::mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (camControlInfo.firstMouse)
+	{
+		camControlInfo.lastX = xpos;
+		camControlInfo.lastY = ypos;
+		camControlInfo.firstMouse = false;
+	}
+
+	double xoffset = xpos - camControlInfo.lastX;
+	double yoffset = camControlInfo.lastY - ypos;
+	camControlInfo.lastX = xpos;
+	camControlInfo.lastY = ypos;
+
+	double sensitivity = camControlInfo.mouseEnabled ? 0.05f : 0.1f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	camControlInfo.yaw += xoffset;
+	camControlInfo.pitch += yoffset;
+
+	if (camControlInfo.pitch > 89.0f)
+		camControlInfo.pitch = 89.0f;
+	if (camControlInfo.pitch < -89.0f)
+		camControlInfo.pitch = -89.0f;
+
+	glm::vec3 front;
+	front.x = static_cast<float>(cos(glm::radians(camControlInfo.yaw)) * cos(glm::radians(camControlInfo.pitch)));
+	front.y = static_cast<float>(sin(glm::radians(camControlInfo.pitch)));
+	front.z = static_cast<float>(sin(glm::radians(camControlInfo.yaw)) * cos(glm::radians(camControlInfo.pitch)));
+	camControlInfo.cameraFront = glm::normalize(front);
+}
+
+void CameraControlInfo::update(GLFWwindow* window, Camera& cam, double deltaTime)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+	{
+		glfwSetCursorPosCallback(window, nullptr);
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		camControlInfo.mouseEnabled = false;
+	}
+	glm::vec3 cameraPos(0.f);
+	float cameraSpeed = 1.f * static_cast<float>(deltaTime); // adjust accordingly
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		cameraSpeed *= 5.0f;
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		cameraPos += cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		cameraPos -= cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		cameraPos += glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
+	cam.moveBy(cameraPos);
+
+	double x = lastX;
+	double y = lastY;
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		y = lastY + 1.0f;
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		y = lastY - 1.0f;
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		x = lastX + 1.0f;
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		x = lastX - 1.0f;
+	mouse_callback(window, x, y);
+
+	cam.lookTo(cameraFront);
+}
 
 /**
  * @struct DebugRenderSettings
@@ -116,39 +191,6 @@ struct DebugRenderSettings
 	}
 } settings{};
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
-{
-	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
-
-	double xoffset = xpos - lastX;
-	double yoffset = lastY - ypos;
-	lastX = xpos;
-	lastY = ypos;
-
-	double sensitivity = mouseEnabled ? 0.05f : 0.1f;
-	xoffset *= sensitivity;
-	yoffset *= sensitivity;
-
-	yaw += xoffset;
-	pitch += yoffset;
-
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	glm::vec3 front;
-	front.x = static_cast<float>(cos(glm::radians(yaw)) * cos(glm::radians(pitch)));
-	front.y = static_cast<float>(sin(glm::radians(pitch)));
-	front.z = static_cast<float>(sin(glm::radians(yaw)) * cos(glm::radians(pitch)));
-	cameraFront = glm::normalize(front);
-}
-
 /**
  * @brief Entrypoint for the renderer application.
  *
@@ -181,7 +223,7 @@ void run()
 	{
 		double x, y;
 		glfwGetCursorPos(window, &x, &y);
-		mouse_callback(window, x, y);
+		CameraControlInfo::mouse_callback(window, x, y);
 	}
 
 	// glfwSetCursorPosCallback(window, mouse_callback);
@@ -231,7 +273,7 @@ void run()
 
 	auto writeToDescriptor = [device =
 								  renderer->get_device()](VkDescriptorSet descriptorSet,
-														 const vector<pair<uint32_t, VkDescriptorImageInfo>>& images) {
+														  const vector<pair<uint32_t, VkDescriptorImageInfo>>& images) {
 		vector<VkWriteDescriptorSet> writes;
 		for (auto& image : images)
 		{
@@ -253,9 +295,9 @@ void run()
 	poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSize.descriptorCount = 1;
 	vector<VkDescriptorPoolSize> poolSizes = {poolSize};
-	Managed<VkDescriptorPool> dsPool =
-		Managed(createDescriptorPool(renderer->get_device(), poolSizes, 1),
-				[dev = renderer->get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+	Managed<VkDescriptorPool> dsPool = Managed(
+		createDescriptorPool(renderer->get_device(), poolSizes, 1),
+		[dev = renderer->get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 	Managed<VkDescriptorSet> ds = Managed(createDescriptorSet(renderer->get_environmentLayout(), dsPool.get()),
 										  [dev = renderer->get_device(), pool = dsPool.get()](VkDescriptorSet& dset) {
 											  vkFreeDescriptorSets(dev, pool, 1, &dset);
@@ -298,41 +340,7 @@ void run()
 		glfwPollEvents();
 		elapsed += deltaTime;
 
-		{
-			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			{
-				glfwSetCursorPosCallback(window, nullptr);
-				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-				mouseEnabled = false;
-			}
-			glm::vec3 cameraPos(0.f);
-			float cameraSpeed = 1.f * static_cast<float>(deltaTime); // adjust accordingly
-			if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-				cameraSpeed *= 5.0f;
-
-			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-				cameraPos += cameraSpeed * cameraFront;
-			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-				cameraPos -= cameraSpeed * cameraFront;
-			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-				cameraPos -= glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
-			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-				cameraPos += glm::normalize(glm::cross(cameraFront, cam.get_up())) * cameraSpeed;
-			cam.moveBy(cameraPos);
-
-			double x = lastX;
-			double y = lastY;
-			if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-				y = lastY + 1.0f;
-			if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-				y = lastY - 1.0f;
-			if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-				x = lastX + 1.0f;
-			if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-				x = lastX - 1.0f;
-			mouse_callback(window, x, y);
-		}
-		cam.lookTo(cameraFront);
+		camControlInfo.update(window, cam, deltaTime);
 
 		renderer->get_lightSystem().setLightPosition(swingingLight, glm::vec3(4.0f * glm::cos(elapsed), 5.0f, -0.3f));
 		if (settings.lockLight)
@@ -415,17 +423,17 @@ void run()
 				}
 				if (ImGui::Button("Lock Mouse"))
 				{
-					firstMouse = true;
+					camControlInfo.firstMouse = true;
 
 					{
 						double x, y;
 						glfwGetCursorPos(window, &x, &y);
-						mouse_callback(window, x, y);
+						CameraControlInfo::mouse_callback(window, x, y);
 					}
 
-					glfwSetCursorPosCallback(window, mouse_callback);
+					glfwSetCursorPosCallback(window, CameraControlInfo::mouse_callback);
 					glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-					mouseEnabled = true;
+					camControlInfo.mouseEnabled = true;
 				}
 			}
 			ImGui::End();
@@ -455,20 +463,3 @@ void run()
 	glfwTerminate();
 }
 } // namespace blaze
-
-/**
- * @brief Entrypoint for the binary executable.
- */
-int main(int argc, char* argv[])
-{
-	try
-	{
-		blaze::run();
-	}
-	catch (std::exception& e)
-	{
-		std::cerr << e.what() << std::endl;
-	}
-
-	return 0;
-}

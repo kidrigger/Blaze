@@ -1,7 +1,7 @@
 
 #include "GUI.hpp"
 
-#include "Renderer.hpp"
+#include <rendering/Renderer.hpp>
 
 bool blaze::GUI::complete = false;
 

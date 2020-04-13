@@ -6,25 +6,20 @@ cmake_minimum_required( VERSION 3.13 )
 find_package( Vulkan REQUIRED )
 
 set( SOURCE_FILES
+        "Blaze2.cpp"
+        "Source.cpp"
         "TextureCube.cpp"
         "Texture2D.cpp"
-        "Swapchain.cpp"
         "Primitives.cpp"
         "Model.cpp"
-        "Renderer.cpp"
-        "LightSystem.cpp"
-        "GUI.cpp" )
+        "LightSystem.cpp")
 
 set( HEADER_FILES
-        "Camera.hpp"
         "Datatypes.hpp"
         "Drawable.hpp"
-        "GUI.hpp"
         "LightSystem.hpp"
         "Model.hpp"
         "Primitives.hpp"
-        "Renderer.hpp"
-        "Swapchain.hpp"
         "Texture2D.hpp"
         "TextureCube.hpp"
         "UniformBuffer.hpp"
@@ -40,6 +35,7 @@ include_directories( "../spirv-cross" )
 add_executable( Blaze "Blaze.hpp" "Blaze.cpp" ${SOURCE_FILES} ${HEADER_FILES} )
 
 add_subdirectory( "core" )
+add_subdirectory( "rendering" )
 add_subdirectory( "gltf" )
 add_subdirectory( "gui" )
 add_subdirectory( "util" )

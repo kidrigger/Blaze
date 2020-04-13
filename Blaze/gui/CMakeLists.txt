@@ -9,7 +9,8 @@ set( HEADER_FILES
 	"imgui_internal.h"
 	"imstb_rectpack.h"
 	"imstb_textedit.h"
-	"imstb_truetype.h")
+	"imstb_truetype.h"
+	"GUI.hpp" )
 
 set( SOURCE_FILES
 	"imgui.cpp"
@@ -17,6 +18,7 @@ set( SOURCE_FILES
 	"imgui_draw.cpp"
 	"imgui_impl_glfw.cpp"
 	"imgui_impl_vulkan.cpp"
-	"imgui_widgets.cpp")
+	"imgui_widgets.cpp"
+	"GUI.cpp" )
 
 target_sources( Blaze PRIVATE ${HEADER_FILES} ${SOURCE_FILES} )

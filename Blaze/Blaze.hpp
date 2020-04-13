@@ -3,4 +3,10 @@
 
 #pragma once
 
+namespace blaze
+{
+void run();
+void runRefactored();
+}
+
 // TODO: Reference additional headers your program requires here.

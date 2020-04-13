@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <Renderer.hpp>
+#include <rendering/Renderer.hpp>
 
 namespace blaze::util
 {

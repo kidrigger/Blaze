@@ -9,7 +9,6 @@ set( HEADER_FILES
 	"files.hpp"
 	"Managed.hpp"
 	"processing.hpp"
-	"ShaderUtils.hpp"
 	"Environment.hpp")
 
 set( SOURCE_FILES

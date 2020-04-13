@@ -1,5 +1,5 @@
 
-#include "Renderer.hpp"
+#include "ForwardRenderer.hpp"
 
 #include <Datatypes.hpp>
 #include <Primitives.hpp>

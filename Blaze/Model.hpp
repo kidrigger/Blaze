@@ -2,10 +2,10 @@
 #pragma once
 
 #include "Datatypes.hpp"
-#include "Renderer.hpp"
 #include "Texture2D.hpp"
 #include "VertexBuffer.hpp"
 #include "util/Managed.hpp"
+#include <rendering/Renderer.hpp>
 #include <vector>
 
 #define GLFW_INCLUDE_VULKAN
