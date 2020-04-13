@@ -185,7 +185,7 @@ public:
 
 		auto cube = getUVCube(context);
 
-		CubemapUniformBufferObject uboData = {
+		CubemapUBlock uboData = {
 			glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f),
 			{
 				// POSITIVE_X (Outside in - so NEG_X face)
@@ -202,7 +202,7 @@ public:
 				glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 			}};
 
-		UniformBuffer<CubemapUniformBufferObject> ubo(context, uboData);
+		UBO<CubemapUBlock> ubo(context, uboData);
 
 		{
 			VkDescriptorSetAllocateInfo allocInfo = {};
@@ -220,10 +220,7 @@ public:
 			descriptorSet = util::Managed(dSet, [dev = context.get_device(), pool = descriptorPool.get()](
 													VkDescriptorSet& ds) { vkFreeDescriptorSets(dev, pool, 1, &ds); });
 
-			VkDescriptorBufferInfo info = {};
-			info.buffer = ubo.get_buffer();
-			info.offset = 0;
-			info.range = sizeof(CubemapUniformBufferObject);
+			VkDescriptorBufferInfo info = ubo.get_descriptorInfo();
 
 			VkWriteDescriptorSet write = {};
 			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

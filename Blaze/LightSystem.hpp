@@ -244,8 +244,8 @@ private:
 	util::Managed<VkDescriptorSetLayout> shadowLayout;
 	util::Unmanaged<VkDescriptorSet> uboDescriptorSet;
 	util::Unmanaged<VkDescriptorSet> shadowDescriptorSet;
-	UniformBuffer<ShadowUniformBufferObject> viewsUBO;
-	UniformBuffer<CascadeUniformBufferObject> csmUBO;
+	UBO<ShadowUBlock> viewsUBO;
+	UBO<CascadeUBlock> csmUBO;
 
 	static const uint32_t LIGHT_MASK_INDEX = 0xF0FFFFFF;
 	static const uint32_t LIGHT_MASK_TYPE = 0x0F000000;
@@ -260,7 +260,7 @@ private:
 	std::vector<ShadowHandle> dirShadowFreeStack;
 	std::vector<bool> dirShadowHandleValidity;
 
-	LightsUniformBufferObject lightsData;
+	LightsUBlock lightsData;
 
 public:
 	/**
@@ -340,7 +340,7 @@ public:
 	 *
 	 * @returns Light uniform buffer.
 	 */
-	inline const LightsUniformBufferObject& getLightsData() const
+	inline const LightsUBlock& getLightsData() const
 	{
 		return lightsData;
 	}
@@ -593,7 +593,7 @@ private:
 		return {glm::perspective(glm::radians(90.0f), 1.0f, shadow.nearPlane, shadow.farPlane), shadow.position};
 	}
 
-	ShadowUniformBufferObject createOmniShadowUBO() const
+	ShadowUBlock createOmniShadowUBO() const
 	{
 		return {{
 			// POSITIVE_X (Outside in - so NEG_X face)

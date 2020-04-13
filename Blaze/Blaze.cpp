@@ -176,13 +176,13 @@ struct DebugRenderSettings
 		 *
 		 * @brief Gets the selected option as Enum instead of internal int.
 		 */
-		SettingsUniformBufferObject::ViewTextureMap value() const
+		SettingsUBlock::ViewTextureMap value() const
 		{
-			return static_cast<SettingsUniformBufferObject::ViewTextureMap>(currentValue);
+			return static_cast<SettingsUBlock::ViewTextureMap>(currentValue);
 		}
 	} textureMapSettings;
 
-	SettingsUniformBufferObject settingsUBO = {SettingsUniformBufferObject::VTM_FULL, 0, 0};
+	SettingsUBlock settingsUBO = {SettingsUBlock::VTM_FULL, 0, 0};
 
 	void submitDelta(float delta)
 	{

@@ -24,10 +24,10 @@ public:
 
 	virtual void set_environmentDescriptor(VkDescriptorSet envDS) = 0;
 	virtual void set_skyboxCommand(const RenderCommand& cmd) = 0;
-	virtual void set_cameraUBO(const CameraUniformBufferObject& ubo) = 0;
+	virtual void set_cameraUBO(const CameraUBlock& ubo) = 0;
 	virtual void set_camera(Camera* cam) = 0;
-	virtual void set_lightUBO(const LightsUniformBufferObject& ubo) = 0;
-	virtual void set_settingsUBO(const SettingsUniformBufferObject& ubo) = 0;
+	virtual void set_lightUBO(const LightsUBlock& ubo) = 0;
+	virtual void set_settingsUBO(const SettingsUBlock& ubo) = 0;
 
 	virtual const VkDescriptorSetLayout& get_materialLayout() const = 0;
 	virtual const VkDescriptorSetLayout& get_environmentLayout() const = 0;

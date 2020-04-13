@@ -33,8 +33,8 @@ LightSystem::LightSystem(const Context& context) noexcept
 		Managed(createShadowRenderPass(context.get_device()),
 				[dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
-	viewsUBO = UniformBuffer(context, createOmniShadowUBO());
-	csmUBO = UniformBuffer(context, CascadeUniformBufferObject{});
+	viewsUBO = UBO(context, createOmniShadowUBO());
+	csmUBO = UBO(context, CascadeUBlock{});
 
 	try
 	{
@@ -107,10 +107,7 @@ LightSystem::LightSystem(const Context& context) noexcept
 			uboDescriptorSet = dSet;
 
 			{
-				VkDescriptorBufferInfo info = {};
-				info.buffer = viewsUBO.get_buffer();
-				info.offset = 0;
-				info.range = sizeof(ShadowUniformBufferObject);
+				VkDescriptorBufferInfo info = viewsUBO.get_descriptorInfo();
 
 				VkWriteDescriptorSet write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -122,14 +119,11 @@ LightSystem::LightSystem(const Context& context) noexcept
 				write.pBufferInfo = &info;
 
 				vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
-				viewsUBO.write(context, createOmniShadowUBO());
+				viewsUBO.write(createOmniShadowUBO());
 			}
 
 			{
-				VkDescriptorBufferInfo info = {};
-				info.buffer = csmUBO.get_buffer();
-				info.offset = 0;
-				info.range = sizeof(CascadeUniformBufferObject);
+				VkDescriptorBufferInfo info = csmUBO.get_descriptorInfo();
 
 				VkWriteDescriptorSet write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -223,7 +217,7 @@ LightSystem::LightSystem(LightSystem&& other) noexcept
 	  dirShadowFreeStack(std::move(other.dirShadowFreeStack)),
 	  dirShadowHandleValidity(std::move(other.dirShadowHandleValidity))
 {
-	memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
+	memcpy(&lightsData, &other.lightsData, sizeof(LightsUBlock));
 }
 
 LightSystem& LightSystem::operator=(LightSystem&& other) noexcept
@@ -249,7 +243,7 @@ LightSystem& LightSystem::operator=(LightSystem&& other) noexcept
 	dirShadows = std::move(other.dirShadows);
 	dirShadowFreeStack = std::move(other.dirShadowFreeStack);
 	dirShadowHandleValidity = std::move(other.dirShadowHandleValidity);
-	memcpy(&lightsData, &other.lightsData, sizeof(LightsUniformBufferObject));
+	memcpy(&lightsData, &other.lightsData, sizeof(LightsUBlock));
 	return *this;
 }
 

@@ -71,6 +71,7 @@ struct Vertex
 		uint32_t idx = 0;
 		{
 			VkVertexInputAttributeDescription attributeDesc = {};
+
 			attributeDesc.binding = binding;
 			attributeDesc.location = idx++;
 			attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -101,7 +102,7 @@ struct Vertex
 };
 
 /**
- * @struct CameraUniformBufferObject
+ * @struct CameraUBlock
  *
  * @brief Holds camera data to be sent to GPU.
  *
@@ -110,7 +111,7 @@ struct Vertex
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct CameraUniformBufferObject
+struct CameraUBlock
 {
 	/// The View matrix of the camera.
 	alignas(16) glm::mat4 view;
@@ -127,7 +128,7 @@ struct CameraUniformBufferObject
 /// @}
 
 /**
- * @struct LightsUniformBufferObject
+ * @struct LightsUBlock
  *
  * @brief Holds Light data to be sent to GPU.
  *
@@ -136,7 +137,7 @@ struct CameraUniformBufferObject
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct LightsUniformBufferObject
+struct LightsUBlock
 {
 	/// The transformation matrix to directional light space coordinates.
 	alignas(16) glm::mat4 dirLightTransform[MAX_DIR_LIGHTS][MAX_CSM_SPLITS];
@@ -187,20 +188,20 @@ struct LightsUniformBufferObject
 /// @}
 
 /**
- * @struct RendererUniformBufferObject
+ * @struct RendererUBlock
  *
  * @brief The actual data sent to the GPU.
  *
- * This struct is a aggregation of CameraUniformBufferObject and LightsUniformBufferObject.
+ * This struct is a aggregation of CameraUBlock and LightsUBlock.
  * They can be directly copied before sending to GPU view UBO update.
  *
- * @sa CameraUniformBufferObject
- * @sa LightsUniformBufferObject
+ * @sa CameraUBlock
+ * @sa LightsUBlock
  *
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct RendererUniformBufferObject
+struct RendererUBlock
 {
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 projection;
@@ -217,14 +218,14 @@ struct RendererUniformBufferObject
 /// @}
 
 /**
- * @struct CubemapUniformBufferObject
+ * @struct CubemapUBlock
  *
  * @brief The data sent to the shaders that use cubemap framebuffers.
  *
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct CubemapUniformBufferObject
+struct CubemapUBlock
 {
 	/// Projection matrix common to each face of the cubemap.
 	alignas(16) glm::mat4 projection;
@@ -235,7 +236,7 @@ struct CubemapUniformBufferObject
 /// @}
 
 /**
- * @struct ShadowUniformBufferObject
+ * @struct ShadowUBlock
  *
  * @brief The data sent to the omnidirectional shadow shaders.
  *
@@ -244,7 +245,7 @@ struct CubemapUniformBufferObject
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct ShadowUniformBufferObject
+struct ShadowUBlock
 {
 	/// View matrices to look at each direction.
 	alignas(16) glm::mat4 view[6];
@@ -259,7 +260,7 @@ struct ShadowUniformBufferObject
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct CascadeUniformBufferObject
+struct CascadeUBlock
 {
 	/// Projection matrices to look at each cascade.
 	alignas(16) glm::mat4 view[4];
@@ -270,7 +271,7 @@ struct CascadeUniformBufferObject
 /// @}
 
 /**
- * @struct SettingsUniformBufferObject
+ * @struct SettingsUBlock
  *
  * @brief Main display settings exposed to both Player and GPU Shader.
  *
@@ -280,7 +281,7 @@ struct CascadeUniformBufferObject
  * @addtogroup UniformBufferObjects
  * @{
  */
-struct SettingsUniformBufferObject
+struct SettingsUBlock
 {
 	/// Difference image maps or data visualizable on the screen.
 	alignas(4) enum ViewTextureMap : int {
@@ -358,7 +359,7 @@ struct ModelPushConstantBlock
  *
  * @brief PCB for sending projection matrix and position to the GPU.
  *
- * During omnidirectional shadow mapping, ShadowUniformBufferObject provides
+ * During omnidirectional shadow mapping, ShadowUBlock provides
  * The view matrix for each face of the cubemap.
  * The Projection and position change per shadow, and hence are a part of the
  * PCB
@@ -395,6 +396,12 @@ struct BufferObject
 {
 	VkBuffer buffer{VK_NULL_HANDLE};
 	VmaAllocation allocation{VK_NULL_HANDLE};
+
+	template <typename T, typename U>
+	operator std::tuple<T, U>()
+	{
+		return {buffer, allocation};
+	}
 };
 
 /**

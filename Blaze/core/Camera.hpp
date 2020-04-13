@@ -16,7 +16,7 @@ namespace blaze
  */
 class Camera
 {
-	CameraUniformBufferObject ubo;
+	CameraUBlock ubo;
 	bool uboDirty;
 
 	glm::vec3 position;
@@ -85,7 +85,7 @@ public:
 	 * If the data has been changed, recalculate the UBO.
 	 * Else only return a reference.
 	 */
-	const CameraUniformBufferObject& getUbo()
+	const CameraUBlock& getUbo()
 	{
 		if (uboDirty)
 		{

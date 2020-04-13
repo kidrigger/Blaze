@@ -152,10 +152,7 @@ std::vector<VkDescriptorSet> ForwardRenderer::createCameraDescriptorSets() const
 
 	for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 	{
-		VkDescriptorBufferInfo info = {};
-		info.buffer = rendererUniformBuffers[i].get_buffer();
-		info.offset = 0;
-		info.range = sizeof(RendererUniformBufferObject);
+		VkDescriptorBufferInfo info = rendererUniformBuffers[i].get_descriptorInfo();
 
 		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -171,10 +168,7 @@ std::vector<VkDescriptorSet> ForwardRenderer::createCameraDescriptorSets() const
 
 	for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 	{
-		VkDescriptorBufferInfo info = {};
-		info.buffer = settingsUniformBuffers[i].get_buffer();
-		info.offset = 0;
-		info.range = sizeof(SettingsUniformBufferObject);
+		VkDescriptorBufferInfo info = settingsUniformBuffers[i].get_descriptorInfo();
 
 		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -191,10 +185,10 @@ std::vector<VkDescriptorSet> ForwardRenderer::createCameraDescriptorSets() const
 	return descriptorSets;
 }
 
-std::vector<UniformBuffer<RendererUniformBufferObject>> ForwardRenderer::createUniformBuffers(
-	const RendererUniformBufferObject& ubo) const
+std::vector<UBO<RendererUBlock>> ForwardRenderer::createUniformBuffers(
+	const RendererUBlock& ubo) const
 {
-	std::vector<UniformBuffer<RendererUniformBufferObject>> ubos;
+	std::vector<UBO<RendererUBlock>> ubos;
 	ubos.reserve(swapchain.get_imageCount());
 	for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 	{
@@ -203,10 +197,10 @@ std::vector<UniformBuffer<RendererUniformBufferObject>> ForwardRenderer::createU
 	return std::move(ubos);
 }
 
-std::vector<UniformBuffer<SettingsUniformBufferObject>> ForwardRenderer::createUniformBuffers(
-	const SettingsUniformBufferObject& ubo) const
+std::vector<UBO<SettingsUBlock>> ForwardRenderer::createUniformBuffers(
+	const SettingsUBlock& ubo) const
 {
-	std::vector<UniformBuffer<SettingsUniformBufferObject>> ubos;
+	std::vector<UBO<SettingsUBlock>> ubos;
 	ubos.reserve(swapchain.get_imageCount());
 	for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 	{

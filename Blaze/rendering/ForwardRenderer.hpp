@@ -51,10 +51,10 @@ private:
 	util::Managed<VkDescriptorPool> descriptorPool;
 	util::UnmanagedVector<VkDescriptorSet> uboDescriptorSets;
 
-	std::vector<UniformBuffer<RendererUniformBufferObject>> rendererUniformBuffers;
-	RendererUniformBufferObject rendererUBO{};
-	std::vector<UniformBuffer<SettingsUniformBufferObject>> settingsUniformBuffers;
-	SettingsUniformBufferObject settingsUBO{};
+	std::vector<UBO<RendererUBlock>> rendererUniformBuffers;
+	RendererUBlock rendererUBO{};
+	std::vector<UBO<SettingsUBlock>> settingsUniformBuffers;
+	SettingsUBlock settingsUBO{};
 
 	util::Managed<VkPipelineLayout> graphicsPipelineLayout;
 	util::Managed<VkPipeline> graphicsPipeline;
@@ -242,7 +242,7 @@ public:
 		skyboxCommand = cmd;
 	}
 
-	void set_cameraUBO(const CameraUniformBufferObject& ubo)
+	void set_cameraUBO(const CameraUBlock& ubo)
 	{
 		memcpy(&rendererUBO, &ubo, sizeof(ubo));
 	}
@@ -252,12 +252,12 @@ public:
 		camera = cam;
 	}
 
-	void set_lightUBO(const LightsUniformBufferObject& ubo)
+	void set_lightUBO(const LightsUBlock& ubo)
 	{
 		memcpy(&rendererUBO.dirLightTransform, &ubo, sizeof(ubo));
 	}
 
-	void set_settingsUBO(const SettingsUniformBufferObject& ubo)
+	void set_settingsUBO(const SettingsUBlock& ubo)
 	{
 		memcpy(&settingsUBO, &ubo, sizeof(ubo));
 	}
@@ -289,10 +289,10 @@ private:
 	VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 	VkDescriptorPool createDescriptorPool() const;
 	std::vector<VkDescriptorSet> createCameraDescriptorSets() const;
-	std::vector<UniformBuffer<RendererUniformBufferObject>> createUniformBuffers(
-		const RendererUniformBufferObject& ubo) const;
-	std::vector<UniformBuffer<SettingsUniformBufferObject>> createUniformBuffers(
-		const SettingsUniformBufferObject& ubo) const;
+	std::vector<UBO<RendererUBlock>> createUniformBuffers(
+		const RendererUBlock& ubo) const;
+	std::vector<UBO<SettingsUBlock>> createUniformBuffers(
+		const SettingsUBlock& ubo) const;
 	std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
 	std::vector<VkFramebuffer> createRenderFramebuffers() const;
 	std::vector<VkCommandBuffer> allocateCommandBuffers() const;
@@ -302,14 +302,14 @@ private:
 
 	Texture2D createDepthBuffer() const;
 
-	void updateUniformBuffer(int frame, const RendererUniformBufferObject& ubo)
+	void updateUniformBuffer(int frame, const RendererUBlock& ubo)
 	{
-		rendererUniformBuffers[frame].write(context, ubo);
+		rendererUniformBuffers[frame].write(ubo);
 	}
 
-	void updateUniformBuffer(int frame, const SettingsUniformBufferObject& ubo)
+	void updateUniformBuffer(int frame, const SettingsUBlock& ubo)
 	{
-		settingsUniformBuffers[frame].write(context, ubo);
+		settingsUniformBuffers[frame].write(ubo);
 	}
 };
 } // namespace blaze

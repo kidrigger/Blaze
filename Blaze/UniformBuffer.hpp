@@ -4,53 +4,55 @@
 #include <core/Context.hpp>
 #include <cstring>
 
+#include <vma/vk_mem_alloc.h>
+
 namespace blaze
 {
 /**
- * @class UniformBuffer
+ * @class UBO
  *
- * @tparam T The data object to be stored in the UniformBuffer.
+ * @tparam T The data object to be stored in the UBO.
  *
  * @brief The class to handle operations on a uniform buffer.
  */
 template <typename T>
-class UniformBuffer
+class UBO
 {
 private:
-	util::Managed<BufferObject> buffer;
+	VkBuffer buffer{VK_NULL_HANDLE};
+	VmaAllocation allocation{VK_NULL_HANDLE};
+	VmaAllocator allocator{VK_NULL_HANDLE};
 	size_t size{0};
 
 public:
 	/**
-	 * @fn UniformBuffer()
+	 * @fn UBO()
 	 *
 	 * @brief Default Constructor.
 	 */
-	UniformBuffer() noexcept
+	UBO() noexcept
 	{
 	}
 
 	/**
-	 * @fn UniformBuffer(const Context& context, const T& data)
+	 * @fn UBO(const Context& context, const T& data)
 	 *
 	 * @brief Main constructor of the class.
 	 *
 	 * @param context The current Vulkan Context.
 	 * @param data The data object of type T to store.
 	 */
-	UniformBuffer(const Context& context, const T& data) : size(sizeof(data))
+	UBO(const Context& context, const T& data) : size(sizeof(data))
 	{
-		VmaAllocator allocator = context.get_allocator();
+		allocator = context.get_allocator();
 
-		auto [buf, alloc] = context.createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+		std::tie(buffer, allocation) =
+			context.createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 		void* memdata;
-		vmaMapMemory(allocator, alloc, &memdata);
+		vmaMapMemory(allocator, allocation, &memdata);
 		memcpy(memdata, &data, size);
-		vmaUnmapMemory(allocator, alloc);
-
-		buffer = util::Managed<BufferObject>(
-			{buf, alloc}, [allocator](BufferObject& buf) { vmaDestroyBuffer(allocator, buf.buffer, buf.allocation); });
+		vmaUnmapMemory(allocator, allocation);
 	}
 
 	/**
@@ -60,26 +62,40 @@ public:
 	 *
 	 * @{
 	 */
-	UniformBuffer(UniformBuffer&& other) noexcept : buffer(std::move(other.buffer)), size(other.size)
+	UBO(UBO&& other) noexcept : UBO()
 	{
+		std::swap(buffer, other.buffer);
+		std::swap(allocation, other.allocation);
+		std::swap(allocator, other.allocator);
+		std::swap(size, other.size);
 	}
 
-	UniformBuffer& operator=(UniformBuffer&& other) noexcept
+	UBO& operator=(UBO&& other) noexcept
 	{
 		if (this == &other)
 		{
 			return *this;
 		}
-		buffer = std::move(other.buffer);
-		size = other.size;
+		std::swap(buffer, other.buffer);
+		std::swap(allocation, other.allocation);
+		std::swap(allocator, other.allocator);
+		std::swap(size, other.size);
 		return *this;
 	}
 
-	UniformBuffer(const UniformBuffer& other) = delete;
-	UniformBuffer& operator=(const UniformBuffer& other) = delete;
+	UBO(const UBO& other) = delete;
+	UBO& operator=(const UBO& other) = delete;
 	/**
 	 * @}
 	 */
+
+	~UBO()
+	{
+		if (buffer != VK_NULL_HANDLE)
+		{
+			vmaDestroyBuffer(allocator, buffer, allocation);
+		}
+	}
 
 	/**
 	 * @name Getters.
@@ -88,17 +104,9 @@ public:
 	 *
 	 * @{
 	 */
-	VkBuffer get_buffer() const
+	VkDescriptorBufferInfo get_descriptorInfo() const
 	{
-		return buffer.get().buffer;
-	}
-	VmaAllocation get_allocation() const
-	{
-		return buffer.get().allocation;
-	}
-	size_t get_size() const
-	{
-		return size;
+		return VkDescriptorBufferInfo{buffer, 0, size};
 	}
 	/**
 	 * @}
@@ -112,12 +120,12 @@ public:
 	 * @param context The Vulkan Context in use.
 	 * @param data The data to write to the uniform buffer.
 	 */
-	void write(const Context& context, const T& data)
+	void write(const T& data)
 	{
 		void* dataPtr;
-		vmaMapMemory(context.get_allocator(), buffer.get().allocation, &dataPtr);
+		vmaMapMemory(allocator, allocation, &dataPtr);
 		memcpy(dataPtr, &data, size);
-		vmaUnmapMemory(context.get_allocator(), buffer.get().allocation);
+		vmaUnmapMemory(allocator, allocation);
 	}
 };
 } // namespace blaze
