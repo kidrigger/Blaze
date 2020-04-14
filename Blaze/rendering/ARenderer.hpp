@@ -1,12 +1,13 @@
 
 #pragma once
 
+#include "Renderer.hpp"
+#include <core/Camera.hpp>
 #include <core/Context.hpp>
 #include <core/Swapchain.hpp>
 #include <gui/GUI.hpp>
-#include <core/Camera.hpp>
-#include "Renderer.hpp"
 #include <util/Managed.hpp>
+#include <util/PackedHandler.hpp>
 #include <vkwrap/VkWrap.hpp>
 
 namespace blaze
@@ -14,7 +15,7 @@ namespace blaze
 class ARenderer
 {
 protected:
-	uint32_t max_frames_in_flight{2};
+	uint32_t maxFrameInFlight{2};
 	bool isComplete{false};
 	bool windowResized{false};
 
@@ -25,13 +26,14 @@ protected:
 	std::unique_ptr<GUI> gui;
 	Camera* camera{nullptr};
 
-	util::ManagedVector<VkCommandBuffer, false> commandBuffers;
+	vkw::CommandBufferVector commandBuffers;
 
 	vkw::SemaphoreVector imageAvailableSem;
 	vkw::SemaphoreVector renderFinishedSem;
 	vkw::FenceVector inFlightFences;
 
-	std::vector<Drawable*> drawables;
+	using DrawList = util::PackedHandler<Drawable*>;
+	DrawList drawables;
 
 public:
 	ARenderer() noexcept
@@ -39,13 +41,18 @@ public:
 	}
 
 	ARenderer(GLFWwindow* window, bool enableValidationLayers = true) noexcept;
-	
+
 	ARenderer(ARenderer&& other) = delete;
 	ARenderer& operator=(ARenderer&& other) = delete;
 	ARenderer(const ARenderer& other) = delete;
 	ARenderer& operator=(const ARenderer& other) = delete;
 
 	void render();
+
+	[[nodiscard]] DrawList::Handle submit(Drawable* sub)
+	{
+		return drawables.add(sub);
+	}
 
 	bool complete()
 	{
@@ -57,7 +64,7 @@ public:
 	}
 
 protected:
-	virtual void renderFrame() = 0;
+	virtual void update() = 0;
 
 	void recreateSwapchain();
 	virtual void recreateSwapchainDependents() = 0;
@@ -70,13 +77,14 @@ protected:
 	}
 
 	void rebuildAllCommandBuffers();
-
+	void rebuildCommandBuffer(uint32_t frame);
 	// This is ONLY the renderpasses from the renderer
-	virtual void rebuildCommandBuffer(VkCommandBuffer cmd) = 0;
+	virtual void recordCommands(uint32_t frame) = 0;
 
 private:
 	vkw::SemaphoreVector createSemaphores(uint32_t imageCount) const;
 	vkw::FenceVector createFences(uint32_t imageCount) const;
-	std::vector<VkCommandBuffer> allocateCommandBuffers(uint32_t imageCount) const;
+	vkw::CommandBufferVector allocateCommandBuffers(uint32_t imageCount) const;
+	void setupPerFrameData(uint32_t numFrames);
 };
 } // namespace blaze

@@ -5,8 +5,8 @@
 #include <GLFW/glfw3.h>
 
 #include <core/Context.hpp>
-#include <util/Managed.hpp>
 #include <vector>
+#include <vkwrap/VkWrap.hpp>
 
 namespace blaze
 {
@@ -20,12 +20,12 @@ namespace blaze
 class Swapchain
 {
 private:
-	util::Managed<VkSwapchainKHR> swapchain;
-	util::Unmanaged<VkFormat> format;
-	util::Unmanaged<VkExtent2D> extent;
+	vkw::SwapchainKHR swapchain;
+	VkFormat format;
+	VkExtent2D extent;
 
-	util::UnmanagedVector<VkImage> images;
-	util::ManagedVector<VkImageView> imageViews;
+	std::vector<VkImage> images;
+	vkw::ImageViewVector imageViews;
 
 	uint32_t count{0};
 
@@ -42,11 +42,11 @@ public:
 	}
 	const VkFormat& get_format() const
 	{
-		return format.get();
+		return format;
 	}
 	const VkExtent2D& get_extent() const
 	{
-		return extent.get();
+		return extent;
 	}
 	const std::vector<VkImageView>& get_imageViews() const
 	{
@@ -80,14 +80,14 @@ public:
 	 *
 	 * @param context Context reference.
 	 */
-	Swapchain(const Context& context) noexcept;
+	Swapchain(const Context* context) noexcept;
 
 	/**
 	 * @fn recreate(const Context& context)
 	 *
 	 * @brief Recreates the swapchain due to changes in screen size etc.
 	 */
-	void recreate(const Context& context) noexcept;
+	void recreate(const Context* context) noexcept;
 
 	/**
 	 * @name Move Constructors
@@ -105,8 +105,8 @@ public:
 	 */
 
 private:
-	std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> createSwapchain(const Context& context) const;
-	std::vector<VkImage> getImages(const Context& context) const;
-	std::vector<VkImageView> createImageViews(const Context& context) const;
+	void createSwapchain(const Context* context);
+	std::vector<VkImage> getImages(const Context* context) const;
+	vkw::ImageViewVector createImageViews(const Context* context) const;
 };
 } // namespace blaze

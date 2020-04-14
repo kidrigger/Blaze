@@ -313,7 +313,6 @@ void run()
 	auto brdfLut = createBrdfLut(renderer->get_context());
 	writeToDescriptor(ds.get(), {{3, brdfLut.get_imageInfo()}});
 
-	auto model = loadModel(*renderer, settings.filename);
 
 	renderer->set_skyboxCommand([&vbo](VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frameCount) {
 		VkBuffer vbufs[] = {vbo.get_vertexBuffer()};
@@ -332,7 +331,9 @@ void run()
 	double elapsed = 0.0;
 
 	renderer->set_environmentDescriptor(ds.get());
-	renderer->submit(&model);
+	auto model = loadModel(*renderer, settings.filename);
+
+	auto modelHandle = renderer->submit(&model);
 
 	while (!glfwWindowShouldClose(window))
 	{

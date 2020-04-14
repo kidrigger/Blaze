@@ -4,8 +4,8 @@
 #include <Datatypes.hpp>
 #include <glm/glm.hpp>
 
-#include <rendering/FwdRenderer.hpp>
 #include <core/Camera.hpp>
+#include <rendering/FwdRenderer.hpp>
 
 namespace blaze
 {
@@ -94,14 +94,14 @@ void runRefactored()
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	// Renderer creation
-	
+
 	//*
 	renderer = make_unique<FwdRenderer>(window, enableValidationLayers);
 	/*/
 	auto f = new FwdRenderer(window, enableValidationLayers);
 	//*/
 	assert(renderer->complete());
-	
+
 	// Run
 	bool onetime = true;
 
@@ -124,6 +124,20 @@ void runRefactored()
 				mouseEnabled = false;
 				glfwSetWindowShouldClose(window, GLFW_TRUE);
 			}
+
+			GUI::startFrame();
+			{
+				if (ImGui::Begin("Settings"))
+				{
+					bool quit = ImGui::Button("Exit");
+					if (quit)
+					{
+						glfwSetWindowShouldClose(window, GLFW_TRUE);
+					}
+				}
+				ImGui::End();
+			}
+			GUI::endFrame();
 
 			renderer->render();
 

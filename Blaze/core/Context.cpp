@@ -132,7 +132,7 @@ ImageObject Context::createImageCube(uint32_t width, uint32_t height, uint32_t m
 	return ImageObject{image, allocation, format};
 }
 
-VkInstance Context::createInstance(const std::vector<const char*>& requiredExtensions) const
+vkw::Instance Context::createInstance(const std::vector<const char*>& requiredExtensions) const
 {
 	VkInstance instance = VK_NULL_HANDLE;
 	auto debugMessengerCreateInfo = util::createDebugMessengerCreateInfo();
@@ -172,7 +172,7 @@ VkInstance Context::createInstance(const std::vector<const char*>& requiredExten
 	{
 		std::cout << "VK Instance Created." << std::endl;
 	}
-	return instance;
+	return vkw::Instance(instance);
 }
 
 std::vector<const char*> Context::getRequiredInstanceExtensions() const
@@ -202,13 +202,11 @@ void Context::setupDebugMessenger()
 		{
 			throw std::runtime_error("Debug messenger creation failed with " + std::to_string(result));
 		}
-		debugMessenger = util::Managed(dm, [inst = instance.get()](VkDebugUtilsMessengerEXT& dm) {
-			util::destroyDebugUtilsMessengerEXT(inst, dm, nullptr);
-		});
+		debugMessenger = vkw::DebugUtilsMessengerEXT(dm, instance.get());
 	}
 }
 
-VkSurfaceKHR Context::createSurface(GLFWwindow* window) const
+vkw::SurfaceKHR Context::createSurface(GLFWwindow* window) const
 {
 	VkSurfaceKHR surface;
 	auto result = glfwCreateWindowSurface(instance.get(), window, nullptr, &surface);
@@ -216,10 +214,10 @@ VkSurfaceKHR Context::createSurface(GLFWwindow* window) const
 	{
 		throw std::runtime_error("Surface creation failed with " + std::to_string(result));
 	}
-	return surface;
+	return vkw::SurfaceKHR(surface, instance.get());
 }
 
-VkPhysicalDevice Context::getPhysicalDevice() const
+vkw::PhysicalDevice Context::getPhysicalDevice() const
 {
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(instance.get(), &deviceCount, nullptr);
@@ -236,14 +234,14 @@ VkPhysicalDevice Context::getPhysicalDevice() const
 	{
 		if (util::isDeviceSuitable(physicalDevice, surface.get(), deviceExtensions))
 		{
-			return physicalDevice;
+			return vkw::PhysicalDevice(physicalDevice);
 		}
 	}
 
 	throw std::runtime_error("Suitable Device Not Found");
 }
 
-VkDevice Context::createLogicalDevice() const
+vkw::Device Context::createLogicalDevice() const
 {
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<uint32_t> uniqueQueueFamilies = {queueFamilyIndices.graphicsIndex.value(),
@@ -283,21 +281,21 @@ VkDevice Context::createLogicalDevice() const
 
 	VkDevice device;
 	auto result = vkCreateDevice(physicalDevice.get(), &createInfo, nullptr, &device);
-	if (result == VK_SUCCESS)
+	if (result != VK_SUCCESS)
 	{
-		return device;
+		throw std::runtime_error("Device Creation failed with " + std::to_string(result));
 	}
-	throw std::runtime_error("Device Creation failed with " + std::to_string(result));
+	return vkw::Device(device);
 }
 
-VkQueue Context::getQueue(uint32_t index) const
+vkw::Queue Context::getQueue(uint32_t index) const
 {
 	VkQueue queue;
 	vkGetDeviceQueue(device.get(), index, 0, &queue);
-	return queue;
+	return vkw::Queue(queue);
 }
 
-VkCommandPool Context::createCommandPool(uint32_t queueIndex) const
+vkw::CommandPool Context::createCommandPool(uint32_t queueIndex) const
 {
 	VkCommandPool commandPool;
 	VkCommandPoolCreateInfo createInfo = {};
@@ -310,10 +308,10 @@ VkCommandPool Context::createCommandPool(uint32_t queueIndex) const
 	{
 		throw std::runtime_error("CommandPool creation failed with " + std::to_string(result));
 	}
-	return commandPool;
+	return vkw::CommandPool(commandPool, device.get());
 }
 
-VmaAllocator Context::createAllocator() const
+vkw::MemAllocator Context::createAllocator() const
 {
 	VmaAllocatorCreateInfo createInfo = {};
 	createInfo.physicalDevice = physicalDevice.get();
@@ -322,7 +320,7 @@ VmaAllocator Context::createAllocator() const
 	VmaAllocator alloc;
 	vmaCreateAllocator(&createInfo, &alloc);
 
-	return alloc;
+	return vkw::MemAllocator(alloc);
 };
 
 VkCommandBuffer Context::startCommandBufferRecord() const
@@ -393,20 +391,15 @@ Context::Context(GLFWwindow* window, bool enableValidationLayers) noexcept
 		{
 			throw std::runtime_error("Validation layers not supported.");
 		}
-		instance = util::Managed(createInstance(requiredExtensions),
-								 [](VkInstance& inst) { vkDestroyInstance(inst, nullptr); });
+		instance = createInstance(requiredExtensions);
 		setupDebugMessenger();
-		surface = util::Managed(createSurface(window), [inst = instance.get()](VkSurfaceKHR& surface) {
-			vkDestroySurfaceKHR(inst, surface, nullptr);
-		});
+		surface = createSurface(window);
 		physicalDevice = getPhysicalDevice();
 		queueFamilyIndices = util::getQueueFamilies(physicalDevice.get(), surface.get());
-		device = util::Managed(createLogicalDevice(), [](VkDevice& device) { vkDestroyDevice(device, nullptr); });
+		device = createLogicalDevice();
 		graphicsQueue = getQueue(queueFamilyIndices.graphicsIndex.value());
 		presentQueue = getQueue(queueFamilyIndices.presentIndex.value());
-		graphicsCommandPool = util::Managed(
-			createCommandPool(queueFamilyIndices.graphicsIndex.value()),
-			[dev = device.get()](VkCommandPool& commandPool) { vkDestroyCommandPool(dev, commandPool, nullptr); });
+		graphicsCommandPool = createCommandPool(queueFamilyIndices.graphicsIndex.value());
 
 		{
 			VkPhysicalDeviceProperties props;
@@ -414,7 +407,7 @@ Context::Context(GLFWwindow* window, bool enableValidationLayers) noexcept
 			std::cout << "Using " << props.deviceName << std::endl;
 		}
 
-		allocator = util::Managed(createAllocator(), [](VmaAllocator& alloc) { vmaDestroyAllocator(alloc); });
+		allocator = createAllocator();
 
 		isComplete = true;
 	}

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <stb_image.h>
 #include <util/createFunctions.hpp>
+#include <util/Managed.hpp>
 
 namespace blaze
 {

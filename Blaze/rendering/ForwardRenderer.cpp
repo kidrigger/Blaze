@@ -86,7 +86,7 @@ void ForwardRenderer::renderFrame()
 		throw runtime_error("Image acquiring failed with " + to_string(result));
 	}
 
-	currentFrame = (currentFrame + 1) % max_frames_in_flight;
+	currentFrame = (currentFrame + 1) % maxFrameInFlight;
 }
 
 VkRenderPass ForwardRenderer::createRenderPass() const
@@ -317,7 +317,7 @@ void ForwardRenderer::rebuildCommandBuffer(int frame)
 		throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 	}
 
-	lightSystem.cast(context, camera, commandBuffers[frame], drawables);
+	lightSystem.cast(context, camera, commandBuffers[frame], drawables.get_data());
 
 	VkRenderPassBeginInfo renderpassBeginInfo = {};
 	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -424,7 +424,7 @@ ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers
 	try
 	{
 
-		swapchain = Swapchain(context);
+		swapchain = Swapchain(&context);
 
 		lightSystem = LightSystem(context);
 
@@ -457,7 +457,7 @@ ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers
 				vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data());
 			});
 
-		max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
+		maxFrameInFlight = static_cast<uint32_t>(commandBuffers.size());
 
 		{
 			auto [startSems, endSems, fences] = createSyncObjects();
@@ -466,7 +466,7 @@ ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers
 			inFlightFences = vkw::FenceVector(std::move(fences), context.get_device());
 		}
 
-		gui = GUI(context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
+		gui = GUI(&context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
 
 		recordCommandBuffers();
 
@@ -547,7 +547,7 @@ void ForwardRenderer::recreateSwapchain()
 		}
 
 		using namespace util;
-		swapchain.recreate(context);
+		swapchain.recreate(&context);
 
 		depthBufferTexture = createDepthBuffer();
 
@@ -574,7 +574,7 @@ void ForwardRenderer::recreateSwapchain()
 				vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data());
 			});
 
-		gui.recreate(context, swapchain.get_extent(), swapchain.get_imageViews());
+		gui.recreate(&context, swapchain.get_extent(), swapchain.get_imageViews());
 
 		recordCommandBuffers();
 	}

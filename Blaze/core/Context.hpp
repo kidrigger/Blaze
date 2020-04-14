@@ -3,8 +3,8 @@
 
 #include <Datatypes.hpp>
 #include <util/DeviceSelection.hpp>
-#include <util/Managed.hpp>
 #include <util/debugMessenger.hpp>
+#include <vkwrap/VkWrap.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -38,18 +38,18 @@ private:
 		VK_KHR_MULTIVIEW_EXTENSION_NAME,
 	};
 
-	util::Managed<VkInstance> instance;
-	util::Managed<VkDebugUtilsMessengerEXT> debugMessenger;
-	util::Managed<VkSurfaceKHR> surface;
-	util::Unmanaged<VkPhysicalDevice> physicalDevice;
-	util::Managed<VkDevice> device;
+	vkw::Instance instance;
+	vkw::DebugUtilsMessengerEXT debugMessenger;
+	vkw::SurfaceKHR surface;
+	vkw::PhysicalDevice physicalDevice;
+	vkw::Device device;
 
 	util::QueueFamilyIndices queueFamilyIndices;
-	util::Unmanaged<VkQueue> graphicsQueue;
-	util::Unmanaged<VkQueue> presentQueue;
-	util::Managed<VkCommandPool> graphicsCommandPool;
+	vkw::Queue graphicsQueue;
+	vkw::Queue presentQueue;
+	vkw::CommandPool graphicsCommandPool;
 
-	util::Managed<VmaAllocator> allocator;
+	vkw::MemAllocator allocator;
 
 	GLFWwindow* window{nullptr};
 
@@ -260,14 +260,14 @@ public:
 	 */
 
 private:
-	VkInstance createInstance(const std::vector<const char*>& requiredExtensions) const;
+	vkw::Instance createInstance(const std::vector<const char*>& requiredExtensions) const;
 	std::vector<const char*> getRequiredInstanceExtensions() const;
 	void setupDebugMessenger();
-	VkSurfaceKHR createSurface(GLFWwindow* window) const;
-	VkPhysicalDevice getPhysicalDevice() const;
-	VkDevice createLogicalDevice() const;
-	VkQueue getQueue(uint32_t index) const;
-	VkCommandPool createCommandPool(uint32_t queueIndex) const;
-	VmaAllocator createAllocator() const;
+	vkw::SurfaceKHR createSurface(GLFWwindow* window) const;
+	vkw::PhysicalDevice getPhysicalDevice() const;
+	vkw::Device createLogicalDevice() const;
+	vkw::Queue getQueue(uint32_t index) const;
+	vkw::CommandPool createCommandPool(uint32_t queueIndex) const;
+	vkw::MemAllocator createAllocator() const;
 };
 } // namespace blaze

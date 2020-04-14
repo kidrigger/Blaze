@@ -18,6 +18,7 @@
 #undef min
 
 #include <algorithm>
+#include <vkwrap/VkWrap.hpp>
 
 namespace blaze
 {
@@ -45,12 +46,12 @@ private:
 
 	uint32_t width{0};
 	uint32_t height{0};
-	util::Managed<VkDescriptorPool> descriptorPool;
-	util::Managed<VkRenderPass> renderPass;
-	util::ManagedVector<VkFramebuffer> framebuffers;
+	vkw::DescriptorPool descriptorPool;
+	vkw::RenderPass renderPass;
+	vkw::FramebufferVector framebuffers;
 	bool valid;
 
-	static bool complete;
+	inline static bool complete = false;
 
 public:
 	/**
@@ -68,9 +69,8 @@ public:
 	 *
 	 * @brief Constructor of the object. Initializes ImGUI and required resources.
 	 */
-	GUI(const Context& context, const VkExtent2D& size, const VkFormat& format,
-		const std::vector<VkImageView>& swapchainImageViews)
-	noexcept;
+	GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
+		const std::vector<VkImageView>& swapchainImageViews) noexcept;
 
 	/**
 	 * @name Move Constructors
@@ -99,7 +99,7 @@ public:
 	 * @param size The size of the framebuffer.
 	 * @param swapchainImageViews The imageviews of the current swapchain.
 	 */
-	void recreate(const Context& context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews);
+	void recreate(const Context* context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews);
 
 	/**
 	 * @fn startFrame
@@ -136,7 +136,6 @@ public:
 	~GUI();
 
 private:
-	std::vector<VkFramebuffer> createSwapchainFramebuffers(VkDevice device,
-														   const std::vector<VkImageView>& swapchainImageViews) const;
+	vkw::FramebufferVector createSwapchainFramebuffers(VkDevice device, const std::vector<VkImageView>& swapchainImageViews) const;
 };
 } // namespace blaze

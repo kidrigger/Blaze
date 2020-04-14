@@ -6,6 +6,7 @@
 #include <LightSystem.hpp>
 #include <core/Context.hpp>
 #include <util/Managed.hpp>
+#include <util/PackedHandler.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -17,9 +18,10 @@ using RenderCommand = std::function<void(VkCommandBuffer buf, VkPipelineLayout l
 
 class Renderer
 {
+protected:
+	using HSub = util::PackedHandler<Drawable*>::Handle;
 public:
-
-	virtual void submit(Drawable* drawable) = 0;
+	[[nodiscard]] virtual util::PackedHandler<Drawable*>::Handle submit(Drawable* drawable) = 0;
 	virtual void renderFrame() = 0;
 
 	virtual void set_environmentDescriptor(VkDescriptorSet envDS) = 0;

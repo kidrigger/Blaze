@@ -14,6 +14,7 @@
 #include <util/Managed.hpp>
 #include <util/createFunctions.hpp>
 #include <vkwrap/VkWrap.hpp>
+#include <util/PackedHandler.hpp>
 
 #include <map>
 #include <string>
@@ -33,7 +34,7 @@ namespace blaze
 class ForwardRenderer : public Renderer
 {
 private:
-	uint32_t max_frames_in_flight{2};
+	uint32_t maxFrameInFlight{2};
 	bool isComplete{false};
 	bool windowResized{false};
 
@@ -68,7 +69,7 @@ private:
 	vkw::SemaphoreVector renderFinishedSem;
 	vkw::FenceVector inFlightFences;
 
-	std::vector<Drawable*> drawables;
+	util::PackedHandler<Drawable*> drawables;
 	VkDescriptorSet environmentDescriptor{VK_NULL_HANDLE};
 	RenderCommand skyboxCommand;
 
@@ -221,9 +222,9 @@ public:
 	 *
 	 * @brief Submits a Drawable to draw to screen.
 	 */
-	void submit(Drawable* cmd)
+	[[nodiscard]] HSub submit(Drawable* cmd)
 	{
-		drawables.push_back(cmd);
+		return drawables.add(cmd);
 	}
 
 	/**

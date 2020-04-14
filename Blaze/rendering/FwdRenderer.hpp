@@ -13,6 +13,8 @@ class FwdRenderer final : public ARenderer
 {
 private:
 	vkw::RenderPass renderPass;
+	Texture2D depthBuffer;
+	vkw::FramebufferVector renderFramebuffers;
 
 public:
 	/**
@@ -53,8 +55,13 @@ public:
 	}
 
 protected:
-	void renderFrame();
-	void rebuildCommandBuffer(VkCommandBuffer cmd);
+	void update();
+	void recordCommands(uint32_t frame);
 	void recreateSwapchainDependents();
+
+private:
+	vkw::RenderPass createRenderpass() const;
+	Texture2D createDepthBuffer() const;
+	vkw::FramebufferVector createFramebuffers() const;
 };
 } // namespace blaze

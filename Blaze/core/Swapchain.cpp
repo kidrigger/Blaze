@@ -6,10 +6,10 @@
 
 namespace blaze
 {
-std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(const Context& context) const
+void Swapchain::createSwapchain(const Context* context)
 {
 	util::SwapchainSupportDetails swapchainSupport =
-		util::getSwapchainSupport(context.get_physicalDevice(), context.get_surface());
+		util::getSwapchainSupport(context->get_physicalDevice(), context->get_surface());
 
 	VkSurfaceFormatKHR surfaceFormat = swapchainSupport.formats[0];
 	for (const auto& availableFormat : swapchainSupport.formats)
@@ -21,6 +21,7 @@ std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(cons
 			break;
 		}
 	}
+	format = surfaceFormat.format;
 
 	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
 	for (const auto& availablePresentMode : swapchainSupport.presentModes)
@@ -36,19 +37,18 @@ std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(cons
 		}
 	}
 
-	VkExtent2D swapExtent;
 	auto capabilities = swapchainSupport.capabilities;
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 	{
-		swapExtent = capabilities.currentExtent;
+		extent = capabilities.currentExtent;
 	}
 	else
 	{
 		int width, height;
-		glfwGetWindowSize(context.get_window(), &width, &height);
-		swapExtent.width = std::clamp(static_cast<uint32_t>(width), capabilities.minImageExtent.width,
+		glfwGetWindowSize(context->get_window(), &width, &height);
+		extent.width = std::clamp(static_cast<uint32_t>(width), capabilities.minImageExtent.width,
 									  capabilities.maxImageExtent.width);
-		swapExtent.height = std::clamp(static_cast<uint32_t>(height), capabilities.minImageExtent.height,
+		extent.height = std::clamp(static_cast<uint32_t>(height), capabilities.minImageExtent.height,
 									   capabilities.maxImageExtent.height);
 	}
 
@@ -60,11 +60,11 @@ std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(cons
 
 	VkSwapchainCreateInfoKHR createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = context.get_surface();
+	createInfo.surface = context->get_surface();
 	createInfo.minImageCount = imageCount;
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
-	createInfo.imageExtent = swapExtent;
+	createInfo.imageExtent = extent;
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	createInfo.preTransform = swapchainSupport.capabilities.currentTransform;
@@ -73,7 +73,7 @@ std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(cons
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = swapchain.get();
 
-	auto queueIndices = context.get_queueFamilyIndices();
+	auto queueIndices = context->get_queueFamilyIndices();
 	uint32_t queueFamilyIndices[] = {queueIndices.graphicsIndex.value(), queueIndices.presentIndex.value()};
 	if (queueIndices.graphicsIndex != queueIndices.presentIndex)
 	{
@@ -88,66 +88,56 @@ std::tuple<VkSwapchainKHR, VkFormat, VkExtent2D> Swapchain::createSwapchain(cons
 		createInfo.pQueueFamilyIndices = nullptr;
 	}
 
-	VkSwapchainKHR swapchain;
-	auto result = vkCreateSwapchainKHR(context.get_device(), &createInfo, nullptr, &swapchain);
+	VkSwapchainKHR schain;
+	auto result = vkCreateSwapchainKHR(context->get_device(), &createInfo, nullptr, &schain);
 	if (result != VK_SUCCESS)
 	{
 		throw std::runtime_error("Swapchain creation failed with " + std::to_string(result));
 	}
-	return std::make_tuple(swapchain, surfaceFormat.format, swapExtent);
+	swapchain = vkw::SwapchainKHR(schain, context->get_device());
 }
 
-std::vector<VkImage> Swapchain::getImages(const Context& context) const
+std::vector<VkImage> Swapchain::getImages(const Context* context) const
 {
 	uint32_t swapchainImageCount = 0;
 	std::vector<VkImage> swapchainImages;
-	vkGetSwapchainImagesKHR(context.get_device(), swapchain.get(), &swapchainImageCount, nullptr);
+	vkGetSwapchainImagesKHR(context->get_device(), swapchain.get(), &swapchainImageCount, nullptr);
 	swapchainImages.resize(swapchainImageCount);
-	vkGetSwapchainImagesKHR(context.get_device(), swapchain.get(), &swapchainImageCount, swapchainImages.data());
+	vkGetSwapchainImagesKHR(context->get_device(), swapchain.get(), &swapchainImageCount, swapchainImages.data());
 	return swapchainImages;
 }
 
-std::vector<VkImageView> Swapchain::createImageViews(const Context& context) const
+vkw::ImageViewVector Swapchain::createImageViews(const Context* context) const
 {
-	std::vector<VkImageView> swapchainImageViews(images.size());
+	std::vector<VkImageView> swapchainImageViews;
+	swapchainImageViews.reserve(images.size());
 	for (size_t i = 0; i < images.size(); i++)
 	{
-		swapchainImageViews[i] = util::createImageView(context.get_device(), images[i], VK_IMAGE_VIEW_TYPE_2D,
-													   format.get(), VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
+		swapchainImageViews.push_back(util::createImageView(context->get_device(), images[i], VK_IMAGE_VIEW_TYPE_2D,
+															format, VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
 	}
-	return swapchainImageViews;
+	return vkw::ImageViewVector(std::move(swapchainImageViews), context->get_device());
 }
 
-Swapchain::Swapchain(const Context& context) noexcept
+Swapchain::Swapchain(const Context* context) noexcept
 {
 	using namespace util;
-	auto [swapc, swapcFormat, swapcExtent] = createSwapchain(context);
-	swapchain = Managed(
-		swapc, [dev = context.get_device()](VkSwapchainKHR& swpc) { vkDestroySwapchainKHR(dev, swpc, nullptr); });
-	format = swapcFormat;
-	extent = swapcExtent;
+	
+	createSwapchain(context);
 
 	images = getImages(context);
-	imageViews = ManagedVector(createImageViews(context), [dev = context.get_device()](VkImageView& view) {
-		vkDestroyImageView(dev, view, nullptr);
-	});
+	imageViews = createImageViews(context);
 
 	count = static_cast<uint32_t>(images.size());
 }
 
-void Swapchain::recreate(const Context& context) noexcept
+void Swapchain::recreate(const Context* context) noexcept
 {
 	using namespace util;
-	auto [swapc, swapcFormat, swapcExtent] = createSwapchain(context);
-	swapchain = Managed(
-		swapc, [dev = context.get_device()](VkSwapchainKHR& swpc) { vkDestroySwapchainKHR(dev, swpc, nullptr); });
-	format = swapcFormat;
-	extent = swapcExtent;
+	createSwapchain(context);
 
 	images = getImages(context);
-	imageViews = ManagedVector(createImageViews(context), [dev = context.get_device()](VkImageView& view) {
-		vkDestroyImageView(dev, view, nullptr);
-	});
+	imageViews = createImageViews(context);
 
 	count = static_cast<uint32_t>(images.size());
 }

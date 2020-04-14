@@ -16,21 +16,11 @@ ARenderer::ARenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 	});
 
 	context = make_unique<Context>(window, enableValidationLayers);
-	swapchain = make_unique<Swapchain>(*context);
+	swapchain = make_unique<Swapchain>(context.get());
 
-	commandBuffers = ManagedVector<VkCommandBuffer, false>(
-		allocateCommandBuffers(swapchain->get_imageCount()),
-		[dev = context->get_device(), pool = context->get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) {
-			vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data());
-		});
+	setupPerFrameData(swapchain->get_imageCount());
 
-	max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
-
-	imageAvailableSem = createSemaphores(swapchain->get_imageCount());
-	renderFinishedSem = createSemaphores(swapchain->get_imageCount());
-	inFlightFences = createFences(swapchain->get_imageCount());
-
-	gui = make_unique<GUI>(*context, swapchain->get_extent(), swapchain->get_format(), swapchain->get_imageViews());
+	gui = make_unique<GUI>(context.get(), swapchain->get_extent(), swapchain->get_format(), swapchain->get_imageViews());
 }
 
 void ARenderer::render()
@@ -43,7 +33,8 @@ void ARenderer::render()
 							  imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
 	vkWaitForFences(context->get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 
-	renderFrame();
+	update();
+	rebuildCommandBuffer(imageIndex);
 
 	if (result != VK_SUCCESS)
 	{
@@ -96,7 +87,7 @@ void ARenderer::render()
 		throw runtime_error("Image acquiring failed with " + to_string(result));
 	}
 
-	currentFrame = (currentFrame + 1) % max_frames_in_flight;
+	currentFrame = (currentFrame + 1) % maxFrameInFlight;
 }
 
 vkw::SemaphoreVector ARenderer::createSemaphores(uint32_t imageCount) const
@@ -121,7 +112,7 @@ vkw::FenceVector ARenderer::createFences(uint32_t imageCount) const
 	return vkw::FenceVector(std::move(fences), context->get_device());
 }
 
-std::vector<VkCommandBuffer> ARenderer::allocateCommandBuffers(uint32_t imageCount) const
+vkw::CommandBufferVector ARenderer::allocateCommandBuffers(uint32_t imageCount) const
 {
 	std::vector<VkCommandBuffer> commandBuffers(imageCount);
 
@@ -131,11 +122,12 @@ std::vector<VkCommandBuffer> ARenderer::allocateCommandBuffers(uint32_t imageCou
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 	auto result = vkAllocateCommandBuffers(context->get_device(), &allocInfo, commandBuffers.data());
-	if (result == VK_SUCCESS)
+	if (result != VK_SUCCESS)
 	{
-		return commandBuffers;
+		throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
 	}
-	throw std::runtime_error("Command buffer alloc failed with " + std::to_string(result));
+	return vkw::CommandBufferVector(std::move(commandBuffers), context->get_graphicsCommandPool(),
+									context->get_device());
 }
 
 void ARenderer::recreateSwapchain()
@@ -151,24 +143,14 @@ void ARenderer::recreateSwapchain()
 		}
 
 		using namespace util;
-		swapchain->recreate(*context);
+		swapchain->recreate(context.get());
 
-		commandBuffers = ManagedVector<VkCommandBuffer, false>(
-			allocateCommandBuffers(swapchain->get_imageCount()),
-			[dev = context->get_device(), pool = context->get_graphicsCommandPool()](std::vector<VkCommandBuffer>& buf) {
-				vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data());
-			});
+		setupPerFrameData(swapchain->get_imageCount());
 
-		max_frames_in_flight = static_cast<uint32_t>(commandBuffers.size());
-
-		imageAvailableSem = createSemaphores(swapchain->get_imageCount());
-		renderFinishedSem = createSemaphores(swapchain->get_imageCount());
-		inFlightFences = createFences(swapchain->get_imageCount());
+		gui->recreate(context.get(), swapchain->get_extent(), swapchain->get_imageViews());
 
 		// Recreate all number based
 		recreateSwapchainDependents();
-
-		gui->recreate(*context, swapchain->get_extent(), swapchain->get_imageViews());
 
 		// Record commands
 		rebuildAllCommandBuffers();
@@ -179,33 +161,49 @@ void ARenderer::recreateSwapchain()
 	}
 }
 
-
 void ARenderer::rebuildAllCommandBuffers()
 {
-	for (int frame = 0; frame < commandBuffers.size(); frame++)
+	for (uint32_t frame = 0; frame < maxFrameInFlight; frame++)
 	{
-		vkWaitForFences(context->get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-
-		VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-		auto result = vkBeginCommandBuffer(commandBuffers[frame], &commandBufferBeginInfo);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
-		}
-
-		rebuildCommandBuffer(commandBuffers[frame]);
-
-		gui->draw(commandBuffers[frame], frame);
-
-		result = vkEndCommandBuffer(commandBuffers[frame]);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
-		}
+		rebuildCommandBuffer(frame);
 	}
+}
+
+void ARenderer::rebuildCommandBuffer(uint32_t frame)
+{
+	vkWaitForFences(context->get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+
+	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+	auto result = vkBeginCommandBuffer(commandBuffers[frame], &commandBufferBeginInfo);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
+	}
+
+	recordCommands(frame);
+
+	gui->draw(commandBuffers[frame], frame);
+
+	result = vkEndCommandBuffer(commandBuffers[frame]);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
+	}
+}
+
+void ARenderer::setupPerFrameData(uint32_t numFrames)
+{
+
+	commandBuffers = allocateCommandBuffers(numFrames);
+
+	maxFrameInFlight = numFrames;
+
+	imageAvailableSem = createSemaphores(numFrames);
+	renderFinishedSem = createSemaphores(numFrames);
+	inFlightFences = createFences(numFrames);
 }
 
 } // namespace blaze

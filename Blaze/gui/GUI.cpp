@@ -3,8 +3,6 @@
 
 #include <rendering/Renderer.hpp>
 
-bool blaze::GUI::complete = false;
-
 namespace blaze
 {
 
@@ -21,13 +19,11 @@ void GUI::endFrame()
 	complete = true;
 }
 
-void GUI::recreate(const Context& context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews)
+void GUI::recreate(const Context* context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews)
 {
 	width = size.width;
 	height = size.height;
-	framebuffers = util::ManagedVector(
-		createSwapchainFramebuffers(context.get_device(), swapchainImageViews),
-		[dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchainImageViews);
 }
 
 void GUI::draw(VkCommandBuffer cmdBuffer, int frameCount)
@@ -52,7 +48,7 @@ void GUI::draw(VkCommandBuffer cmdBuffer, int frameCount)
 	}
 }
 
-GUI::GUI(const Context& context, const VkExtent2D& size, const VkFormat& format,
+GUI::GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
 		 const std::vector<VkImageView>& swapchainImageViews) noexcept
 	: width(size.width), height(size.height), valid(false)
 {
@@ -67,16 +63,14 @@ GUI::GUI(const Context& context, const VkExtent2D& size, const VkFormat& format,
 													{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
 													{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
 													{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
-	descriptorPool = util::Managed(
-		util::createDescriptorPool(context.get_device(), pool_sizes, 1000),
-		[dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+	descriptorPool =
+		vkw::DescriptorPool(util::createDescriptorPool(context->get_device(), pool_sizes, 1000), context->get_device());
 
 	{
 		auto rpass =
-			util::createRenderPass(context.get_device(), format, VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			util::createRenderPass(context->get_device(), format, VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD);
-		renderPass = util::Managed(
-			rpass, [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+		renderPass = vkw::RenderPass(rpass, context->get_device());
 	}
 
 	IMGUI_CHECKVERSION();
@@ -85,14 +79,14 @@ GUI::GUI(const Context& context, const VkExtent2D& size, const VkFormat& format,
 	(void)io;
 	ImGui::StyleColorsDark();
 
-	ImGui_ImplGlfw_InitForVulkan(context.get_window(), true);
+	ImGui_ImplGlfw_InitForVulkan(context->get_window(), true);
 
 	ImGui_ImplVulkan_InitInfo init_info = {};
-	init_info.Instance = context.get_instance();
-	init_info.PhysicalDevice = context.get_physicalDevice();
-	init_info.Device = context.get_device();
-	init_info.QueueFamily = context.get_queueFamilyIndices().graphicsIndex.value();
-	init_info.Queue = context.get_graphicsQueue();
+	init_info.Instance = context->get_instance();
+	init_info.PhysicalDevice = context->get_physicalDevice();
+	init_info.Device = context->get_device();
+	init_info.QueueFamily = context->get_queueFamilyIndices().graphicsIndex.value();
+	init_info.Queue = context->get_graphicsQueue();
 	init_info.PipelineCache = VK_NULL_HANDLE;
 	init_info.DescriptorPool = descriptorPool.get();
 	init_info.Allocator = nullptr;
@@ -101,13 +95,11 @@ GUI::GUI(const Context& context, const VkExtent2D& size, const VkFormat& format,
 	init_info.CheckVkResultFn = VK_ASSERT;
 	ImGui_ImplVulkan_Init(&init_info, renderPass.get());
 
-	auto cmdBuffer = context.startCommandBufferRecord();
+	auto cmdBuffer = context->startCommandBufferRecord();
 	ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer);
-	context.flushCommandBuffer(cmdBuffer);
+	context->flushCommandBuffer(cmdBuffer);
 
-	framebuffers = util::ManagedVector(
-		createSwapchainFramebuffers(context.get_device(), swapchainImageViews),
-		[dev = context.get_device()](VkFramebuffer& fb) { vkDestroyFramebuffer(dev, fb, nullptr); });
+	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchainImageViews);
 
 	valid = true;
 }
@@ -145,7 +137,7 @@ GUI::~GUI()
 	}
 }
 
-std::vector<VkFramebuffer> GUI::createSwapchainFramebuffers(VkDevice device,
+vkw::FramebufferVector GUI::createSwapchainFramebuffers(VkDevice device,
 															const std::vector<VkImageView>& swapchainImageViews) const
 {
 	using namespace std;
@@ -174,6 +166,6 @@ std::vector<VkFramebuffer> GUI::createSwapchainFramebuffers(VkDevice device,
 			throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
 		}
 	}
-	return frameBuffers;
+	return vkw::FramebufferVector(std::move(frameBuffers), device);
 }
 } // namespace blaze
