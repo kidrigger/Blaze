@@ -1,0 +1,18 @@
+
+#pragma once
+
+constexpr struct Version
+{
+	unsigned MAJOR
+	{
+		@Blaze_VERSION_MAJOR@
+	};
+	unsigned MINOR
+	{
+		@Blaze_VERSION_MINOR@
+	};
+	unsigned BUILD
+	{
+		@Blaze_VERSION_PATCH@
+	};
+} VERSION;

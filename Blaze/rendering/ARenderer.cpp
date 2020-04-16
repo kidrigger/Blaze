@@ -20,7 +20,8 @@ ARenderer::ARenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 
 	setupPerFrameData(swapchain->get_imageCount());
 
-	gui = make_unique<GUI>(context.get(), swapchain->get_extent(), swapchain->get_format(), swapchain->get_imageViews());
+	gui =
+		make_unique<GUI>(context.get(), swapchain->get_extent(), swapchain->get_format(), swapchain->get_imageViews());
 }
 
 void ARenderer::render()
@@ -191,6 +192,31 @@ void ARenderer::rebuildCommandBuffer(uint32_t frame)
 	if (result != VK_SUCCESS)
 	{
 		throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
+	}
+}
+
+void ARenderer::clearCommandBuffers()
+{
+	for (uint32_t frame = 0; frame < maxFrameInFlight; frame++)
+	{
+		vkWaitForFences(context->get_device(), 1, &inFlightFences[frame], VK_TRUE,
+						std::numeric_limits<uint64_t>::max());
+
+		VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+		auto result = vkBeginCommandBuffer(commandBuffers[frame], &commandBufferBeginInfo);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
+		}
+
+		result = vkEndCommandBuffer(commandBuffers[frame]);
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("End Command Buffer failed with " + std::to_string(result));
+		}
 	}
 }
 

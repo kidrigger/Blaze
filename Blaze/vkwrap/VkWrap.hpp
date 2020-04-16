@@ -6,7 +6,7 @@
 
 #include <util/createFunctions.hpp>
 #include <util/debugMessenger.hpp>
-#include <vma/vk_mem_alloc.h>
+#include <thirdparty/vma/vk_mem_alloc.h>
 
 namespace blaze::vkw
 {
@@ -360,6 +360,7 @@ GEN_DEVICE_DEPENDENT_HOLDER(PipelineLayout);
 GEN_DEVICE_DEPENDENT_HOLDER(Pipeline);
 GEN_DEVICE_DEPENDENT_HOLDER(SwapchainKHR);
 GEN_DEVICE_DEPENDENT_HOLDER(CommandPool);
+GEN_DEVICE_DEPENDENT_HOLDER(ShaderModule);
 
 #define GEN_DEVICE_DEPENDENT_COLLECTION(Type) using Type##Vector = DeviceDependentVector<Vk##Type, vkDestroy##Type>
 

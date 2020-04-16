@@ -10,7 +10,7 @@
 
 #include <array>
 #include <vector>
-#include <vk_mem_alloc.h>
+#include <thirdparty/vma/vk_mem_alloc.h>
 
 const int32_t MAX_DIR_LIGHTS = 1;
 const int32_t MAX_POINT_LIGHTS = 16;

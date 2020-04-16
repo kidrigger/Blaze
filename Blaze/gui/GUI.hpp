@@ -1,9 +1,9 @@
 
 #pragma once
 
-#include <gui/imgui.h>
-#include <gui/imgui_impl_glfw.h>
-#include <gui/imgui_impl_vulkan.h>
+#include <thirdparty/imgui/imgui.h>
+#include <thirdparty/imgui/imgui_impl_glfw.h>
+#include <thirdparty/imgui/imgui_impl_vulkan.h>
 
 #include <core/Context.hpp>
 #include <util/Managed.hpp>

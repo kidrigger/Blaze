@@ -6,6 +6,10 @@
 
 #include <core/Camera.hpp>
 #include <rendering/FwdRenderer.hpp>
+#include <util/files.hpp>
+
+// TODO: Remove
+#include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
@@ -69,7 +73,6 @@ void runRefactored()
 
 	// Variables
 	GLFWwindow* window = nullptr;
-
 	std::unique_ptr<ARenderer> renderer;
 
 	Camera cam({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
@@ -77,7 +80,6 @@ void runRefactored()
 
 	// GLFW Setup
 	assert(glfwInit());
-
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
@@ -94,13 +96,22 @@ void runRefactored()
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	// Renderer creation
-
-	//*
 	renderer = make_unique<FwdRenderer>(window, enableValidationLayers);
-	/*/
-	auto f = new FwdRenderer(window, enableValidationLayers);
-	//*/
 	assert(renderer->complete());
+
+	// Shader fun
+	spirv::PipelineFactory pipelineFactory(renderer->get_context()->get_device());
+	std::vector<spirv::ShaderStageData> shaderStages = {
+		{
+			VK_SHADER_STAGE_VERTEX_BIT,
+			util::loadBinaryFile("shaders/vShader.vert.spv"),
+		},
+		{
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			util::loadBinaryFile("shaders/fShader.frag.spv"),
+		},
+	};
+	auto pipeline = pipelineFactory.createShader(shaderStages);
 
 	// Run
 	bool onetime = true;

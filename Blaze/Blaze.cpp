@@ -37,8 +37,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define VALIDATION_LAYERS_ENABLED
-
 #ifdef NDEBUG
 #ifdef VALIDATION_LAYERS_ENABLED
 #undef VALIDATION_LAYERS_ENABLED

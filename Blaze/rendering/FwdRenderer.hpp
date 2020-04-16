@@ -52,6 +52,7 @@ public:
 
 	~FwdRenderer()
 	{
+		clearCommandBuffers();
 	}
 
 protected:

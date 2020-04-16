@@ -18,11 +18,11 @@ VkShaderModule createShaderModule(VkDevice device, const std::vector<uint32_t>& 
 	createInfo.pCode = shaderCode.data();
 	VkShaderModule shaderModule = VK_NULL_HANDLE;
 	auto result = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
-	if (result == VK_SUCCESS)
+	if (result != VK_SUCCESS)
 	{
-		return shaderModule;
+		throw std::runtime_error("Shader Module creation failed with " + std::to_string(result));
 	}
-	throw std::runtime_error("Shader Module creation failed with " + std::to_string(result));
+	return shaderModule;
 }
 
 VkSemaphore createSemaphore(VkDevice device)

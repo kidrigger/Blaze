@@ -2,6 +2,7 @@
 // or project specific include files.
 
 #pragma once
+#define VALIDATION_LAYERS_ENABLED
 
 namespace blaze
 {

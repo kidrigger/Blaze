@@ -33,8 +33,8 @@ LightSystem::LightSystem(const Context& context) noexcept
 		Managed(createShadowRenderPass(context.get_device()),
 				[dev = context.get_device()](VkRenderPass& rp) { vkDestroyRenderPass(dev, rp, nullptr); });
 
-	viewsUBO = UBO(context, createOmniShadowUBO());
-	csmUBO = UBO(context, CascadeUBlock{});
+	viewsUBO = UBO(&context, createOmniShadowUBO());
+	csmUBO = UBO(&context, CascadeUBlock{});
 
 	try
 	{

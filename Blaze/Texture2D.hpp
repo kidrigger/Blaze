@@ -5,7 +5,7 @@
 #include <cmath>
 #include <core/Context.hpp>
 #include <cstring>
-#include <stb_image.h>
+#include <thirdparty/stbi/stb_image.h>
 #include <util/createFunctions.hpp>
 #include <util/Managed.hpp>
 

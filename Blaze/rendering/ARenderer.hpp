@@ -49,6 +49,11 @@ public:
 
 	void render();
 
+	const Context* get_context() const
+	{
+		return context.get();
+	}
+
 	[[nodiscard]] DrawList::Handle submit(Drawable* sub)
 	{
 		return drawables.add(sub);
@@ -76,6 +81,7 @@ protected:
 		return {x, y};
 	}
 
+	void clearCommandBuffers();
 	void rebuildAllCommandBuffers();
 	void rebuildCommandBuffer(uint32_t frame);
 	// This is ONLY the renderpasses from the renderer

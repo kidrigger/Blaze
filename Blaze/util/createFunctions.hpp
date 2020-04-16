@@ -18,21 +18,21 @@ namespace blaze::util
  * @param device The logical device used.
  * @param shaderCode The code as a vector<uint32_t>
  */
-VkShaderModule createShaderModule(VkDevice device, const std::vector<uint32_t>& shaderCode);
+[[nodiscard]] VkShaderModule createShaderModule(VkDevice device, const std::vector<uint32_t>& shaderCode);
 
 /**
  * @brief Creates a semaphore on the device.
  *
  * @param device The logical device used.
  */
-VkSemaphore createSemaphore(VkDevice device);
+[[nodiscard]] VkSemaphore createSemaphore(VkDevice device);
 
 /**
  * @brief Creates a fence on the device.
  *
  * @param device The logical device used.
  */
-VkFence createFence(VkDevice device);
+[[nodiscard]] VkFence createFence(VkDevice device);
 
 /**
  * @brief Creates an image view.
@@ -46,8 +46,9 @@ VkFence createFence(VkDevice device);
  * @param numLayers The number of layers in the image to construct a view for.
  * @param baseLayer The first layer from which to construct views.
  */
-VkImageView createImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format,
-							VkImageAspectFlags aspect, uint32_t miplevels, uint32_t numLayers, uint32_t baseLayer = 0);
+[[nodiscard]] VkImageView createImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format,
+										  VkImageAspectFlags aspect, uint32_t miplevels, uint32_t numLayers,
+										  uint32_t baseLayer = 0);
 
 /**
  * @brief Creates a new descriptor pool as per the poolsizes.
@@ -56,7 +57,8 @@ VkImageView createImageView(VkDevice device, VkImage image, VkImageViewType view
  * @param poolSizes The vector of pool sizes to support.
  * @param maxSets The maximum number of descriptor sets to support.
  */
-VkDescriptorPool createDescriptorPool(VkDevice device, std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+[[nodiscard]] VkDescriptorPool createDescriptorPool(VkDevice device, std::vector<VkDescriptorPoolSize>& poolSizes,
+													uint32_t maxSets);
 
 /**
  * @brief Creates a descriptor set layout as per the bindings.
@@ -64,8 +66,8 @@ VkDescriptorPool createDescriptorPool(VkDevice device, std::vector<VkDescriptorP
  * @param device The logical device used.
  * @param layoutBindings The vector of layout bindings in the descriptor set.
  */
-VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
-												std::vector<VkDescriptorSetLayoutBinding>& layoutBindings);
+[[nodiscard]] VkDescriptorSetLayout createDescriptorSetLayout(
+	VkDevice device, std::vector<VkDescriptorSetLayoutBinding>& layoutBindings);
 
 /**
  * @brief Creates a renderpass as per the configuration.
@@ -78,11 +80,11 @@ VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
  * @param initialLayout The initial layout of color attachments attached.
  * @param colorLoadOp The load operation for color attachment.
  */
-VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat,
-							  VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED,
-							  VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							  VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-							  VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
+[[nodiscard]] VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat,
+											VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+											VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+											VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+											VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
 
 /**
  * @brief Creates a renderpass for shadow as per the configuration.
@@ -91,8 +93,9 @@ VkRenderPass createRenderPass(VkDevice device, VkFormat colorAttachmentFormat,
  * @param depthAttachmentFormat The format used for the depth attachment
  * @param finalLayout The layout the depth attachment should end in.
  */
-VkRenderPass createShadowRenderPass(VkDevice device, VkFormat depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
-									VkImageLayout finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+[[nodiscard]] VkRenderPass createShadowRenderPass(
+	VkDevice device, VkFormat depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
+	VkImageLayout finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
 /**
  * @brief Creates a renderpass for multiview framebuffer as per the configuration.
@@ -106,11 +109,12 @@ VkRenderPass createShadowRenderPass(VkDevice device, VkFormat depthAttachmentFor
  * @param initialLayout The initial layout of color attachments attached.
  * @param colorLoadOp The load operation for color attachment.
  */
-VkRenderPass createRenderPassMultiView(VkDevice device, uint32_t viewMask, VkFormat colorAttachmentFormat,
-									   VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED,
-									   VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-									   VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-									   VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
+[[nodiscard]] VkRenderPass createRenderPassMultiView(
+	VkDevice device, uint32_t viewMask, VkFormat colorAttachmentFormat,
+	VkFormat depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+	VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	VkAttachmentLoadOp colorLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR);
 
 /**
  * @brief Creates a pipeline layout.
@@ -119,8 +123,9 @@ VkRenderPass createRenderPassMultiView(VkDevice device, uint32_t viewMask, VkFor
  * @param descriptorSetLayouts All the descriptorSetLayouts to support.
  * @param pushConstantRanges The push constant ranges to use.
  */
-VkPipelineLayout createPipelineLayout(VkDevice device, const std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
-									  const std::vector<VkPushConstantRange>& pushConstantRanges);
+[[nodiscard]] VkPipelineLayout createPipelineLayout(VkDevice device,
+													const std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
+													const std::vector<VkPushConstantRange>& pushConstantRanges);
 
 /**
  * @brief Create the graphics pipeline.
@@ -139,7 +144,7 @@ VkPipelineLayout createPipelineLayout(VkDevice device, const std::vector<VkDescr
  * @param vertBindingDescription The binding description for the vertices.
  * @param vertAttributeDescription The attribute description for the vertices.
  */
-VkPipeline createGraphicsPipeline(
+[[nodiscard]] VkPipeline createGraphicsPipeline(
 	VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass, VkExtent2D viewPortSize,
 	const std::string& vShader, const std::string& fShader, const std::vector<VkDynamicState>& dynamicStates = {},
 	VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT, VkBool32 depthTest = VK_TRUE, VkBool32 depthWrite = VK_TRUE,

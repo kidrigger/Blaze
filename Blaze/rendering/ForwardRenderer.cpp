@@ -192,7 +192,7 @@ std::vector<UBO<RendererUBlock>> ForwardRenderer::createUniformBuffers(
 	ubos.reserve(swapchain.get_imageCount());
 	for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 	{
-		ubos.emplace_back(context, ubo);
+		ubos.emplace_back(&context, ubo);
 	}
 	return std::move(ubos);
 }
@@ -204,7 +204,7 @@ std::vector<UBO<SettingsUBlock>> ForwardRenderer::createUniformBuffers(
 	ubos.reserve(swapchain.get_imageCount());
 	for (uint32_t i = 0; i < swapchain.get_imageCount(); i++)
 	{
-		ubos.emplace_back(context, ubo);
+		ubos.emplace_back(&context, ubo);
 	}
 	return std::move(ubos);
 }
