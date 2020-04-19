@@ -13,6 +13,27 @@
 
 namespace blaze::spirv
 {
+struct LoadStoreConfig
+{
+	enum class LoadAction : uint8_t
+	{
+		CLEAR,
+		READ,
+		DONT_CARE,
+		CONTINUE,
+	};
+	enum class StoreAction : uint8_t
+	{
+		READ,
+		DONT_CARE,
+		CONTINUE,
+	};
+
+	LoadAction colorLoad;
+	StoreAction colorStore;
+	LoadAction depthLoad;
+	StoreAction depthStore;
+};
 
 struct ShaderStageData
 {
@@ -28,13 +49,87 @@ struct ShaderStageData
 	}
 };
 
+struct GraphicsPipelineCreateInfo
+{
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo;
+	VkPipelineRasterizationStateCreateInfo rasterizerCreateInfo;
+	VkPipelineMultisampleStateCreateInfo multisampleCreateInfo;
+	VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo;
+	VkPipelineColorBlendStateCreateInfo colorblendCreateInfo;
+	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo;
+};
+
+struct AttachmentFormat
+{
+	VkImageUsageFlags usage;
+	VkFormat format;
+	VkSampleCountFlagBits sampleCount;
+
+	bool operator!=(const AttachmentFormat& other) const
+	{
+		return (usage != other.usage) || (format != other.format) || (sampleCount != other.sampleCount);
+	}
+
+	bool operator<(const AttachmentFormat& other) const
+	{
+		if (usage != other.usage)
+		{
+			return usage < other.usage;
+		}
+		else if (format != other.format)
+		{
+			return format < other.format;
+		}
+		else if (sampleCount != other.sampleCount)
+		{
+			return sampleCount < other.sampleCount;
+		}
+		return false;
+	}
+};
+
+struct Framebuffer
+{
+	using FormatID = uint32_t;
+	struct Format
+	{
+		std::vector<AttachmentFormat> attachmentFormats;
+		bool operator<(const Format& other) const
+		{
+			auto self = attachmentFormats.size();
+			auto soth = other.attachmentFormats.size();
+			if (self != soth)
+			{
+				return self < soth;
+			}
+			auto iself = attachmentFormats.begin();
+			auto ioth = other.attachmentFormats.begin();
+			if (*iself != *ioth)
+			{
+				return *iself < *ioth;
+			}
+			return false;
+		}
+	};
+};
+
+struct RenderPass
+{
+	Framebuffer::FormatID fbFormat;
+	vkw::RenderPass renderPass;
+};
+
 class PipelineFactory
 {
 	using SetFormat = Shader::Set::Format;
-	using SetFormatKey = Shader::Set::FormatKey;
+	using SetFormatID = Shader::Set::FormatID;
+
+	using FBFormat = Framebuffer::Format;
+	using FBFormatID = Framebuffer::FormatID;
 
 	VkDevice device;
-	std::map<SetFormat, SetFormatKey> setFormatRegistry;
+	std::map<SetFormat, SetFormatID> setFormatRegistry;
+	std::map<FBFormat, FBFormatID> fbFormatRegistry;
 
 public:
 	PipelineFactory(VkDevice device) noexcept : device(device)
@@ -42,15 +137,18 @@ public:
 	}
 
 	Shader createShader(const std::vector<ShaderStageData>& stages);
+	Pipeline createGraphicsPipeline(const Shader& shader, const RenderPass& renderPass,
+									const GraphicsPipelineCreateInfo& createInfo);
 
-	~PipelineFactory()
-	{
-	
-	}
+	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
+								const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
+								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
 
 private:
-	vkw::PipelineLayout createPipelineLayout(const std::vector<Shader::Set>& info, const Shader::PushConstant& pcr) const;
+	vkw::PipelineLayout createPipelineLayout(const std::vector<Shader::Set>& info,
+											 const Shader::PushConstant& pcr) const;
 
-	SetFormatKey getFormatKey(const std::vector<UniformInfo>& format);
+	SetFormatID getFormatKey(const std::vector<UniformInfo>& format);
+	FBFormatID getFormatKey(const std::vector<AttachmentFormat>& format);
 };
 }; // namespace blaze::spirv

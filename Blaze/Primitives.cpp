@@ -19,7 +19,7 @@ IndexedVertexBuffer<Vertex> getUVCube(const Context& context)
 	std::vector<uint32_t> indices = {
 		0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 1, 0, 6, 1, 6, 5, 7, 6, 0, 7, 0, 3, 7, 3, 2, 7, 2, 4, 4, 2, 1, 4, 1, 5,
 	};
-	return IndexedVertexBuffer(context, vertices, indices);
+	return IndexedVertexBuffer(context, indices, vertices);
 }
 
 IndexedVertexBuffer<Vertex> getUVRect(const Context& context)
@@ -34,7 +34,7 @@ IndexedVertexBuffer<Vertex> getUVRect(const Context& context)
 	std::vector<uint32_t> indices = {
 		0, 1, 2, 0, 2, 3,
 	};
-	return IndexedVertexBuffer(context, vertices, indices);
+	return IndexedVertexBuffer(context, indices, vertices);
 }
 
 IndexedVertexBuffer<Vertex> getIcoSphere(const Context& context)
@@ -125,6 +125,6 @@ IndexedVertexBuffer<Vertex> getIcoSphere(const Context& context)
 		57, 58, 59, 2,	60, 62, 4,	61, 60, 11, 62, 61, 60, 61, 62, 6,	63, 65, 2,	64, 63, 10, 65, 64, 63, 64, 65,
 		8,	66, 68, 6,	67, 66, 7,	68, 67, 66, 67, 68, 9,	69, 71, 8,	70, 69, 1,	71, 70, 69, 70, 71,
 	};
-	return IndexedVertexBuffer(context, vertices, indices);
+	return IndexedVertexBuffer(context, indices, vertices);
 }
 } // namespace blaze

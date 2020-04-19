@@ -104,21 +104,21 @@ void runRefactored()
 	std::vector<spirv::ShaderStageData> shaderStages = {
 		{
 			VK_SHADER_STAGE_VERTEX_BIT,
-			util::loadBinaryFile("shaders/vShader.vert.spv"),
+			util::loadBinaryFile("shaders/PBR/vPBR.vert.spv"),
 		},
 		{
 			VK_SHADER_STAGE_FRAGMENT_BIT,
-			util::loadBinaryFile("shaders/fShader.frag.spv"),
+			util::loadBinaryFile("shaders/PBR/fPBR.frag.spv"),
 		},
 	};
-	auto pipeline = pipelineFactory.createShader(shaderStages);
+	auto shader = pipelineFactory.createShader(shaderStages);
+	std::cerr << shader << std::endl;
 
 	// Run
 	bool onetime = true;
 
 	double prevTime = glfwGetTime();
 	double deltaTime = 0.0;
-	int intermittence = 0;
 	double elapsed = 0.0;
 
 	while (!glfwWindowShouldClose(window))

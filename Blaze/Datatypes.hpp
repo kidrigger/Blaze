@@ -9,8 +9,8 @@
 #include <GLFW/glfw3.h>
 
 #include <array>
-#include <vector>
 #include <thirdparty/vma/vk_mem_alloc.h>
+#include <vector>
 
 const int32_t MAX_DIR_LIGHTS = 1;
 const int32_t MAX_POINT_LIGHTS = 16;
@@ -18,6 +18,15 @@ const int32_t MAX_CSM_SPLITS = 4;
 
 namespace blaze
 {
+
+struct VertexInputFormat
+{
+	uint8_t A_POSITION = 0;
+	uint8_t A_NORMAL = 1;
+	uint8_t A_UV0 = 2;
+	uint8_t A_UV1 = 3;
+};
+
 /**
  * @struct Vertex
  *
@@ -32,10 +41,10 @@ struct Vertex
 	alignas(16) glm::vec3 normal;
 
 	/// Texture Coordinate (0)
-	alignas(16) glm::vec2 texCoord0;
+	alignas(16) glm::vec2 uv0;
 
 	/// Texture Coordinate (1)
-	alignas(16) glm::vec2 texCoord1;
+	alignas(16) glm::vec2 uv1;
 
 	/**
 	 * @fn getBindingDescription(uint32_t binding = 0)
@@ -65,41 +74,39 @@ struct Vertex
 	 *
 	 * @returns vector of attribute descriptions
 	 */
-	static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions(uint32_t binding = 0)
+	static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions(VertexInputFormat format = {},
+																				   uint32_t binding = 0)
 	{
-		std::vector<VkVertexInputAttributeDescription> attributeDescs;
-		uint32_t idx = 0;
-		{
-			VkVertexInputAttributeDescription attributeDesc = {};
-
-			attributeDesc.binding = binding;
-			attributeDesc.location = idx++;
-			attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDesc.offset = offsetof(Vertex, position);
-			attributeDescs.push_back(attributeDesc);
-
-			attributeDesc.binding = binding;
-			attributeDesc.location = idx++;
-			attributeDesc.format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDesc.offset = offsetof(Vertex, normal);
-			attributeDescs.push_back(attributeDesc);
-
-			attributeDesc.binding = binding;
-			attributeDesc.location = idx++;
-			attributeDesc.format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDesc.offset = offsetof(Vertex, texCoord0);
-			attributeDescs.push_back(attributeDesc);
-
-			attributeDesc.binding = binding;
-			attributeDesc.location = idx++;
-			attributeDesc.format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDesc.offset = offsetof(Vertex, texCoord1);
-			attributeDescs.push_back(attributeDesc);
-		}
+		std::vector<VkVertexInputAttributeDescription> attributeDescs = {
+			{
+				binding,
+				format.A_POSITION,
+				VK_FORMAT_R32G32B32_SFLOAT,
+				offsetof(Vertex, position),
+			},
+			{
+				binding,
+				format.A_NORMAL,
+				VK_FORMAT_R32G32B32_SFLOAT,
+				offsetof(Vertex, normal),
+			},
+			{
+				binding,
+				format.A_UV0,
+				VK_FORMAT_R32G32_SFLOAT,
+				offsetof(Vertex, uv0),
+			},
+			{
+				binding,
+				format.A_UV1,
+				VK_FORMAT_R32G32_SFLOAT,
+				offsetof(Vertex, uv1),
+			},
+		};
 
 		return attributeDescs;
-	}
-};
+	} // namespace blaze
+};	  // namespace blaze
 
 /**
  * @struct CameraUBlock

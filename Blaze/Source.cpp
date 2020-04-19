@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 	{
 		std::cout << "Blaze (ver: " << VERSION.MAJOR << "." << VERSION.MINOR << "." << VERSION.BUILD << ")"
 				  << std::endl;
-		blaze::runRefactored();
+		blaze::run();
 	}
 	catch (std::exception& e)
 	{

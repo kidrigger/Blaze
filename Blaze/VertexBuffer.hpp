@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #define GLM_FORCE_RADIANS
@@ -20,6 +21,45 @@ namespace blaze
 {
 // Refactor into Buffer class
 
+class BaseVBO
+{
+protected:
+	VkBuffer buffer{VK_NULL_HANDLE};
+	VmaAllocation allocation{VK_NULL_HANDLE};
+	VmaAllocator allocator{VK_NULL_HANDLE};
+	uint32_t count{0};
+	size_t size{0};
+
+public:
+	enum Usage
+	{
+		VertexBuffer = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		IndexBuffer = VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+	};
+
+	BaseVBO() noexcept
+	{
+	}
+	BaseVBO(const Context* context, Usage usage, const void* data, uint32_t count, size_t size) noexcept;
+
+	BaseVBO(BaseVBO&& other) noexcept;
+	BaseVBO& operator=(BaseVBO&& other) noexcept;
+	BaseVBO(const BaseVBO& other) = delete;
+	BaseVBO& operator=(const BaseVBO& other) = delete;
+
+	inline const VkBuffer& get_buffer() const
+	{
+		return buffer;
+	}
+
+	inline const uint32_t& get_count() const
+	{
+		return count;
+	}
+
+	virtual ~BaseVBO();
+};
+
 /**
  * @class VertexBuffer
  *
@@ -28,20 +68,15 @@ namespace blaze
  * @brief Object encapsulating the data in a vertex buffer.
  */
 template <typename T>
-class VertexBuffer
+class VertexBuffer : public BaseVBO
 {
-private:
-	util::Managed<BufferObject> vertexBuffer;
-	uint32_t count{0};
-	size_t size{0};
-
 public:
 	/**
 	 * @fn VertexBuffer()
 	 *
 	 * @brief Default Constructor.
 	 */
-	VertexBuffer() noexcept
+	VertexBuffer() noexcept : BaseVBO()
 	{
 	}
 
@@ -54,74 +89,52 @@ public:
 	 * @param data A vector of vertices (\a T) to be held in the buffer.
 	 */
 	VertexBuffer(const Context& context, const std::vector<T>& data) noexcept
-		: size(sizeof(data[0]) * data.size()), count(static_cast<uint32_t>(data.size()))
+		: BaseVBO(&context, Usage::VertexBuffer, data.data(), static_cast<uint32_t>(data.size()), data.size() * sizeof(T))
 	{
-		using namespace util;
-		VmaAllocator allocator = context.get_allocator();
+	}
 
-		auto stagingBuf = context.createBuffer(
-			size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	inline void bind(VkCommandBuffer buf) const
+	{
+		const static VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(buf, 0, 1, &buffer, &offset);
+	}
+};
 
-		auto stagingBufferRAII = Managed<BufferObject>(
-			stagingBuf, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
+/**
+ * @class IndexBuffer
+ *
+ * @tparam T The type of vertex data held by the buffer.
+ *
+ * @brief Object encapsulating the data in a vertex buffer.
+ */
+template <typename T>
+class IndexBuffer : public BaseVBO
+{
+	static_assert(std::is_same<T, uint16_t>() || std::is_same<T, uint32_t>());
+	static constexpr VkIndexType indexType = std::is_same<T, uint16_t>() ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 
-		void* bufferdata;
-		vmaMapMemory(allocator, stagingBuf.allocation, &bufferdata);
-		memcpy(bufferdata, data.data(), size);
-		vmaUnmapMemory(allocator, stagingBuf.allocation);
-
-		auto finalBuf = context.createBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-											 VMA_MEMORY_USAGE_GPU_ONLY);
-		vertexBuffer = Managed<BufferObject>(
-			finalBuf, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
-
-		try
-		{
-			VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
-
-			VkBufferCopy copyRegion = {};
-			copyRegion.srcOffset = 0;
-			copyRegion.dstOffset = 0;
-			copyRegion.size = size;
-			vkCmdCopyBuffer(commandBuffer, stagingBuf.buffer, finalBuf.buffer, 1, &copyRegion);
-
-			context.flushCommandBuffer(commandBuffer);
-		}
-		catch (std::exception& e)
-		{
-			std::cerr << e.what() << std::endl;
-		}
+public:
+	/**
+	 * @fn IndexBuffer()
+	 *
+	 * @brief Default Constructor.
+	 */
+	IndexBuffer() noexcept : BaseVBO()
+	{
 	}
 
 	/**
-	 * @name Move Constructors.
+	 * @fn IndexBuffer(const Context& context, const std::vector<T>& data)
 	 *
-	 * @brief Move only, copy deleted.
+	 * @brief Main constructor.
 	 *
-	 * @{
+	 * @param context The Vulkan Context in use.
+	 * @param data A vector of vertices (\a T) to be held in the buffer.
 	 */
-	VertexBuffer(VertexBuffer&& other) noexcept
-		: vertexBuffer(std::move(other.vertexBuffer)), count(other.count), size(other.size)
+	IndexBuffer(const Context& context, const std::vector<T>& data) noexcept
+		: BaseVBO(&context, Usage::IndexBuffer, data.data(), static_cast<uint32_t>(data.size()), data.size() * sizeof(T))
 	{
 	}
-
-	VertexBuffer& operator=(VertexBuffer&& other) noexcept
-	{
-		if (this == &other)
-		{
-			return *this;
-		}
-		vertexBuffer = std::move(other.vertexBuffer);
-		count = other.count;
-		size = other.size;
-		return *this;
-	}
-
-	VertexBuffer(const VertexBuffer& other) = delete;
-	VertexBuffer& operator=(const VertexBuffer& other) = delete;
-	/**
-	 * @}
-	 */
 
 	/**
 	 * @fn bind(VkCommandBuffer buf)
@@ -130,39 +143,10 @@ public:
 	 *
 	 * @param buf The Command Buffer in use.
 	 */
-	void bind(VkCommandBuffer buf)
+	inline void bind(VkCommandBuffer buf)
 	{
-		VkBuffer vbufs[] = {vertexBuffer.get().buffer};
-		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
+		vkCmdBindIndexBuffer(buf, buffer, 0, indexType);
 	}
-
-	/**
-	 * @name Getters
-	 *
-	 * @brief Getters for private members.
-	 *
-	 * @{
-	 */
-	VkBuffer get_buffer() const
-	{
-		return vertexBuffer.get().buffer;
-	}
-	VmaAllocation get_allocation() const
-	{
-		return vertexBuffer.get().allocation;
-	}
-	const size_t& get_size() const
-	{
-		return size;
-	}
-	const uint32_t& get_count() const
-	{
-		return count;
-	}
-	/**
-	 * @}
-	 */
 };
 
 /**
@@ -177,12 +161,8 @@ class IndexedVertexBuffer
 {
 
 private:
-	util::Managed<BufferObject> vertexBuffer;
-	size_t vertexSize{0};
-	uint32_t vertexCount{0};
-	util::Managed<BufferObject> indexBuffer;
-	size_t indexSize{0};
-	uint32_t indexCount{0};
+	VertexBuffer<T> vertexBuffer;
+	IndexBuffer<uint32_t> indexBuffer;
 
 public:
 	/**
@@ -195,82 +175,16 @@ public:
 	}
 
 	/**
-	 * @fn IndexedVertexBuffer(const Context& context, const std::vector<T>& vertex_data, const std::vector<uint32_t>&
-	 * index_data)
-	 *
 	 * @brief Main constructor for the object.
 	 *
 	 * @param context The Vulkan Context in use.
 	 * @param vertex_data A vector of vertices (\a T) to be in the buffer.
 	 * @param index_data A vector of indices (uint32_t) to be index the vertices.
 	 */
-	IndexedVertexBuffer(const Context& context, const std::vector<T>& vertex_data,
-						const std::vector<uint32_t>& index_data) noexcept
-		: vertexSize(sizeof(vertex_data[0]) * vertex_data.size()),
-		  vertexCount(static_cast<uint32_t>(vertex_data.size())), indexSize(sizeof(uint32_t) * index_data.size()),
-		  indexCount(static_cast<uint32_t>(index_data.size()))
+	IndexedVertexBuffer(const Context& context, const std::vector<uint32_t>& index_data,
+						const std::vector<T>& vertex_data) noexcept
+		: vertexBuffer(context, vertex_data), indexBuffer(context, index_data)
 	{
-		using namespace util;
-		auto allocator = context.get_allocator();
-
-		// Vertex Buffer
-		auto stagingVBuf =
-			context.createBuffer(vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-								 VMA_MEMORY_USAGE_CPU_ONLY);
-
-		auto stagingVertexBufferRAII = Managed<BufferObject>(
-			stagingVBuf, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
-
-		void* bufferdata;
-		vmaMapMemory(allocator, stagingVBuf.allocation, &bufferdata);
-		memcpy(bufferdata, vertex_data.data(), vertexSize);
-		vmaUnmapMemory(allocator, stagingVBuf.allocation);
-
-		auto finalVBuf =
-			context.createBuffer(vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-								 VMA_MEMORY_USAGE_GPU_ONLY);
-
-		vertexBuffer = Managed<BufferObject>(
-			finalVBuf, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
-
-		// Index buffer
-
-		auto stagingIBuf = context.createBuffer(
-			indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-		auto stagingIndexBufferRAII = Managed<BufferObject>(
-			stagingIBuf, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
-
-		vmaMapMemory(allocator, stagingIBuf.allocation, &bufferdata);
-		memcpy(bufferdata, index_data.data(), indexSize);
-		vmaUnmapMemory(allocator, stagingIBuf.allocation);
-
-		auto finalIBuf = context.createBuffer(
-			indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-
-		indexBuffer = Managed<BufferObject>(
-			finalIBuf, [allocator](BufferObject& bo) { vmaDestroyBuffer(allocator, bo.buffer, bo.allocation); });
-
-		try
-		{
-			VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
-
-			VkBufferCopy copyRegion = {};
-			copyRegion.srcOffset = 0;
-			copyRegion.dstOffset = 0;
-
-			copyRegion.size = vertexSize;
-			vkCmdCopyBuffer(commandBuffer, stagingVBuf.buffer, finalVBuf.buffer, 1, &copyRegion);
-
-			copyRegion.size = indexSize;
-			vkCmdCopyBuffer(commandBuffer, stagingIBuf.buffer, finalIBuf.buffer, 1, &copyRegion);
-
-			context.flushCommandBuffer(commandBuffer);
-		}
-		catch (std::exception& e)
-		{
-			std::cerr << e.what() << std::endl;
-		}
 	}
 
 	/**
@@ -281,8 +195,7 @@ public:
 	 * @{
 	 */
 	IndexedVertexBuffer(IndexedVertexBuffer&& other) noexcept
-		: vertexBuffer(std::move(other.vertexBuffer)), vertexSize(other.vertexSize), vertexCount(other.vertexCount),
-		  indexBuffer(std::move(other.indexBuffer)), indexSize(other.indexSize), indexCount(other.indexCount)
+		: vertexBuffer(std::move(other.vertexBuffer)), indexBuffer(std::move(other.indexBuffer))
 	{
 	}
 
@@ -293,11 +206,7 @@ public:
 			return *this;
 		}
 		vertexBuffer = std::move(other.vertexBuffer);
-		vertexSize = other.vertexSize;
-		vertexCount = other.vertexCount;
 		indexBuffer = std::move(other.indexBuffer);
-		indexSize = other.indexSize;
-		indexCount = other.indexCount;
 		return *this;
 	}
 
@@ -314,12 +223,10 @@ public:
 	 *
 	 * @param buf The Command Buffer in use.
 	 */
-	void bind(VkCommandBuffer buf)
+	inline void bind(VkCommandBuffer buf)
 	{
-		VkBuffer vbufs[] = {vertexBuffer.get().buffer};
-		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(buf, 0, 1, vbufs, offsets);
-		vkCmdBindIndexBuffer(buf, indexBuffer.get().buffer, 0, VK_INDEX_TYPE_UINT32);
+		vertexBuffer.bind(buf);
+		indexBuffer.bind(buf);
 	}
 
 	/**
@@ -329,37 +236,37 @@ public:
 	 *
 	 * @{
 	 */
-	const VkBuffer& get_vertexBuffer() const
+	inline const VkBuffer& get_vertexBuffer() const
 	{
-		return vertexBuffer.get().buffer;
+		return vertexBuffer.get_buffer();
 	}
-	const VmaAllocation& get_vertexAllocation() const
+	inline const VmaAllocation& get_vertexAllocation() const
 	{
-		return vertexBuffer.get().allocation;
+		return vertexBuffer.get_allocation();
 	}
-	const size_t& get_verticeSize() const
+	inline const size_t& get_verticeSize() const
 	{
-		return vertexSize;
+		return vertexBuffer.get_size();
 	}
-	const uint32_t& get_vertexCount() const
+	inline const uint32_t& get_vertexCount() const
 	{
-		return vertexCount;
+		return vertexBuffer.get_count();
 	}
-	const VkBuffer& get_indexBuffer() const
+	inline const VkBuffer& get_indexBuffer() const
 	{
-		return indexBuffer.get().buffer;
+		return indexBuffer.get_buffer();
 	}
-	const VmaAllocation& get_indexAllocation() const
+	inline const VmaAllocation& get_indexAllocation() const
 	{
-		return indexBuffer.get().allocation;
+		return indexBuffer.get_allocation();
 	}
-	const size_t& get_indiceSize() const
+	inline const size_t& get_indiceSize() const
 	{
-		return indexSize;
+		return indexBuffer.get_size();
 	}
-	const uint32_t& get_indexCount() const
+	inline const uint32_t& get_indexCount() const
 	{
-		return indexCount;
+		return indexBuffer.get_count();
 	}
 	/**
 	 * @}

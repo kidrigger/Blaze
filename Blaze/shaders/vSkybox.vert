@@ -9,10 +9,10 @@ layout(set = 0, binding = 0) uniform UniformBufferObject
 	vec3 lightPos[16];
 } ubo;
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoords0;
-layout(location = 3) in vec2 inTexCoords1;
+layout(location = 0) in vec3 A_POSITION;
+layout(location = 1) in vec3 A_NORMAL;
+layout(location = 2) in vec2 A_UV0;
+layout(location = 3) in vec2 A_UV1;
 
 layout(push_constant) uniform TRS {
 	mat4 model;
@@ -26,8 +26,8 @@ layout(location = 3) out vec2 texCoords1;
 layout(location = 4) out vec3 color;
 
 void main() {
-	vec4 pos = ubo.projection * ubo.view * vec4(inPosition * 0.1f + ubo.viewPos, 1.0);
+	vec4 pos = ubo.projection * ubo.view * vec4(A_POSITION * 0.1f + ubo.viewPos, 1.0);
 	gl_Position = pos.xyww;
-	outPosition = inPosition;
+	outPosition = A_POSITION;
 	outPosition.x *= -1.0f;
 }

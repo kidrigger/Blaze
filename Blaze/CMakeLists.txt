@@ -15,7 +15,8 @@ set( SOURCE_FILES
         "Primitives.cpp"
         "Model.cpp"
         "LightSystem.cpp"
-        "UniformBuffer.cpp")
+        "UniformBuffer.cpp"
+        "VertexBuffer.cpp" )
 
 set( HEADER_FILES
         "Datatypes.hpp"
@@ -52,11 +53,11 @@ target_link_libraries(Blaze glfw ${GLFW_LIBRARIES})
 target_link_libraries(Blaze glm)
 target_link_libraries(Blaze Vulkan::Vulkan)
 
-add_custom_command(TARGET Blaze POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/shaders/"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${PROJECT_BINARY_DIR}/shaders"
-        "$<TARGET_FILE_DIR:Blaze>/shaders")
+# add_custom_command(TARGET Blaze POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Blaze>/shaders/"
+#    COMMAND ${CMAKE_COMMAND} -E copy_directory
+#        "${PROJECT_BINARY_DIR}/shaders"
+#        "$<TARGET_FILE_DIR:Blaze>/shaders")
 
 file (MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/assets")
 file (COPY "${PROJECT_SOURCE_DIR}/Blaze/assets/" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/assets")

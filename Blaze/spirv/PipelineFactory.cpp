@@ -52,11 +52,11 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 	SpvReflectResult result;
 	bool isCompute = false;
 
-	uint32_t vertexInputs = 0;
 	uint32_t fragmentOutputs = 0;
 
 	map<uint32_t, map<uint32_t, UniformInfo>> uniformInfos;
-	Shader::PushConstant pushConst = {0, 0};
+	Shader::PushConstant pushConst = {};
+	VertexInputFormat vertexInput = {};
 
 	uint8_t error = ErrCode::SUCCESS;
 
@@ -105,6 +105,7 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 					info.arrayLength = length;
 					info.stages = static_cast<VkShaderStageFlagBits>(reflector.shader_stage);
 					info.size = binding->block.size;
+					info.name = binding->name;
 
 					if (uniformInfos[set->set].find(binding->binding) != uniformInfos[set->set].end())
 					{
@@ -144,7 +145,11 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 					{
 						if (input_vars[j] && input_vars[j]->decoration_flags == 0)
 						{ // regular input
-							vertexInputs |= (1 << uint32_t(input_vars[j]->location));
+							vertexInput.A_POSITION =
+								strcmp(input_vars[j]->name, "A_POSITION") ? vertexInput.A_POSITION : j;
+							vertexInput.A_NORMAL = strcmp(input_vars[j]->name, "A_NORMAL") ? vertexInput.A_NORMAL : j;
+							vertexInput.A_UV0 = strcmp(input_vars[j]->name, "A_UV0") ? vertexInput.A_UV0 : j;
+							vertexInput.A_UV1 = strcmp(input_vars[j]->name, "A_UV1") ? vertexInput.A_UV1 : j;
 						}
 					}
 				}
@@ -192,12 +197,13 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 			result = spvReflectEnumeratePushConstantBlocks(&reflector, &pc_count, &pconstants);
 			error |= SPV_ASSERT(result);
 
-			if (pconstants->offset != 0 || pushConst.size != pconstants->size)
+			if (pconstants->offset != 0 || (pushConst.size != 0 && pushConst.size != pconstants->size))
 			{
 				error |= ErrCode::UNUNIFIED_PUSH_CONST;
 			}
 			else
 			{
+				pushConst.size = pconstants->size;
 				pushConst.stage |= stage.stage;
 			}
 		}
@@ -233,7 +239,7 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 
 	// Collapse nested maps to a vector
 	vector<Shader::Set> descriptorSetLayouts;
-	vector<SetFormatKey> setFormatKeys;
+	vector<SetFormatID> setFormatKeys;
 	descriptorSetLayouts.reserve(uniformInfos.size());
 	setFormatKeys.reserve(uniformInfos.size());
 
@@ -260,7 +266,7 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 	shader.pushConstant = pushConst;
 	shader.isCompute = isCompute;
 	shader.fragmentOutputs = fragmentOutputs;
-	shader.vertexInputMask = vertexInputs;
+	shader.vertexInputFormat = vertexInput;
 	shader.sets = std::move(descriptorSetLayouts);
 	shader.pipelineLayout = createPipelineLayout(descriptorSetLayouts, pushConst);
 	shader.setFormats = std::move(setFormatKeys);
@@ -283,9 +289,9 @@ vkw::PipelineLayout PipelineFactory::createPipelineLayout(const std::vector<Shad
 	}
 
 	VkPushConstantRange pcr = {
+		pushConst.stage,
 		0,
 		pushConst.size,
-		pushConst.stage,
 	};
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
@@ -304,7 +310,62 @@ vkw::PipelineLayout PipelineFactory::createPipelineLayout(const std::vector<Shad
 	return vkw::PipelineLayout(pipelineLayout, device);
 }
 
-PipelineFactory::SetFormatKey PipelineFactory::getFormatKey(const std::vector<UniformInfo>& uniforms)
+Pipeline PipelineFactory::createGraphicsPipeline(const Shader& shader, const RenderPass& renderPass,
+												 const GraphicsPipelineCreateInfo& createInfo)
+{
+	if (shader.isCompute)
+	{
+		throw std::invalid_argument("ERR: Trying to create a Rendering Pipeline from a Compute Shader");
+	}
+
+	VkVertexInputBindingDescription vertexBindDescription = Vertex::getBindingDescription();
+	std::vector<VkVertexInputAttributeDescription> vertexAttrDescription(
+		std::move(Vertex::getAttributeDescriptions(shader.vertexInputFormat)));
+
+	VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
+	vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+	vertexInputCreateInfo.pVertexBindingDescriptions = &vertexBindDescription;
+	vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttrDescription.size());
+	vertexInputCreateInfo.pVertexAttributeDescriptions = vertexAttrDescription.data();
+
+	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
+	viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportStateCreateInfo.viewportCount = 1;
+	viewportStateCreateInfo.pViewports = nullptr;
+	viewportStateCreateInfo.scissorCount = 1;
+	viewportStateCreateInfo.pScissors = nullptr;
+
+	VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+	pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineCreateInfo.stageCount = static_cast<uint32_t>(shader.pipelineStages.size());
+	pipelineCreateInfo.pStages = shader.pipelineStages.data();
+	pipelineCreateInfo.pVertexInputState = &vertexInputCreateInfo;
+	pipelineCreateInfo.pInputAssemblyState = &createInfo.inputAssemblyCreateInfo;
+	pipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
+	pipelineCreateInfo.pRasterizationState = &createInfo.rasterizerCreateInfo;
+	pipelineCreateInfo.pMultisampleState = &createInfo.multisampleCreateInfo;
+	pipelineCreateInfo.pDepthStencilState = &createInfo.depthStencilCreateInfo;
+	pipelineCreateInfo.pColorBlendState = &createInfo.colorblendCreateInfo;
+	pipelineCreateInfo.pDynamicState = &createInfo.dynamicStateCreateInfo;
+	pipelineCreateInfo.layout = shader.pipelineLayout.get();
+	pipelineCreateInfo.renderPass = renderPass.renderPass.get();
+	pipelineCreateInfo.subpass = 0;
+	pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineCreateInfo.basePipelineIndex = -1;
+
+	VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+	auto result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &graphicsPipeline);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Graphics Pipeline creation failed with " + std::to_string(result));
+	}
+	Pipeline pipe = {};
+	// TODO
+	return pipe;
+}
+
+PipelineFactory::SetFormatID PipelineFactory::getFormatKey(const std::vector<UniformInfo>& uniforms)
 {
 	if (uniforms.size())
 	{
@@ -316,12 +377,196 @@ PipelineFactory::SetFormatKey PipelineFactory::getFormatKey(const std::vector<Un
 		}
 		else
 		{
-			return setFormatRegistry[format] = static_cast<SetFormatKey>(setFormatRegistry.size() + 1);
+			return setFormatRegistry[format] = static_cast<SetFormatID>(setFormatRegistry.size() + 1);
 		}
 	}
 	else
 	{
 		return 0;
 	}
+}
+
+PipelineFactory::FBFormatID PipelineFactory::getFormatKey(const std::vector<AttachmentFormat>& attachments)
+{
+	if (attachments.size())
+	{
+		FBFormat format = {attachments};
+		auto it = fbFormatRegistry.find(format);
+		if (it != fbFormatRegistry.end())
+		{
+			return it->second;
+		}
+		else
+		{
+			return fbFormatRegistry[format] = static_cast<SetFormatID>(fbFormatRegistry.size() + 1);
+		}
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats,
+											 const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
+											 const VkRenderPassMultiviewCreateInfo* multiview)
+{
+	std::vector<VkAttachmentDescription> attachmentDescriptions;
+	for (auto& format : formats)
+	{
+		if ((format.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) == 0)
+		{
+			throw std::invalid_argument("Format Usage " + std::to_string(format.usage) + " is not supported");
+		}
+		bool isSampled = format.usage & VK_IMAGE_USAGE_SAMPLED_BIT;
+		bool isDepthStencil = format.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		bool isStorage = format.usage & VK_IMAGE_USAGE_STORAGE_BIT;
+
+		auto& description = attachmentDescriptions.emplace_back();
+		description.flags = 0;
+		description.format = format.format;
+		description.samples = format.sampleCount;
+
+		switch (isDepthStencil ? config.depthLoad : config.colorLoad)
+		{
+		case LoadStoreConfig::LoadAction::CLEAR: {
+			description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		};
+		break;
+		case LoadStoreConfig::LoadAction::CONTINUE: {
+			if (isDepthStencil)
+			{
+				description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			}
+		};
+		break;
+		case LoadStoreConfig::LoadAction::DONT_CARE: {
+			if (isDepthStencil)
+			{
+				description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				description.initialLayout =
+					(isSampled ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+							   : (isStorage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+			}
+		};
+		break;
+		case LoadStoreConfig::LoadAction::READ: {
+			if (isDepthStencil)
+			{
+				description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				description.initialLayout =
+					(isSampled ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+							   : (isStorage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+			}
+		};
+		break;
+		}
+
+		switch (isDepthStencil ? config.depthStore : config.colorStore)
+		{
+		case LoadStoreConfig::StoreAction::CONTINUE: {
+			if (isDepthStencil)
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			}
+		};
+		break;
+		case LoadStoreConfig::StoreAction::DONT_CARE: {
+			if (isDepthStencil)
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.initialLayout =
+					(isSampled ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+							   : (isStorage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+			}
+		};
+		break;
+		case LoadStoreConfig::StoreAction::READ: {
+			if (isDepthStencil)
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+			else
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.finalLayout =
+					(isSampled ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+							   : (isStorage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+			}
+		};
+		break;
+		}
+	}
+
+	if (multiview == nullptr || multiview->subpassCount == static_cast<uint32_t>(subpasses.size()))
+	{
+		throw std::invalid_argument(
+			"Number of subpasses in the RenderPass must match the subpassCount of the multiview");
+	}
+
+	VkRenderPassCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	createInfo.pNext = multiview;
+	createInfo.flags = 0;
+	createInfo.attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size());
+	createInfo.pAttachments = attachmentDescriptions.data();
+	createInfo.subpassCount = static_cast<uint32_t>(subpasses.size());
+	createInfo.pSubpasses = subpasses.data();
+	createInfo.dependencyCount;
+	createInfo.pDependencies;
+
+	VkRenderPass renderPass;
+	auto result = vkCreateRenderPass(device, &createInfo, nullptr, &renderPass);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("RenderPass creation failed with " + std::to_string(result));
+	}
+	RenderPass rp = {};
+	rp.fbFormat = getFormatKey(formats);
+	rp.renderPass = vkw::RenderPass(renderPass, device);
+
+	return rp;
 }
 } // namespace blaze::spirv

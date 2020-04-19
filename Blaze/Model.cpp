@@ -662,7 +662,7 @@ void Model::update_nodes(int node, int parent)
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 
-	auto ivb = IndexedVertexBuffer(renderer.get_context(), vertexBuffer, indexBuffer);
+	auto ivb = IndexedVertexBuffer(renderer.get_context(), indexBuffer, vertexBuffer);
 	blazeModel = Model(renderer, scene.nodes, nodes, primitives, materials, std::move(ivb));
 
 	return blazeModel;

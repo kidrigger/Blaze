@@ -17,6 +17,7 @@ struct UniformInfo
 	uint32_t binding;
 	uint32_t arrayLength;
 	uint32_t size;
+	std::string name;
 
 	bool operator!=(const UniformInfo& other) const
 	{
@@ -45,6 +46,7 @@ struct UniformInfo
 		{
 			return size < other.size;
 		}
+		return false;
 	}
 
 	explicit operator VkDescriptorSetLayoutBinding()
@@ -62,8 +64,8 @@ struct Shader
 		uint32_t set{0};
 		std::vector<UniformInfo> uniforms;
 		vkw::DescriptorSetLayout layout;
-		
-		using FormatKey = uint32_t;
+
+		using FormatID = uint32_t;
 		struct Format
 		{
 			std::vector<UniformInfo> uniforms;
@@ -82,7 +84,7 @@ struct Shader
 				{
 					if (*iself != *ioth)
 					{
-						return iself < ioth;
+						return *iself < *ioth;
 					}
 				}
 
@@ -93,25 +95,76 @@ struct Shader
 
 	struct PushConstant
 	{
-		uint32_t size;
-		uint32_t stage;
+		uint32_t size = 0;
+		uint32_t stage = 0;
 	};
 
-	uint32_t vertexInputMask; // inputs used, this is mostly for validation
+	VertexInputFormat vertexInputFormat;
 	int fragmentOutputs;
 
 	PushConstant pushConstant;
 
 	bool isCompute = false;
 	std::vector<Set> sets;
-	std::vector<Set::FormatKey> setFormats;
+	std::vector<Set::FormatID> setFormats;
 	std::vector<VkPipelineShaderStageCreateInfo> pipelineStages;
-	std::vector<vkw::ShaderModule> shaderModules;	// to take ownership
+	std::vector<vkw::ShaderModule> shaderModules; // to take ownership
 	vkw::PipelineLayout pipelineLayout;
 
 	bool valid() const
 	{
 		return pipelineLayout.valid();
 	}
+
+#ifndef NDEBUG
+	friend std::ostream& operator<<(std::ostream& out, const Shader& shader)
+	{
+		constexpr char nl = '\n';
+		constexpr char tab = '\t';
+		out << "Vertex Input: {" << nl;
+		out << tab << "A_POSITION: " << shader.vertexInputFormat.A_POSITION << nl;
+		out << tab << "A_NORMAL: " << shader.vertexInputFormat.A_NORMAL << nl;
+		out << tab << "A_UV0: " << shader.vertexInputFormat.A_UV0 << nl;
+		out << tab << "A_UV1: " << shader.vertexInputFormat.A_UV1 << nl;
+		out << "Fragment Outputs:" << shader.fragmentOutputs << nl;
+		out << "Push Constant: { size = " << shader.pushConstant.size << ", stages = 0x" << std::hex
+			<< shader.pushConstant.stage << "}" << std::dec << nl;
+		out << "IsCompute: " << (shader.isCompute ? "yes" : "no") << nl;
+		out << "DescriptorSets: " << nl;
+		for (auto& set : shader.sets)
+		{
+			out << "Set " << set.set << nl;
+			for (auto& uniform : set.uniforms)
+			{
+				out << tab << "Uniform " << uniform.binding << " " << uniform.name << nl;
+				out << tab << tab << "type: ";
+#define ENUM_STR_CASE(e)                                                                                               \
+	case VK_DESCRIPTOR_TYPE_##e:                                                                                       \
+		out << #e << nl;                                                                                               \
+		break
+				switch (uniform.type)
+				{
+					ENUM_STR_CASE(SAMPLER);
+					ENUM_STR_CASE(COMBINED_IMAGE_SAMPLER);
+					ENUM_STR_CASE(SAMPLED_IMAGE);
+					ENUM_STR_CASE(STORAGE_IMAGE);
+					ENUM_STR_CASE(UNIFORM_TEXEL_BUFFER);
+					ENUM_STR_CASE(STORAGE_TEXEL_BUFFER);
+					ENUM_STR_CASE(UNIFORM_BUFFER);
+					ENUM_STR_CASE(STORAGE_BUFFER);
+					ENUM_STR_CASE(UNIFORM_BUFFER_DYNAMIC);
+					ENUM_STR_CASE(STORAGE_BUFFER_DYNAMIC);
+					ENUM_STR_CASE(INPUT_ATTACHMENT);
+				};
+				out << tab << tab << "size: " << uniform.size << nl;
+			}
+		}
+		return out;
+	}
+#endif // NDEBUG
+};
+
+struct Pipeline
+{
 };
 } // namespace blaze::spirv

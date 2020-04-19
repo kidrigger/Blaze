@@ -19,10 +19,10 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 	int numDirLights;
 } ubo;
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoords0;
-layout(location = 3) in vec2 inTexCoords1;
+layout(location = 0) in vec3 A_POSITION;
+layout(location = 1) in vec3 A_NORMAL;
+layout(location = 2) in vec2 A_UV0;
+layout(location = 3) in vec2 A_UV1;
 
 layout(push_constant) uniform TRS {
 	mat4 model;
@@ -42,16 +42,16 @@ const mat4 biasMat = mat4(
 	0.5, 0.5, 0.0, 1.0 );
 
 void main() {
-	gl_Position = ubo.projection * ubo.view * trs.model * vec4(inPosition, 1.0f);
-	outPosition = (trs.model * vec4(inPosition, 1.0f)).xyz;
-	normals = mat3(transpose(inverse(trs.model))) * inNormal;
-	texCoords0 = inTexCoords0;
-	texCoords1 = inTexCoords1;
+	gl_Position = ubo.projection * ubo.view * trs.model * vec4(A_POSITION, 1.0f);
+	outPosition = (trs.model * vec4(A_POSITION, 1.0f)).xyz;
+	normals = mat3(transpose(inverse(trs.model))) * A_NORMAL;
+	texCoords0 = A_UV0;
+	texCoords1 = A_UV1;
 	viewPosition = (ubo.view * vec4(outPosition, 1.0f)).xyz;
 
 	for (int i = 0; i < MAX_DIR_LIGHTS; i++) {
         for (int j = 0; j < MAX_CSM_SPLITS; j++) {
-            lightCoord[i][j] = biasMat * ubo.dirLightPV[i][j] * trs.model * vec4(inPosition, 1.0f);
+            lightCoord[i][j] = biasMat * ubo.dirLightPV[i][j] * trs.model * vec4(A_POSITION, 1.0f);
             // Light coord always is flipped vertically due to Vulkan's -y = up
             lightCoord[i][j].y = 1.0f - lightCoord[i][j].y;
 	    }

@@ -10,7 +10,7 @@ namespace blaze
 {
 class BaseUBO
 {
-private:
+protected:
 	VkBuffer buffer{VK_NULL_HANDLE};
 	VmaAllocation allocation{VK_NULL_HANDLE};
 	VmaAllocator allocator{VK_NULL_HANDLE};
@@ -51,7 +51,7 @@ public:
 
 	void writeData(const void* data, size_t size);
 
-	~BaseUBO();
+	virtual ~BaseUBO();
 };
 
 /**

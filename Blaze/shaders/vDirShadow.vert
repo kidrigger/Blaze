@@ -1,9 +1,9 @@
 #version 450
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoords0;
-layout(location = 3) in vec2 inTexCoords1;
+layout(location = 0) in vec3 A_POSITION;
+layout(location = 1) in vec3 A_NORMAL;
+layout(location = 2) in vec2 A_UV0;
+layout(location = 3) in vec2 A_UV1;
 
 layout(location = 0) out vec4 outPosition;
 
@@ -18,6 +18,6 @@ layout(push_constant) uniform PushConsts {
 } trs;
 
 void main() {
-	outPosition = trs.model * vec4(inPosition.xyz, 1.0f);
-	gl_Position = trs.pv * trs.model * vec4(inPosition.xyz, 1.0f);
+	outPosition = trs.model * vec4(A_POSITION.xyz, 1.0f);
+	gl_Position = trs.pv * trs.model * vec4(A_POSITION.xyz, 1.0f);
 }
