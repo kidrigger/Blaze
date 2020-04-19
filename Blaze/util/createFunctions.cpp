@@ -379,15 +379,12 @@ VkPipeline createGraphicsPipeline(VkDevice device, VkPipelineLayout pipelineLayo
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStagesCreateInfo = {vertexShaderStageCreateInfo,
 																		   fragmentShaderStageCreateInfo};
 
-	auto bindingDescriptions = vertBindingDescription;
-	auto attributeDescriptions = vertAttributeDescription;
-
 	VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
 	vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
-	vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescriptions;
-	vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	vertexInputCreateInfo.pVertexBindingDescriptions = &vertBindingDescription;
+	vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertAttributeDescription.size());
+	vertexInputCreateInfo.pVertexAttributeDescriptions = vertAttributeDescription.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
 	inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

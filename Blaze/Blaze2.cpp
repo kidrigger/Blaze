@@ -100,19 +100,19 @@ void runRefactored()
 	assert(renderer->complete());
 
 	// Shader fun
-	spirv::PipelineFactory pipelineFactory(renderer->get_context()->get_device());
-	std::vector<spirv::ShaderStageData> shaderStages = {
-		{
-			VK_SHADER_STAGE_VERTEX_BIT,
-			util::loadBinaryFile("shaders/PBR/vPBR.vert.spv"),
-		},
-		{
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			util::loadBinaryFile("shaders/PBR/fPBR.frag.spv"),
-		},
-	};
-	auto shader = pipelineFactory.createShader(shaderStages);
-	std::cerr << shader << std::endl;
+	//spirv::PipelineFactory pipelineFactory(renderer->get_context()->get_device());
+	//std::vector<spirv::ShaderStageData> shaderStages = {
+	//	{
+	//		VK_SHADER_STAGE_VERTEX_BIT,
+	//		util::loadBinaryFile("shaders/PBR/vPBR.vert.spv"),
+	//	},
+	//	{
+	//		VK_SHADER_STAGE_FRAGMENT_BIT,
+	//		util::loadBinaryFile("shaders/PBR/fPBR.frag.spv"),
+	//	},
+	//};
+	//auto shader = pipelineFactory.createShader(shaderStages);
+	//std::cerr << shader << std::endl;
 
 	// Run
 	bool onetime = true;

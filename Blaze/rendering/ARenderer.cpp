@@ -20,8 +20,7 @@ ARenderer::ARenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 
 	setupPerFrameData(swapchain->get_imageCount());
 
-	gui =
-		make_unique<GUI>(context.get(), swapchain->get_extent(), swapchain->get_format(), swapchain->get_imageViews());
+	gui = make_unique<GUI>(context.get(), swapchain.get());
 }
 
 void ARenderer::render()
@@ -148,7 +147,7 @@ void ARenderer::recreateSwapchain()
 
 		setupPerFrameData(swapchain->get_imageCount());
 
-		gui->recreate(context.get(), swapchain->get_extent(), swapchain->get_imageViews());
+		gui->recreate(context.get(), swapchain.get());
 
 		// Recreate all number based
 		recreateSwapchainDependents();

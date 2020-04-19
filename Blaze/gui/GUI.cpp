@@ -2,6 +2,7 @@
 #include "GUI.hpp"
 
 #include <rendering/Renderer.hpp>
+#include <core/Swapchain.hpp>
 
 namespace blaze
 {
@@ -19,11 +20,11 @@ void GUI::endFrame()
 	complete = true;
 }
 
-void GUI::recreate(const Context* context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews)
+void GUI::recreate(const Context* context, const Swapchain* swapchain)
 {
-	width = size.width;
-	height = size.height;
-	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchainImageViews);
+	width = swapchain->get_extent().width;
+	height = swapchain->get_extent().height;
+	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchain->get_imageViews());
 }
 
 void GUI::draw(VkCommandBuffer cmdBuffer, int frameCount)
@@ -48,9 +49,8 @@ void GUI::draw(VkCommandBuffer cmdBuffer, int frameCount)
 	}
 }
 
-GUI::GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
-		 const std::vector<VkImageView>& swapchainImageViews) noexcept
-	: width(size.width), height(size.height), valid(false)
+GUI::GUI(const Context* context, const Swapchain* swapchain) noexcept
+	: width(swapchain->get_extent().width), height(swapchain->get_extent().height), valid(false)
 {
 	std::vector<VkDescriptorPoolSize> pool_sizes = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
 													{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
@@ -68,7 +68,7 @@ GUI::GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
 
 	{
 		auto rpass =
-			util::createRenderPass(context->get_device(), format, VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			util::createRenderPass(context->get_device(), swapchain->get_format(), VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD);
 		renderPass = vkw::RenderPass(rpass, context->get_device());
 	}
@@ -90,8 +90,8 @@ GUI::GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
 	init_info.PipelineCache = VK_NULL_HANDLE;
 	init_info.DescriptorPool = descriptorPool.get();
 	init_info.Allocator = nullptr;
-	init_info.MinImageCount = std::max(2u, static_cast<uint32_t>(swapchainImageViews.size()));
-	init_info.ImageCount = static_cast<uint32_t>(swapchainImageViews.size());
+	init_info.MinImageCount = std::max(2u, swapchain->get_imageCount());
+	init_info.ImageCount = swapchain->get_imageCount();
 	init_info.CheckVkResultFn = VK_ASSERT;
 	ImGui_ImplVulkan_Init(&init_info, renderPass.get());
 
@@ -99,7 +99,7 @@ GUI::GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
 	ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer);
 	context->flushCommandBuffer(cmdBuffer);
 
-	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchainImageViews);
+	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchain->get_imageViews());
 
 	valid = true;
 }

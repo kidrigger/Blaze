@@ -166,5 +166,6 @@ struct Shader
 
 struct Pipeline
 {
+	vkw::Pipeline pipeline;
 };
 } // namespace blaze::spirv

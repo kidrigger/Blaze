@@ -22,6 +22,8 @@
 
 namespace blaze
 {
+
+class Swapchain;
 /**
  * @class GUI
  *
@@ -69,8 +71,7 @@ public:
 	 *
 	 * @brief Constructor of the object. Initializes ImGUI and required resources.
 	 */
-	GUI(const Context* context, const VkExtent2D& size, const VkFormat& format,
-		const std::vector<VkImageView>& swapchainImageViews) noexcept;
+	GUI(const Context* context, const Swapchain* swapchain) noexcept;
 
 	/**
 	 * @name Move Constructors
@@ -99,7 +100,7 @@ public:
 	 * @param size The size of the framebuffer.
 	 * @param swapchainImageViews The imageviews of the current swapchain.
 	 */
-	void recreate(const Context* context, const VkExtent2D& size, const std::vector<VkImageView>& swapchainImageViews);
+	void recreate(const Context* context, const Swapchain* swapchain);
 
 	/**
 	 * @fn startFrame

@@ -7,14 +7,19 @@
 #include <rendering/ARenderer.hpp>
 #include <vkwrap/VkWrap.hpp>
 
+#include <spirv/PipelineFactory.hpp>
+
 namespace blaze
 {
 class FwdRenderer final : public ARenderer
 {
 private:
-	vkw::RenderPass renderPass;
+	spirv::PipelineFactory pipelineFactory;
 	Texture2D depthBuffer;
+	spirv::RenderPass renderPass;
 	vkw::FramebufferVector renderFramebuffers;
+	spirv::Shader shader;
+	spirv::Pipeline pipeline;
 
 public:
 	/**
@@ -61,8 +66,10 @@ protected:
 	void recreateSwapchainDependents();
 
 private:
-	vkw::RenderPass createRenderpass() const;
+	spirv::RenderPass createRenderpass();
 	Texture2D createDepthBuffer() const;
 	vkw::FramebufferVector createFramebuffers() const;
+	spirv::Shader createShader();
+	spirv::Pipeline createPipeline();
 };
 } // namespace blaze

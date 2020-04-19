@@ -127,11 +127,15 @@ class PipelineFactory
 	using FBFormat = Framebuffer::Format;
 	using FBFormatID = Framebuffer::FormatID;
 
-	VkDevice device;
+	VkDevice device{VK_NULL_HANDLE};
 	std::map<SetFormat, SetFormatID> setFormatRegistry;
 	std::map<FBFormat, FBFormatID> fbFormatRegistry;
 
 public:
+	PipelineFactory() noexcept
+	{
+	}
+
 	PipelineFactory(VkDevice device) noexcept : device(device)
 	{
 	}
@@ -143,6 +147,11 @@ public:
 	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
 								const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
+
+	inline bool valid() const
+	{
+		return device != VK_NULL_HANDLE;
+	}
 
 private:
 	vkw::PipelineLayout createPipelineLayout(const std::vector<Shader::Set>& info,

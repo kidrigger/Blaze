@@ -21,10 +21,14 @@ namespace blaze
 
 struct VertexInputFormat
 {
-	uint8_t A_POSITION = 0;
-	uint8_t A_NORMAL = 1;
-	uint8_t A_UV0 = 2;
-	uint8_t A_UV1 = 3;
+	uint32_t A_POSITION;
+	uint32_t A_NORMAL;
+	uint32_t A_UV0;
+	uint32_t A_UV1;
+
+	VertexInputFormat() : A_POSITION(0), A_NORMAL(1), A_UV0(2), A_UV1(3)
+	{
+	}
 };
 
 /**
@@ -79,34 +83,34 @@ struct Vertex
 	{
 		std::vector<VkVertexInputAttributeDescription> attributeDescs = {
 			{
-				binding,
 				format.A_POSITION,
+				binding,
 				VK_FORMAT_R32G32B32_SFLOAT,
 				offsetof(Vertex, position),
 			},
 			{
-				binding,
 				format.A_NORMAL,
+				binding,
 				VK_FORMAT_R32G32B32_SFLOAT,
 				offsetof(Vertex, normal),
 			},
 			{
-				binding,
 				format.A_UV0,
+				binding,
 				VK_FORMAT_R32G32_SFLOAT,
 				offsetof(Vertex, uv0),
 			},
 			{
-				binding,
 				format.A_UV1,
+				binding,
 				VK_FORMAT_R32G32_SFLOAT,
 				offsetof(Vertex, uv1),
 			},
 		};
 
 		return attributeDescs;
-	} // namespace blaze
-};	  // namespace blaze
+	}
+};
 
 /**
  * @struct CameraUBlock

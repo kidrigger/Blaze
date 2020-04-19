@@ -267,8 +267,8 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 	shader.isCompute = isCompute;
 	shader.fragmentOutputs = fragmentOutputs;
 	shader.vertexInputFormat = vertexInput;
-	shader.sets = std::move(descriptorSetLayouts);
 	shader.pipelineLayout = createPipelineLayout(descriptorSetLayouts, pushConst);
+	shader.sets = std::move(descriptorSetLayouts);
 	shader.setFormats = std::move(setFormatKeys);
 	shader.shaderModules = std::move(shaderModules);
 	shader.pipelineStages = std::move(pipelineStagesCI);
@@ -361,7 +361,7 @@ Pipeline PipelineFactory::createGraphicsPipeline(const Shader& shader, const Ren
 		throw std::runtime_error("Graphics Pipeline creation failed with " + std::to_string(result));
 	}
 	Pipeline pipe = {};
-	// TODO
+	pipe.pipeline = vkw::Pipeline(graphicsPipeline, device);
 	return pipe;
 }
 
@@ -540,7 +540,7 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 		}
 	}
 
-	if (multiview == nullptr || multiview->subpassCount == static_cast<uint32_t>(subpasses.size()))
+	if (multiview != nullptr && multiview->subpassCount != static_cast<uint32_t>(subpasses.size()))
 	{
 		throw std::invalid_argument(
 			"Number of subpasses in the RenderPass must match the subpassCount of the multiview");

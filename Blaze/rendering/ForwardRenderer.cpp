@@ -466,7 +466,7 @@ ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers
 			inFlightFences = vkw::FenceVector(std::move(fences), context.get_device());
 		}
 
-		gui = GUI(&context, swapchain.get_extent(), swapchain.get_format(), swapchain.get_imageViews());
+		gui = GUI(&context, &swapchain);
 
 		recordCommandBuffers();
 
@@ -574,7 +574,7 @@ void ForwardRenderer::recreateSwapchain()
 				vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(buf.size()), buf.data());
 			});
 
-		gui.recreate(&context, swapchain.get_extent(), swapchain.get_imageViews());
+		gui.recreate(&context, &swapchain);
 
 		recordCommandBuffers();
 	}
