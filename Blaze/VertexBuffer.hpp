@@ -240,14 +240,6 @@ public:
 	{
 		return vertexBuffer.get_buffer();
 	}
-	inline const VmaAllocation& get_vertexAllocation() const
-	{
-		return vertexBuffer.get_allocation();
-	}
-	inline const size_t& get_verticeSize() const
-	{
-		return vertexBuffer.get_size();
-	}
 	inline const uint32_t& get_vertexCount() const
 	{
 		return vertexBuffer.get_count();
@@ -255,14 +247,6 @@ public:
 	inline const VkBuffer& get_indexBuffer() const
 	{
 		return indexBuffer.get_buffer();
-	}
-	inline const VmaAllocation& get_indexAllocation() const
-	{
-		return indexBuffer.get_allocation();
-	}
-	inline const size_t& get_indiceSize() const
-	{
-		return indexBuffer.get_size();
 	}
 	inline const uint32_t& get_indexCount() const
 	{

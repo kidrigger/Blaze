@@ -116,7 +116,7 @@ struct BaseCollection
 	}
 };
 
-template <typename THandle, typename void (*TDestroy)(THandle, const VkAllocationCallbacks*)>
+template <typename THandle, void (*TDestroy)(THandle, const VkAllocationCallbacks*)>
 struct IndependentHolder
 {
 	THandle handle{VK_NULL_HANDLE};
@@ -164,7 +164,7 @@ struct IndependentHolder
 	}
 };
 
-template <typename THandle, typename TDep, typename void (*TDestroy)(TDep, THandle, const VkAllocationCallbacks*)>
+template <typename THandle, typename TDep, void (*TDestroy)(TDep, THandle, const VkAllocationCallbacks*)>
 struct DependentHolder
 {
 	THandle handle{VK_NULL_HANDLE};
@@ -214,7 +214,7 @@ struct DependentHolder
 	}
 };
 
-template <typename THandle, typename void (*TDestroy)(VkDevice, THandle, const VkAllocationCallbacks*)>
+template <typename THandle, void (*TDestroy)(VkDevice, THandle, const VkAllocationCallbacks*)>
 struct DeviceDependentVector
 {
 	std::vector<THandle> handles;

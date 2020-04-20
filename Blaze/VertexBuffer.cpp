@@ -1,6 +1,8 @@
 
 #include "VertexBuffer.hpp"
 
+#include <tuple>
+
 namespace blaze
 {
 BaseVBO::BaseVBO(const Context* context, Usage usage, const void* data, uint32_t count, size_t size) noexcept

@@ -3,6 +3,7 @@
 
 #include "util/createFunctions.hpp"
 #include <string>
+#include <algorithm>
 
 namespace blaze
 {
