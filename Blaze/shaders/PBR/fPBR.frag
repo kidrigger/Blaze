@@ -27,7 +27,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 	ivec4 shadowIdx[MAX_POINT_LIGHTS/4];
 	int numLights;
 	int numDirLights;
-} ubo;
+} renderUBO;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
 	int viewMap;
@@ -70,7 +70,7 @@ const float PI = 3.1415926535897932384626433832795f;
 
 int getShadowIdx(int lightIndex)
 {
-	return ubo.shadowIdx[lightIndex/4][lightIndex%4];
+	return renderUBO.shadowIdx[lightIndex/4][lightIndex%4];
 }
 
 vec3 Uncharted2Tonemap(vec3 color)
@@ -168,7 +168,7 @@ float calculatePointShadow(int lightIdx) {
 	if (shadowIdx < 0) {
 		return 1.0f;
 	}
-	vec3 dir = position - ubo.lightPos[lightIdx].xyz;
+	vec3 dir = position - renderUBO.lightPos[lightIdx].xyz;
 	dir.x *= -1;
 	float dist = length(dir);
 	dir = normalize(dir);
@@ -178,7 +178,7 @@ float calculatePointShadow(int lightIdx) {
 float calculateDirectionalShadow(int shadowIdx) {
 	int cascade = 0;
 	for (int i = 0; i < MAX_CSM_SPLITS-1; i++) {
-		if (-viewPosition.z > ubo.csmSplits[shadowIdx][i]) {
+		if (-viewPosition.z > renderUBO.csmSplits[shadowIdx][i]) {
 			cascade = i+1;
 		}
 	}
@@ -208,7 +208,7 @@ float calculateDirectionalShadow(int shadowIdx) {
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
 	vec3 N = (material.normalTextureSet > -1 ? getNormal() : normalize(normal));
-	vec3 V = normalize(ubo.viewPos - position);
+	vec3 V = normalize(renderUBO.viewPos - position);
 
 	vec3 albedo;
 	float metallic;
@@ -250,15 +250,15 @@ void main() {
 
 	vec3 L0 = vec3(0.0f);
 
-	for (int i = 0; i < ubo.numLights; i++) {
+	for (int i = 0; i < renderUBO.numLights; i++) {
 		
-		vec3 L		 = normalize(ubo.lightPos[i].xyz - position);
+		vec3 L		 = normalize(renderUBO.lightPos[i].xyz - position);
 		vec3 H		 = normalize(V + L);
 		float cosine = max(dot(L, N), 0.0f);
 
-		float dist		  = length(ubo.lightPos[i].xyz - position);
+		float dist		  = length(renderUBO.lightPos[i].xyz - position);
 		float attenuation = 1.0 / (dist * dist);
-		vec3 radiance	  = lightColor * attenuation * ubo.lightPos[i].w;
+		vec3 radiance	  = lightColor * attenuation * renderUBO.lightPos[i].w;
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G	  = GeometrySmith(N, V, L, roughness);
@@ -279,15 +279,15 @@ void main() {
 		L0 += shade * (kd * albedo / PI + specular) * radiance * NdotL;
 	}
 
-	for (int i = 0; i < ubo.numDirLights; i++) {
+	for (int i = 0; i < renderUBO.numDirLights; i++) {
 		
-		vec3 L		 = normalize(-ubo.lightDir[i].xyz);
+		vec3 L		 = normalize(-renderUBO.lightDir[i].xyz);
 		vec3 H		 = normalize(V + L);
 		float cosine = max(dot(L, N), 0.0f);
 
-		float dist		  = length(-ubo.lightDir[i].xyz);
+		float dist		  = length(-renderUBO.lightDir[i].xyz);
 		float attenuation = 1.0 / max((dist * dist), 0.001);
-		vec3 radiance	  = lightColor * attenuation * ubo.lightDir[i].w;
+		vec3 radiance	  = lightColor * attenuation * renderUBO.lightDir[i].w;
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G	  = GeometrySmith(N, V, L, roughness);
@@ -356,11 +356,11 @@ void main() {
 			}; break;
 			case 8: {
 				float d = -viewPosition.z;
-				if (d < ubo.csmSplits[0][0]) {
+				if (d < renderUBO.csmSplits[0][0]) {
 					outColor = outColor * 0.7f + 0.3f * vec4(1.0f, 0.0f, 0.0f, 1.0f);
-				} else if (ubo.csmSplits[0][3] > 1 && d < ubo.csmSplits[0][1]) {
+				} else if (renderUBO.csmSplits[0][3] > 1 && d < renderUBO.csmSplits[0][1]) {
 					outColor = outColor * 0.7f + 0.3f * vec4(0.0f, 1.0f, 0.0f, 1.0f);
-				} else if (ubo.csmSplits[0][3] > 2 && d < ubo.csmSplits[0][2]) {
+				} else if (renderUBO.csmSplits[0][3] > 2 && d < renderUBO.csmSplits[0][2]) {
 					outColor = outColor * 0.7f + 0.3f * vec4(0.0f, 0.0f, 1.0f, 1.0f);
 				} else {
 					outColor = outColor * 0.7f + 0.3f * vec4(1.0f, 0.0f, 1.0f, 1.0f);

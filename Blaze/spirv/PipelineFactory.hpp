@@ -4,11 +4,10 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include "DescriptorSet.hpp"
+#include "Pipeline.hpp"
 #include <map>
 #include <thirdparty/spirv_reflect/spirv_reflect.h>
-
-#include <deque>
-#include <spirv/Pipeline.hpp>
 #include <vkwrap/VkWrap.hpp>
 
 namespace blaze::spirv
@@ -113,6 +112,13 @@ struct Framebuffer
 	};
 };
 
+struct DescriptorFrame
+{
+	std::map<Shader::Set::FormatID, uint32_t> formatIDmap;
+	vkw::DescriptorPool pool;
+	std::vector<vkw::DescriptorSetVector> sets;
+};
+
 struct RenderPass
 {
 	Framebuffer::FormatID fbFormat;
@@ -147,6 +153,9 @@ public:
 	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
 								const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
+
+	vkw::DescriptorPool createDescriptorPool(const std::vector<Shader::Set*>& sets, uint32_t maxSets);
+	DescriptorFrame createDescriptorSets(const std::vector<Shader::Set*>& sets, uint32_t count);
 
 	inline bool valid() const
 	{

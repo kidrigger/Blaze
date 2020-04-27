@@ -1,11 +1,11 @@
 
 #pragma once
 
-#include <vector>
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <map>
+#include <vector>
 #include <vkwrap/VkWrap.hpp>
 
 namespace blaze::spirv
@@ -110,6 +110,7 @@ struct Shader
 	std::vector<VkPipelineShaderStageCreateInfo> pipelineStages;
 	std::vector<vkw::ShaderModule> shaderModules; // to take ownership
 	vkw::PipelineLayout pipelineLayout;
+	std::map<std::string, std::pair<uint32_t, uint32_t>> uniformLocations;
 
 	bool valid() const
 	{

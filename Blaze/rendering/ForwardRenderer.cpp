@@ -130,8 +130,8 @@ VkDescriptorSetLayout ForwardRenderer::createMaterialDescriptorSetLayout() const
 
 VkDescriptorPool ForwardRenderer::createDescriptorPool() const
 {
-	std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}};
-	return util::createDescriptorPool(context.get_device(), poolSizes, 2u * swapchain.get_imageCount());
+	std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2u * swapchain.get_imageCount()}};
+	return util::createDescriptorPool(context.get_device(), poolSizes, swapchain.get_imageCount());
 }
 
 std::vector<VkDescriptorSet> ForwardRenderer::createCameraDescriptorSets() const

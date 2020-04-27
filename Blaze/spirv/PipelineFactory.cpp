@@ -243,18 +243,17 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 	descriptorSetLayouts.reserve(uniformInfos.size());
 	setFormatKeys.reserve(uniformInfos.size());
 
-	for (auto& mui : uniformInfos)
+	for (auto& [set, map] : uniformInfos)
 	{
-		auto& uniformMap = mui.second;
 		auto& lay = descriptorSetLayouts.emplace_back();
-		lay.uniforms.reserve(uniformMap.size());
+		lay.uniforms.reserve(map.size());
 
-		lay.set = mui.first;
+		lay.set = set;
 		vector<VkDescriptorSetLayoutBinding> binds;
-		for (auto& kv : uniformMap)
+		for (auto& [key, val] : map)
 		{
-			lay.uniforms.push_back(kv.second);
-			binds.push_back(static_cast<VkDescriptorSetLayoutBinding>(kv.second));
+			lay.uniforms.push_back(val);
+			binds.push_back(static_cast<VkDescriptorSetLayoutBinding>(val));
 		}
 		lay.layout = vkw::DescriptorSetLayout(util::createDescriptorSetLayout(device, binds), device);
 
@@ -272,6 +271,14 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 	shader.setFormats = std::move(setFormatKeys);
 	shader.shaderModules = std::move(shaderModules);
 	shader.pipelineStages = std::move(pipelineStagesCI);
+
+	for (auto& dset : shader.sets)
+	{
+		for (auto& uniform : dset.uniforms)
+		{
+			shader.uniformLocations[uniform.name] = {dset.set, uniform.binding};
+		}
+	}
 
 	return std::move(shader);
 }
@@ -568,5 +575,66 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 	rp.renderPass = vkw::RenderPass(renderPass, device);
 
 	return rp;
+}
+
+vkw::DescriptorPool PipelineFactory::createDescriptorPool(const std::vector<Shader::Set*>& sets, uint32_t maxSets)
+{
+	std::vector<VkDescriptorPoolSize> poolSizes;
+	for (auto& set : sets)
+	{
+		for (auto& uniform : set->uniforms)
+		{
+			bool found = false;
+			for (auto& poolSize : poolSizes)
+			{
+				if (poolSize.type == uniform.type)
+				{
+					poolSize.descriptorCount++;
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				auto& ps = poolSizes.emplace_back();
+				ps.type = uniform.type;
+				ps.descriptorCount = 1;
+			}
+		}
+	}
+
+	for (auto& ps : poolSizes)
+	{
+		ps.descriptorCount *= maxSets;
+	}
+
+	return vkw::DescriptorPool(util::createDescriptorPool(device, poolSizes, static_cast<uint32_t>(maxSets * sets.size())), device);
+}
+
+
+DescriptorFrame PipelineFactory::createDescriptorSets(const std::vector<Shader::Set*>& sets, uint32_t count)
+{
+	DescriptorFrame frame;
+	frame.pool = createDescriptorPool(sets, count);
+	for (auto& set : sets)
+	{
+		std::vector<VkDescriptorSetLayout> layouts(count, set->layout.get());
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = frame.pool.get();
+		allocInfo.descriptorSetCount = count;
+		allocInfo.pSetLayouts = layouts.data();
+
+		std::vector<VkDescriptorSet> descriptorSets(count);
+		auto result = vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data());
+		if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+		}
+		frame.formatIDmap[getFormatKey(set->uniforms)] = static_cast<uint32_t>(frame.sets.size());
+		frame.sets.emplace_back(std::move(descriptorSets));
+	}
+
+	return frame;
 }
 } // namespace blaze::spirv

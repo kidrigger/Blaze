@@ -16,6 +16,7 @@ namespace blaze
 // Constants
 const int WIDTH = 640;
 const int HEIGHT = 480;
+const bool FULLSCREEN = false;
 
 #ifdef VALIDATION_LAYERS_ENABLED
 const bool enableValidationLayers = true;
@@ -83,7 +84,7 @@ void runRefactored()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", nullptr, nullptr);
+	window = glfwCreateWindow(WIDTH, HEIGHT, VERSION.FULL_NAME, FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
 	assert(window != nullptr);
 
 	{

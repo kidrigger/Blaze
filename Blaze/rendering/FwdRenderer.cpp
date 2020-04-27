@@ -22,6 +22,8 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	shader = createShader();
 	pipeline = createPipeline();
 
+	uboFrames = createDescriptorFrame();
+
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
 
@@ -69,6 +71,8 @@ void FwdRenderer::recreateSwapchainDependents()
 	// Pipeline
 	shader = createShader();
 	pipeline = createPipeline();
+
+	uboFrames = createDescriptorFrame();
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -196,6 +200,17 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	return pipelineFactory.createGraphicsPipeline(shader, renderPass, info);
 }
 
+spirv::DescriptorFrame FwdRenderer::createDescriptorFrame()
+{
+	auto [rset, rbind] = shader.uniformLocations["renderUBO"];
+	auto [sset, sbind] = shader.uniformLocations["debugSettings"];
+
+	// Temporary
+	assert(rset == sset);
+
+	return pipelineFactory.createDescriptorSets({&shader.sets[rset]}, swapchain->get_imageCount());
+}
+
 vkw::FramebufferVector FwdRenderer::createFramebuffers() const
 {
 	using namespace std;
@@ -247,5 +262,4 @@ Texture2D FwdRenderer::createDepthBuffer() const
 
 	return Texture2D(*context, imageData);
 }
-
 } // namespace blaze

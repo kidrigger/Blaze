@@ -1,14 +1,70 @@
 
 #include "debugMessenger.hpp"
 
+#include <fstream>
+
 namespace blaze::util
 {
+
+struct DebugCounts
+{
+	inline static uint32_t errors{0};
+	inline static uint32_t warnings{0};
+	inline static uint32_t verbose{0};
+	inline static std::ofstream fileStream;
+
+private:
+	inline static bool _init = false;
+
+public:
+	static void init()
+	{
+		if (!_init)
+		{
+			_init = true;
+			fileStream.open("logfile.txt", std::ofstream::out);
+			atexit(exit);
+		}
+	}
+
+	static void exit()
+	{
+		std::cout << errors << " error(s), " << warnings << " warning(s), " << verbose << " verbose message(s)."
+				  << std::endl;
+		fileStream.close();
+	}
+};
+
 /// @cond PRIVATE
 VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 											 VkDebugUtilsMessageTypeFlagsEXT messageType,
 											 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		std::cerr << "Validation ERR [" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
+	}
+	if (!strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
+	{
+		return VK_FALSE;
+	}
+
+	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		DebugCounts::fileStream << "ERROR ";
+		DebugCounts::errors++;
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	{
+		DebugCounts::fileStream << "WARNING ";
+		DebugCounts::warnings++;
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+	{
+		DebugCounts::fileStream << "VERBOSE ";
+		DebugCounts::verbose++;
+	}
+	DebugCounts::fileStream << "[" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
 
 	return VK_FALSE;
 }
@@ -25,6 +81,9 @@ VkDebugUtilsMessengerCreateInfoEXT createDebugMessengerCreateInfo()
 							 VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
 	createInfo.pUserData = nullptr;
+
+	DebugCounts::init();
+
 	return createInfo;
 }
 

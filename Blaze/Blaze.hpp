@@ -3,6 +3,11 @@
 
 #pragma once
 #define VALIDATION_LAYERS_ENABLED
+#include <Version.hpp>
+
+#include <string_view>
+
+constexpr std::string_view PROJECT_NAME = "Blaze";
 
 namespace blaze
 {

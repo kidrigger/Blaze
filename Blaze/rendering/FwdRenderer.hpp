@@ -20,6 +20,7 @@ private:
 	vkw::FramebufferVector renderFramebuffers;
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
+	spirv::DescriptorFrame uboFrames;
 
 public:
 	/**
@@ -71,5 +72,6 @@ private:
 	vkw::FramebufferVector createFramebuffers() const;
 	spirv::Shader createShader();
 	spirv::Pipeline createPipeline();
+	spirv::DescriptorFrame createDescriptorFrame();
 };
 } // namespace blaze

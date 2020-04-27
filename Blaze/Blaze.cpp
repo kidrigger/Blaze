@@ -52,8 +52,9 @@
 namespace blaze
 {
 // Constants
-const int WIDTH = 1920;
-const int HEIGHT = 1080;
+const int WIDTH = 1280;
+const int HEIGHT = 720;
+const bool FULLSCREEN = false;
 
 #ifdef VALIDATION_LAYERS_ENABLED
 const bool enableValidationLayers = true;
@@ -215,7 +216,7 @@ void run()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Hello, Vulkan", glfwGetPrimaryMonitor(), nullptr);
+	window = glfwCreateWindow(WIDTH, HEIGHT, VERSION.FULL_NAME, FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
 	assert(window != nullptr);
 
 	{
@@ -291,7 +292,7 @@ void run()
 
 	VkDescriptorPoolSize poolSize = {};
 	poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSize.descriptorCount = 1;
+	poolSize.descriptorCount = 4;
 	vector<VkDescriptorPoolSize> poolSizes = {poolSize};
 	Managed<VkDescriptorPool> dsPool = Managed(
 		createDescriptorPool(renderer->get_device(), poolSizes, 1),
@@ -329,6 +330,7 @@ void run()
 	double elapsed = 0.0;
 
 	renderer->set_environmentDescriptor(ds.get());
+
 	auto model = loadModel(*renderer, settings.filename);
 
 	auto modelHandle = renderer->submit(&model);

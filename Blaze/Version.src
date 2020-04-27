@@ -15,4 +15,8 @@ constexpr struct Version
 	{
 		@Blaze_VERSION_PATCH@
 	};
+
+	const char* STRING = "@Blaze_VERSION_MAJOR@.@Blaze_VERSION_MINOR@.@Blaze_VERSION_PATCH@";
+
+	const char* FULL_NAME = "Blaze @Blaze_VERSION_MAJOR@.@Blaze_VERSION_MINOR@.@Blaze_VERSION_PATCH@";
 } VERSION;

@@ -43,6 +43,7 @@ TextureCube createPrefilteredCube(const Renderer& renderer, VkDescriptorSet envi
 		128u,
 		{0, 0},
 	};
+	auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
 
 	const uint32_t dim = info.cube_side;
 
@@ -169,8 +170,6 @@ TextureCube createPrefilteredCube(const Renderer& renderer, VkDescriptorSet envi
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
-			vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderpassBeginInfo.renderPass = irRenderPass.get();
@@ -186,6 +185,7 @@ TextureCube createPrefilteredCube(const Renderer& renderer, VkDescriptorSet envi
 			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
+			vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 0, 1,
 									&info.descriptor, 0, nullptr);
 
@@ -199,8 +199,7 @@ TextureCube createPrefilteredCube(const Renderer& renderer, VkDescriptorSet envi
 
 			VkDeviceSize offsets = {0};
 
-			vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &cube.get_vertexBuffer(), &offsets);
-			vkCmdBindIndexBuffer(cmdBuffer, cube.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			cube.bind(cmdBuffer);
 			vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(cmdBuffer);
@@ -256,6 +255,7 @@ Texture2D createBrdfLut(const Context& context)
 	util::Managed<VkFramebuffer> irFramebuffer;
 
 	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	auto timer = AutoTimer("Process fBrdfLut.frag.spv took (us)");
 
 	ImageData2D id2d{};
 	id2d.height = dim;
@@ -349,8 +349,7 @@ Texture2D createBrdfLut(const Context& context)
 
 	VkDeviceSize offsets = {0};
 
-	vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &rect.get_vertexBuffer(), &offsets);
-	vkCmdBindIndexBuffer(cmdBuffer, rect.get_indexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	rect.bind(cmdBuffer);
 	vkCmdDrawIndexed(cmdBuffer, rect.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(cmdBuffer);

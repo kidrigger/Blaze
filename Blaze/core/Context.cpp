@@ -28,7 +28,7 @@ BufferObject Context::createBuffer(size_t size, VkBufferUsageFlags vulkanUsage, 
 	auto result = vmaCreateBuffer(allocator.get(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
 	if (result != VK_SUCCESS)
 	{
-		throw std::runtime_error("Buffer could not be allocated");
+		throw std::runtime_error("Buffer could not be allocated with " + std::to_string(result));
 	}
 
 	return BufferObject{buffer, allocation};
@@ -60,7 +60,7 @@ ImageObject Context::createImage(uint32_t width, uint32_t height, uint32_t miple
 	auto result = vmaCreateImage(allocator.get(), &imageInfo, &allocInfo, &image, &allocation, nullptr);
 	if (result != VK_SUCCESS)
 	{
-		throw std::runtime_error("Buffer could not be allocated");
+		throw std::runtime_error("Image could not be allocated with " + std::to_string(result));
 	}
 
 	return ImageObject{image, allocation, format};
@@ -93,7 +93,7 @@ ImageObject Context::createImage(uint32_t width, uint32_t height, uint32_t miple
 	auto result = vmaCreateImage(allocator.get(), &imageInfo, &allocInfo, &image, &allocation, nullptr);
 	if (result != VK_SUCCESS)
 	{
-		throw std::runtime_error("Buffer could not be allocated");
+		throw std::runtime_error("Image could not be allocated with " + std::to_string(result));
 	}
 
 	return ImageObject{image, allocation, format};
@@ -126,7 +126,7 @@ ImageObject Context::createImageCube(uint32_t width, uint32_t height, uint32_t m
 	auto result = vmaCreateImage(allocator.get(), &imageInfo, &allocInfo, &image, &allocation, nullptr);
 	if (result != VK_SUCCESS)
 	{
-		throw std::runtime_error("Buffer could not be allocated");
+		throw std::runtime_error("ImageCube could not be allocated with " + std::to_string(result));
 	}
 
 	return ImageObject{image, allocation, format};
