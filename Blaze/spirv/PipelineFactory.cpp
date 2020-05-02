@@ -305,8 +305,8 @@ vkw::PipelineLayout PipelineFactory::createPipelineLayout(const std::vector<Shad
 	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(dsl.size());
 	pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
-	pipelineLayoutCreateInfo.pushConstantRangeCount = 1u;
-	pipelineLayoutCreateInfo.pPushConstantRanges = &pcr;
+	pipelineLayoutCreateInfo.pushConstantRangeCount = pcr.size ? 1u : 0u;
+	pipelineLayoutCreateInfo.pPushConstantRanges = pcr.size ? &pcr : nullptr;
 
 	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 	auto result = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
@@ -369,6 +369,7 @@ Pipeline PipelineFactory::createGraphicsPipeline(const Shader& shader, const Ren
 	}
 	Pipeline pipe = {};
 	pipe.pipeline = vkw::Pipeline(graphicsPipeline, device);
+	pipe.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	return pipe;
 }
 

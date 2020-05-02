@@ -168,5 +168,11 @@ struct Shader
 struct Pipeline
 {
 	vkw::Pipeline pipeline;
+	VkPipelineBindPoint bindPoint;
+
+	void bind(VkCommandBuffer cmdbuf)
+	{
+		vkCmdBindPipeline(cmdbuf, bindPoint, pipeline.get());
+	}
 };
 } // namespace blaze::spirv

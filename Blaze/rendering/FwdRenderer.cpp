@@ -1,6 +1,7 @@
 
 #include "FwdRenderer.hpp"
 
+#include <Primitives.hpp>
 #include <util/files.hpp>
 
 namespace blaze
@@ -22,13 +23,37 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	shader = createShader();
 	pipeline = createPipeline();
 
-	uboFrames = createDescriptorFrame();
+	std::vector<Vertex> vs(3);
+	vs[0].position = glm::vec3(0.5f, -0.5f, 0.5f);
+	vs[1].position = glm::vec3(0.0f, 0.7f, 0.5f);
+	vs[2].position = glm::vec3(-0.5f, -0.5f, 0.5f);
+
+	std::vector<uint32_t> is = {0, 1, 2};
+
+	cube = IndexedVertexBuffer<Vertex>(*context, is, vs);
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
-
-	rebuildAllCommandBuffers();
 	isComplete = true;
+}
+
+void FwdRenderer::recreateSwapchainDependents()
+{
+	// Depthbuffer
+	depthBuffer = createDepthBuffer();
+	renderPass = createRenderpass();
+
+	// All uniform buffer stuff
+
+	// DescriptorPool
+
+	// Pipeline layouts
+	// Pipeline
+	shader = createShader();
+	pipeline = createPipeline();
+
+	// Framebuffers
+	renderFramebuffers = createFramebuffers();
 }
 
 void FwdRenderer::update()
@@ -50,32 +75,31 @@ void FwdRenderer::recordCommands(uint32_t frame)
 	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
 	renderpassBeginInfo.pClearValues = clearColor.data();
 
+	auto& extent = swapchain->get_extent();
+
+	VkViewport viewport = {};
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	viewport.x = 0;
+	viewport.y = static_cast<float>(extent.height);
+	viewport.width = static_cast<float>(extent.width);
+	viewport.height = -static_cast<float>(extent.height);
+
+	VkRect2D scissor = {};
+	scissor.extent = extent;
+	scissor.offset = {0, 0};
+
 	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
+	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
+
 	// Do the systemic thing
+	pipeline.bind(commandBuffers[frame]);
+	cube.bind(commandBuffers[frame]);
+	vkCmdDrawIndexed(commandBuffers[frame], cube.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
-}
-
-void FwdRenderer::recreateSwapchainDependents()
-{
-	// Depthbuffer
-	depthBuffer = createDepthBuffer();
-	renderPass = createRenderpass();
-
-	// All uniform buffer stuff
-
-	// DescriptorPool
-
-	// Pipeline layouts
-	// Pipeline
-	shader = createShader();
-	pipeline = createPipeline();
-
-	uboFrames = createDescriptorFrame();
-
-	// Framebuffers
-	renderFramebuffers = createFramebuffers();
 }
 
 // Custom creation functions
@@ -118,6 +142,7 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 
 	return pipelineFactory.createRenderPass(attachments, {subpassDesc}, loadStore);
 }
+
 spirv::Shader FwdRenderer::createShader()
 {
 	std::vector<spirv::ShaderStageData> stages;
@@ -136,6 +161,7 @@ spirv::Shader FwdRenderer::createShader()
 
 spirv::Pipeline FwdRenderer::createPipeline()
 {
+	// TODO BUGFIX!!
 	spirv::GraphicsPipelineCreateInfo info = {};
 
 	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -148,14 +174,12 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_NONE;	// TODO VK_CULL_MODEL_BACK
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
 	info.rasterizerCreateInfo.pNext = nullptr;
 	info.rasterizerCreateInfo.flags = 0;
-	info.rasterizerCreateInfo.depthBiasConstantFactor = 0.5f;
-	info.rasterizerCreateInfo.depthBiasSlopeFactor = 0.25f;
 
 	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
@@ -182,10 +206,10 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
 	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
-	info.depthStencilCreateInfo.maxDepthBounds = 0.0f;		// Don't care
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
 	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
 	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
-	info.depthStencilCreateInfo.front = {};		// Don't Care
+	info.depthStencilCreateInfo.front = {}; // Don't Care
 	info.depthStencilCreateInfo.back = {};	// Don't Care
 
 	std::vector<VkDynamicState> dynamicStates = {
@@ -198,17 +222,6 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
 	return pipelineFactory.createGraphicsPipeline(shader, renderPass, info);
-}
-
-spirv::DescriptorFrame FwdRenderer::createDescriptorFrame()
-{
-	auto [rset, rbind] = shader.uniformLocations["renderUBO"];
-	auto [sset, sbind] = shader.uniformLocations["debugSettings"];
-
-	// Temporary
-	assert(rset == sset);
-
-	return pipelineFactory.createDescriptorSets({&shader.sets[rset]}, swapchain->get_imageCount());
 }
 
 vkw::FramebufferVector FwdRenderer::createFramebuffers() const

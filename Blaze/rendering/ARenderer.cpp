@@ -151,9 +151,6 @@ void ARenderer::recreateSwapchain()
 
 		// Recreate all number based
 		recreateSwapchainDependents();
-
-		// Record commands
-		rebuildAllCommandBuffers();
 	}
 	catch (std::exception& e)
 	{

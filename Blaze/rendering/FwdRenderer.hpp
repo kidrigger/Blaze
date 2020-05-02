@@ -8,6 +8,7 @@
 #include <vkwrap/VkWrap.hpp>
 
 #include <spirv/PipelineFactory.hpp>
+#include <VertexBuffer.hpp>
 
 namespace blaze
 {
@@ -20,7 +21,7 @@ private:
 	vkw::FramebufferVector renderFramebuffers;
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
-	spirv::DescriptorFrame uboFrames;
+	IndexedVertexBuffer<Vertex> cube;
 
 public:
 	/**
@@ -72,6 +73,5 @@ private:
 	vkw::FramebufferVector createFramebuffers() const;
 	spirv::Shader createShader();
 	spirv::Pipeline createPipeline();
-	spirv::DescriptorFrame createDescriptorFrame();
 };
 } // namespace blaze

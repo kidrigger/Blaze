@@ -123,6 +123,11 @@ struct RenderPass
 {
 	Framebuffer::FormatID fbFormat;
 	vkw::RenderPass renderPass;
+
+	VkRenderPass get() const
+	{
+		return renderPass.get();
+	}
 };
 
 class PipelineFactory

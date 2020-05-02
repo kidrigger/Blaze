@@ -67,6 +67,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	cameraFront = glm::normalize(front);
 }
 
+void glfwErrorCallback(int error, const char* desc)
+{
+	std::cerr << "GLFW_ERROR: " << desc << std::endl;
+}
+
 void runRefactored()
 {
 	// Usings
@@ -75,6 +80,8 @@ void runRefactored()
 	// Variables
 	GLFWwindow* window = nullptr;
 	std::unique_ptr<ARenderer> renderer;
+
+	glfwSetErrorCallback(glfwErrorCallback);
 
 	Camera cam({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);

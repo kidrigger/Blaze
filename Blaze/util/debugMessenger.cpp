@@ -42,9 +42,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBits
 {
 	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 	{
-		std::cerr << "Validation ERR [" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
+		if (pCallbackData->pMessageIdName != nullptr)
+		{
+			DebugCounts::fileStream << "VALIDATION ERR [" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
+		}
+		else
+		{
+			DebugCounts::fileStream << "VALIDATION ERR: " << pCallbackData->pMessage << '\n';
+		}
 	}
-	if (!strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
+	if (pCallbackData->pMessageIdName && !strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
 	{
 		return VK_FALSE;
 	}
@@ -64,7 +71,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBits
 		DebugCounts::fileStream << "VERBOSE ";
 		DebugCounts::verbose++;
 	}
-	DebugCounts::fileStream << "[" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
+
+	if (pCallbackData->pMessageIdName != nullptr)
+	{
+		DebugCounts::fileStream << "[" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
+	}
+	else
+	{
+		DebugCounts::fileStream << ": " << pCallbackData->pMessage << '\n';
+	}
 
 	return VK_FALSE;
 }
