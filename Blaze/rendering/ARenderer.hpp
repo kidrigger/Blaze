@@ -9,6 +9,7 @@
 #include <util/Managed.hpp>
 #include <util/PackedHandler.hpp>
 #include <vkwrap/VkWrap.hpp>
+#include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
@@ -32,6 +33,8 @@ protected:
 	vkw::SemaphoreVector renderFinishedSem;
 	vkw::FenceVector inFlightFences;
 
+	std::unique_ptr<spirv::PipelineFactory> pipelineFactory;
+
 	using DrawList = util::PackedHandler<Drawable*>;
 	DrawList drawables;
 
@@ -48,6 +51,9 @@ public:
 	ARenderer& operator=(const ARenderer& other) = delete;
 
 	void render();
+
+	virtual spirv::SetSingleton createMaterialSet() = 0;
+	virtual const spirv::Shader& get_shader() const = 0;
 
 	void set_camera(Camera* p_camera)
 	{
@@ -69,12 +75,16 @@ public:
 		return isComplete;
 	}
 
+	void waitIdle()
+	{
+		vkDeviceWaitIdle(context->get_device());
+	}
+
 	virtual ~ARenderer()
 	{
 	}
 
 protected:
-
 	void recreateSwapchain();
 
 	std::pair<uint32_t, uint32_t> get_dimensions() const

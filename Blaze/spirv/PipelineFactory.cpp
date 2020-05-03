@@ -146,10 +146,13 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 						if (input_vars[j] && input_vars[j]->decoration_flags == 0)
 						{ // regular input
 							vertexInput.A_POSITION =
-								strcmp(input_vars[j]->name, "A_POSITION") ? vertexInput.A_POSITION : j;
-							vertexInput.A_NORMAL = strcmp(input_vars[j]->name, "A_NORMAL") ? vertexInput.A_NORMAL : j;
-							vertexInput.A_UV0 = strcmp(input_vars[j]->name, "A_UV0") ? vertexInput.A_UV0 : j;
-							vertexInput.A_UV1 = strcmp(input_vars[j]->name, "A_UV1") ? vertexInput.A_UV1 : j;
+								strcmp(input_vars[j]->name, "A_POSITION") ? vertexInput.A_POSITION : input_vars[j]->location;
+							vertexInput.A_NORMAL = strcmp(input_vars[j]->name, "A_NORMAL") ? vertexInput.A_NORMAL
+																						   : input_vars[j]->location;
+							vertexInput.A_UV0 =
+								strcmp(input_vars[j]->name, "A_UV0") ? vertexInput.A_UV0 : input_vars[j]->location;
+							vertexInput.A_UV1 =
+								strcmp(input_vars[j]->name, "A_UV1") ? vertexInput.A_UV1 : input_vars[j]->location;
 						}
 					}
 				}
@@ -626,11 +629,38 @@ SetVector PipelineFactory::createSets(const Shader::Set& set, uint32_t count)
 		throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 	}
 
-	SetVector sets;
-	sets.formatID = getFormatKey(set.uniforms);
-	sets.pool = std::move(pool);
-	sets.sets = vkw::DescriptorSetVector(std::move(descriptorSets));
+	SetVector retVal;
+	retVal.formatID = getFormatKey(set.uniforms);
+	retVal.pool = std::move(pool);
+	retVal.sets = vkw::DescriptorSetVector(std::move(descriptorSets));
+	retVal.setIdx = set.set;
 
-	return sets;
+	return retVal;
+}
+
+SetSingleton PipelineFactory::createSet(const Shader::Set& set)
+{
+	auto pool = createDescriptorPool(set, 1);
+
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = pool.get();
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &set.layout.get();
+
+	VkDescriptorSet descriptorSet;
+	auto result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
+	}
+
+	SetSingleton retVal;
+	retVal.formatID = getFormatKey(set.uniforms);
+	retVal.pool = std::move(pool);
+	retVal.set = vkw::DescriptorSet(descriptorSet);
+	retVal.setIdx = set.set;
+
+	return retVal;
 }
 } // namespace blaze::spirv

@@ -1,20 +1,20 @@
 
 #pragma once
 
-#include <rendering/Renderer.hpp>
 #include <Datatypes.hpp>
-#include <Drawable.hpp>
-#include <gui/GUI.hpp>
 #include <LightSystem.hpp>
-#include <core/Swapchain.hpp>
-#include <Texture2D.hpp>
-#include <TextureCube.hpp>
-#include <UniformBuffer.hpp>
 #include <core/Context.hpp>
+#include <core/Drawable.hpp>
+#include <core/Swapchain.hpp>
+#include <core/Texture2D.hpp>
+#include <core/TextureCube.hpp>
+#include <core/UniformBuffer.hpp>
+#include <gui/GUI.hpp>
+#include <rendering/Renderer.hpp>
 #include <util/Managed.hpp>
+#include <util/PackedHandler.hpp>
 #include <util/createFunctions.hpp>
 #include <vkwrap/VkWrap.hpp>
-#include <util/PackedHandler.hpp>
 
 #include <map>
 #include <string>
@@ -291,10 +291,8 @@ private:
 	VkDescriptorSetLayout createMaterialDescriptorSetLayout() const;
 	VkDescriptorPool createDescriptorPool() const;
 	std::vector<VkDescriptorSet> createCameraDescriptorSets() const;
-	std::vector<UBO<RendererUBlock>> createUniformBuffers(
-		const RendererUBlock& ubo) const;
-	std::vector<UBO<SettingsUBlock>> createUniformBuffers(
-		const SettingsUBlock& ubo) const;
+	std::vector<UBO<RendererUBlock>> createUniformBuffers(const RendererUBlock& ubo) const;
+	std::vector<UBO<SettingsUBlock>> createUniformBuffers(const SettingsUBlock& ubo) const;
 	std::tuple<VkPipelineLayout, VkPipeline, VkPipeline> createGraphicsPipeline() const;
 	std::vector<VkFramebuffer> createRenderFramebuffers() const;
 	std::vector<VkCommandBuffer> allocateCommandBuffers() const;

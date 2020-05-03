@@ -5,7 +5,10 @@ layout(location = 1) in vec3 A_NORMAL;
 layout(location = 2) in vec2 A_UV0;
 layout(location = 3) in vec2 A_UV1;
 
-layout(location = 0) out vec4 outPosition;
+layout(location = 0) out vec4 O_POSITION;
+layout(location = 1) out vec4 O_NORMAL;
+layout(location = 2, component = 0) out vec2 O_UV0;
+layout(location = 2, component = 2) out vec2 O_UV1;
 
 layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
@@ -16,9 +19,22 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 
 layout(push_constant) uniform ModelBlock {
 	mat4 model;
+	vec4 baseColorFactor;
+	vec4 emissiveColorFactor;
+	float metallicFactor;
+	float roughnessFactor;
+	int baseColorTextureSet;
+	int physicalDescriptorTextureSet;
+	int normalTextureSet;
+	int occlusionTextureSet;
+	int emissiveTextureSet;
+	int textureArrIdx;
 } pcb;
 
 void main() {
 	gl_Position = camera.projection * camera.view * pcb.model * vec4(A_POSITION, 1.0f);
-	outPosition = pcb.model * vec4(A_POSITION, 1.0f);
+	O_POSITION = pcb.model * vec4(A_POSITION, 1.0f);
+	// TODO: O_NORMAL
+	O_UV0 = A_UV0;
+	O_UV1 = A_UV1;
 }

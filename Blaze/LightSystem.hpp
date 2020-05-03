@@ -6,10 +6,10 @@
 
 #include <core/Camera.hpp>
 #include <Datatypes.hpp>
-#include <Drawable.hpp>
-#include <Texture2D.hpp>
-#include <TextureCube.hpp>
-#include <UniformBuffer.hpp>
+#include <core/Drawable.hpp>
+#include <core/Texture2D.hpp>
+#include <core/TextureCube.hpp>
+#include <core/UniformBuffer.hpp>
 #include <core/Context.hpp>
 #include <util/Managed.hpp>
 #include <util/createFunctions.hpp>

@@ -9,11 +9,11 @@
 #include <core/Camera.hpp>
 #include <Datatypes.hpp>
 #include <gui/GUI.hpp>
-#include <Model.hpp>
+#include <drawables/Model.hpp>
 #include <Primitives.hpp>
-#include <Texture2D.hpp>
-#include <TextureCube.hpp>
-#include <VertexBuffer.hpp>
+#include <core/Texture2D.hpp>
+#include <core/TextureCube.hpp>
+#include <core/VertexBuffer.hpp>
 #include <core/Context.hpp>
 #include <rendering/ForwardRenderer.hpp>
 #include <rendering/Renderer.hpp>

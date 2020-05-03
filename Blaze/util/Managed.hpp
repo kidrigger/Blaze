@@ -136,8 +136,11 @@ public:
 	 */
 	~Managed()
 	{
-		destroyer(handle);
-		is_valid = false;
+		if (is_valid)
+		{
+			destroyer(handle);
+			is_valid = false;
+		}
 	}
 };
 

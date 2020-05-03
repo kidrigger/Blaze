@@ -21,6 +21,8 @@ ARenderer::ARenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 	setupPerFrameData(swapchain->get_imageCount());
 
 	gui = make_unique<GUI>(context.get(), swapchain.get());
+
+	pipelineFactory = make_unique<spirv::PipelineFactory>(context->get_device());
 }
 
 void ARenderer::render()

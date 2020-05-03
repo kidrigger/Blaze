@@ -44,14 +44,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBits
 	{
 		if (pCallbackData->pMessageIdName != nullptr)
 		{
-			DebugCounts::fileStream << "VALIDATION ERR [" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
+			std::cerr << "VALIDATION ERR [" << pCallbackData->pMessageIdName << "]: " << pCallbackData->pMessage << '\n';
 		}
 		else
 		{
-			DebugCounts::fileStream << "VALIDATION ERR: " << pCallbackData->pMessage << '\n';
+			std::cerr << "VALIDATION ERR: " << pCallbackData->pMessage << '\n';
 		}
 	}
-	if (pCallbackData->pMessageIdName && !strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
+
+	if (pCallbackData->pMessageIdName && strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
 	{
 		return VK_FALSE;
 	}

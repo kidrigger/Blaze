@@ -5,11 +5,9 @@
 #include <glm/glm.hpp>
 
 #include <core/Camera.hpp>
+#include <drawables/ModelLoader.hpp>
 #include <rendering/FwdRenderer.hpp>
 #include <util/files.hpp>
-
-// TODO: Remove
-#include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
@@ -80,6 +78,7 @@ void runRefactored()
 	// Variables
 	GLFWwindow* window = nullptr;
 	std::unique_ptr<ARenderer> renderer;
+	std::unique_ptr<ModelLoader> modelLoader;
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
@@ -109,6 +108,34 @@ void runRefactored()
 	renderer->set_camera(&cam);
 	assert(renderer->complete());
 
+	modelLoader = make_unique<ModelLoader>();
+	struct SceneInfo
+	{
+		string modelName;
+		int modelIndex;
+	};
+
+	SceneInfo sceneInfo;
+	sceneInfo.modelName = "DamagedHelmet";
+	sceneInfo.modelIndex = 0;
+	{
+		auto& ms = modelLoader->getFileNames();
+		for (auto& fn : ms)
+		{
+			if (fn == sceneInfo.modelName)
+			{
+				break;
+			}
+			sceneInfo.modelIndex++;
+		}
+	}
+
+	int holderKey = 0;
+	std::map<int, std::shared_ptr<Model2>> modelHolder;
+
+	auto mod = modelHolder[holderKey++] = modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), renderer->createMaterialSet(), sceneInfo.modelIndex);
+	auto handle = renderer->submit(mod.get());
+
 	// Run
 	bool onetime = true;
 
@@ -121,6 +148,11 @@ void runRefactored()
 		prevTime = glfwGetTime();
 		glfwPollEvents();
 		elapsed += deltaTime;
+
+		for (auto& [k, model] : modelHolder)
+		{
+			model->update();
+		}
 
 		{
 			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -157,6 +189,39 @@ void runRefactored()
 					}
 				}
 				ImGui::End();
+
+				if (ImGui::Begin("Scene"))
+				{
+					auto& modelNames = modelLoader->getFileNames();
+					if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
+					{
+						int i = 0;
+						for (const auto& label : modelNames)
+						{
+							bool selected = (sceneInfo.modelIndex == i);
+							if (ImGui::Selectable(label.c_str(), selected))
+							{
+								sceneInfo.modelIndex = i;
+								sceneInfo.modelName = label;
+								handle.destroy();
+								auto mod = modelHolder[holderKey++] =
+									modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), renderer->createMaterialSet(),
+														   sceneInfo.modelIndex); // TODo
+								handle = renderer->submit(mod.get());
+								renderer->waitIdle();
+								modelHolder.erase(holderKey-2);
+								// TODO(Improvement) Make this smoother
+							}
+							if (selected)
+							{
+								ImGui::SetItemDefaultFocus();
+							}
+							++i;
+						}
+						ImGui::EndCombo();
+					}
+				}
+				ImGui::End();
 			}
 			GUI::endFrame();
 
@@ -165,5 +230,6 @@ void runRefactored()
 			deltaTime = glfwGetTime() - prevTime;
 		}
 	}
+	renderer->waitIdle();
 }
 } // namespace blaze

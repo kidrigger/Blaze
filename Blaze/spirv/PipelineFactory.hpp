@@ -4,7 +4,6 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "DescriptorSet.hpp"
 #include "Pipeline.hpp"
 #include <map>
 #include <thirdparty/spirv_reflect/spirv_reflect.h>
@@ -117,6 +116,7 @@ struct SetVector
 	Shader::Set::FormatID formatID;
 	vkw::DescriptorPool pool;
 	vkw::DescriptorSetVector sets;
+	uint32_t setIdx;
 
 	const VkDescriptorSet& operator[](uint32_t idx) const
 	{
@@ -126,6 +126,30 @@ struct SetVector
 	uint32_t size() const
 	{
 		return static_cast<uint32_t>(sets.size());
+	}
+};
+
+struct SetSingleton
+{
+	Shader::Set::FormatID formatID;
+	vkw::DescriptorPool pool;
+	vkw::DescriptorSet set;
+	uint32_t setIdx;
+
+	const VkDescriptorSet& get() const
+	{
+		return set.get();
+	}
+
+	// Consistency
+	const VkDescriptorSet& operator[](uint32_t idx) const
+	{
+		return set.get();
+	}
+
+	uint32_t size() const
+	{
+		return 1u;
 	}
 };
 
@@ -170,6 +194,7 @@ public:
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
 
 	SetVector createSets(const Shader::Set& set, uint32_t count);
+	SetSingleton createSet(const Shader::Set& set);
 
 	inline bool valid() const
 	{

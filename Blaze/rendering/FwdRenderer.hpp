@@ -8,7 +8,7 @@
 #include <vkwrap/VkWrap.hpp>
 
 #include <spirv/PipelineFactory.hpp>
-#include <VertexBuffer.hpp>
+#include <core/VertexBuffer.hpp>
 
 namespace blaze
 {
@@ -16,8 +16,6 @@ class FwdRenderer final : public ARenderer
 {
 private:
 	using CameraUBOV = UBOVector<CameraUBlock>;
-
-	spirv::PipelineFactory pipelineFactory;
 	Texture2D depthBuffer;
 	spirv::RenderPass renderPass;
 	vkw::FramebufferVector renderFramebuffers;
@@ -27,9 +25,6 @@ private:
 	spirv::SetVector cameraSets;
 
 	ModelPushConstantBlock pcb;
-
-	// DBG 
-	IndexedVertexBuffer<Vertex> cube;
 
 public:
 	/**
@@ -65,15 +60,19 @@ public:
 	 * @}
 	 */
 
+	// Inherited via ARenderer
+	virtual spirv::SetSingleton createMaterialSet() override;
+	virtual const spirv::Shader& get_shader() const override;
+
 	~FwdRenderer()
 	{
 		clearCommandBuffers();
 	}
 
 protected:
-	void update(uint32_t frame) override;
-	void recordCommands(uint32_t frame) override;
-	void recreateSwapchainDependents() override;
+	virtual void update(uint32_t frame) override;
+	virtual void recordCommands(uint32_t frame) override;
+	virtual void recreateSwapchainDependents() override;
 
 private:
 	spirv::RenderPass createRenderpass();

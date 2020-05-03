@@ -10,32 +10,23 @@ configure_file("Version.src" "Version.hpp")
 set( SOURCE_FILES
         "Blaze2.cpp"
         "Source.cpp"
-        "TextureCube.cpp"
-        "Texture2D.cpp"
         "Primitives.cpp"
-        "Model.cpp"
-        "LightSystem.cpp"
-        "UniformBuffer.cpp"
-        "VertexBuffer.cpp" )
+        "LightSystem.cpp")
 
 set( HEADER_FILES
         "Datatypes.hpp"
-        "Drawable.hpp"
         "LightSystem.hpp"
-        "Model.hpp"
-        "Primitives.hpp"
-        "Texture2D.hpp"
-        "TextureCube.hpp"
-        "UniformBuffer.hpp"
-        "VertexBuffer.hpp" )
+        "Primitives.hpp")
 
 include_directories( "." )
 include_directories( "${CMAKE_CURRENT_BINARY_DIR}" )
 
 # Add source to this project's executable.
 add_executable( Blaze "Blaze.hpp" "Blaze.cpp" ${SOURCE_FILES} ${HEADER_FILES} )
+set_property( TARGET Blaze PROPERTY CXX_STANDARD 17 )
 
 add_subdirectory( "core" )
+add_subdirectory( "drawables" )
 add_subdirectory( "rendering" )
 add_subdirectory( "vkwrap" )
 add_subdirectory( "gui" )

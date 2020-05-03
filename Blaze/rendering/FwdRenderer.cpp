@@ -9,10 +9,6 @@ namespace blaze
 FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 	: ARenderer(window, enableValidationLayers)
 {
-	// DEBUG ONLY
-	cube = getUVCube(*context);
-
-	pipelineFactory = spirv::PipelineFactory(context->get_device());
 	// Depthbuffer
 	depthBuffer = createDepthBuffer();
 	renderPass = createRenderpass();
@@ -98,10 +94,10 @@ void FwdRenderer::recordCommands(uint32_t frame)
 	pipeline.bind(commandBuffers[frame]);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
 							&cameraSets[frame], 0, nullptr);
-	cube.bind(commandBuffers[frame]);
-	vkCmdPushConstants(commandBuffers[frame], shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
-					   shader.pushConstant.size, &pcb);
-	vkCmdDrawIndexed(commandBuffers[frame], cube.get_indexCount(), 1, 0, 0, 0);
+	for (Drawable* drawable : drawables)
+	{
+		drawable->draw(commandBuffers[frame], shader.pipelineLayout.get());
+	}
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
 }
@@ -144,7 +140,7 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
 	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::DONT_CARE;
 
-	return pipelineFactory.createRenderPass(attachments, {subpassDesc}, loadStore);
+	return pipelineFactory->createRenderPass(attachments, {subpassDesc}, loadStore);
 }
 
 spirv::Shader FwdRenderer::createShader()
@@ -160,7 +156,7 @@ spirv::Shader FwdRenderer::createShader()
 	stage->spirv = util::loadBinaryFile("shaders/PBR/fPBR.frag.spv");
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	return pipelineFactory.createShader(stages);
+	return pipelineFactory->createShader(stages);
 }
 
 spirv::Pipeline FwdRenderer::createPipeline()
@@ -226,7 +222,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	return pipelineFactory.createGraphicsPipeline(shader, renderPass, info);
+	return pipelineFactory->createGraphicsPipeline(shader, renderPass, info);
 }
 
 vkw::FramebufferVector FwdRenderer::createFramebuffers() const
@@ -292,7 +288,7 @@ spirv::SetVector FwdRenderer::createCameraSets()
 
 	auto& set = shader.sets[setIdx];
 
-	return pipelineFactory.createSets(set, swapchain->get_imageCount());
+	return pipelineFactory->createSets(set, swapchain->get_imageCount());
 }
 
 FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
@@ -301,7 +297,9 @@ FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
 
 	auto found = shader.uniformLocations.find("camera");
 	assert(found != shader.uniformLocations.end() && "No uniform called 'camera' in shader");
+
 	auto [setIdx, bindingIdx] = found->second;
+	auto& unif = shader.sets[setIdx].uniforms[bindingIdx];
 
 	auto ubos = CameraUBOV(context.get(), {}, swapchain->get_imageCount());
 
@@ -311,10 +309,10 @@ FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
 
 		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write.descriptorCount = 1;
+		write.descriptorType = unif.type;
+		write.descriptorCount = unif.arrayLength;
 		write.dstSet = cameraSets[i];
-		write.dstBinding = bindingIdx;
+		write.dstBinding = unif.binding;
 		write.dstArrayElement = 0;
 		write.pBufferInfo = &info;
 
@@ -322,5 +320,33 @@ FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
 	}
 
 	return ubos;
+}
+
+const spirv::Shader& FwdRenderer::get_shader() const
+{
+	return shader;
+}
+
+spirv::SetSingleton FwdRenderer::createMaterialSet()
+{
+	auto found = shader.uniformLocations.find("diffuseMap");
+	assert(found != shader.uniformLocations.end() && "No uniform called 'diffuseMap' in shader");
+
+	auto [setIdx, bindingIdx] = found->second;
+
+	auto& set = shader.sets[setIdx];
+
+	uint8_t counter = 0;
+	for (auto& uniform : set.uniforms)
+	{
+		counter |= (uniform.name == "diffuseMap") ? 1 << 0 : 0;
+		counter |= (uniform.name == "normalMap") ? 1 << 1 : 0;
+		counter |= (uniform.name == "metalRoughMap") ? 1 << 2 : 0;
+		counter |= (uniform.name == "occlusionMap") ? 1 << 3 : 0;
+		counter |= (uniform.name == "emissionMap") ? 1 << 4 : 0;
+	}
+	assert(counter == (1 << 5) - 1);
+
+	return pipelineFactory->createSet(set);
 }
 } // namespace blaze

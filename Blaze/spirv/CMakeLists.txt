@@ -1,7 +1,7 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-set( HEADER_FILES "PipelineFactory.hpp" "Pipeline.hpp" "DescriptorSet.hpp" )
+set( HEADER_FILES "PipelineFactory.hpp" "Pipeline.hpp" )
 
 set( SOURCE_FILES "PipelineFactory.cpp" "Pipeline.cpp" )
 

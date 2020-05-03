@@ -69,6 +69,11 @@ class PackedHandler
 		{
 			return get();
 		}
+
+		void destroy()
+		{
+			handle.reset();
+		}
 	};
 
 	std::vector<T> data;

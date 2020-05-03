@@ -2,7 +2,7 @@
 #pragma once
 
 #include "Datatypes.hpp"
-#include "VertexBuffer.hpp"
+#include <core/VertexBuffer.hpp>
 #include <vector>
 
 namespace blaze

@@ -2,7 +2,7 @@
 #pragma once
 
 #include <Datatypes.hpp>
-#include <Drawable.hpp>
+#include <core/Drawable.hpp>
 #include <LightSystem.hpp>
 #include <core/Context.hpp>
 #include <util/Managed.hpp>

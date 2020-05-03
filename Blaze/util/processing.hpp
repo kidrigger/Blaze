@@ -4,8 +4,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <Primitives.hpp>
-#include <TextureCube.hpp>
-#include <UniformBuffer.hpp>
+#include <core/TextureCube.hpp>
+#include <core/UniformBuffer.hpp>
 #include <core/Context.hpp>
 #include <string>
 #include <util/DebugTimer.hpp>

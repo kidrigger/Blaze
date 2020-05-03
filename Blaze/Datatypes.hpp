@@ -425,5 +425,11 @@ struct ImageObject
 	VkImage image{VK_NULL_HANDLE};
 	VmaAllocation allocation{VK_NULL_HANDLE};
 	VkFormat format;
+
+	template <typename T, typename U, typename V>
+	operator std::tuple<T, U, V>()
+	{
+		return {image, allocation, format};
+	}
 };
 } // namespace blaze
