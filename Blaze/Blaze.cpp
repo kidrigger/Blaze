@@ -303,10 +303,10 @@ void run()
 										  });
 	writeToDescriptor(ds.get(), {{0, skybox.get_imageInfo()}});
 
-	auto irradMap = createIrradianceCube(*renderer, ds.get());
+	auto irradMap = createIrradianceCube(renderer->get_context(), renderer->get_environmentLayout(), ds.get());
 	writeToDescriptor(ds.get(), {{1, irradMap.get_imageInfo()}});
 
-	auto prefilt = createPrefilteredCube(*renderer, ds.get());
+	auto prefilt = createPrefilteredCube(renderer->get_context(), renderer->get_environmentLayout(), ds.get());
 	writeToDescriptor(ds.get(), {{2, prefilt.get_imageInfo()}});
 
 	auto brdfLut = createBrdfLut(renderer->get_context());

@@ -2,14 +2,15 @@
 #pragma once
 
 #include "Renderer.hpp"
+#include <core/Bindable.hpp>
 #include <core/Camera.hpp>
 #include <core/Context.hpp>
 #include <core/Swapchain.hpp>
 #include <gui/GUI.hpp>
+#include <spirv/PipelineFactory.hpp>
 #include <util/Managed.hpp>
 #include <util/PackedHandler.hpp>
 #include <vkwrap/VkWrap.hpp>
-#include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
@@ -53,6 +54,7 @@ public:
 	void render();
 
 	virtual spirv::SetSingleton createMaterialSet() = 0;
+	virtual void setEnvironment(const Bindable* env) = 0;
 	virtual const spirv::Shader& get_shader() const = 0;
 
 	void set_camera(Camera* p_camera)
@@ -63,6 +65,11 @@ public:
 	const Context* get_context() const
 	{
 		return context.get();
+	}
+
+	spirv::PipelineFactory* get_pipelineFactory()
+	{
+		return pipelineFactory.get();
 	}
 
 	[[nodiscard]] DrawList::Handle submit(Drawable* sub)

@@ -10,6 +10,8 @@
 #include <spirv/PipelineFactory.hpp>
 #include <core/VertexBuffer.hpp>
 
+#include <core/Bindable.hpp>
+
 namespace blaze
 {
 class FwdRenderer final : public ARenderer
@@ -24,7 +26,7 @@ private:
 	CameraUBOV cameraUBOs;
 	spirv::SetVector cameraSets;
 
-	ModelPushConstantBlock pcb;
+	const Bindable* environment;
 
 public:
 	/**
@@ -82,5 +84,8 @@ private:
 	spirv::Pipeline createPipeline();
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
+
+	// Inherited via ARenderer
+	virtual void setEnvironment(const Bindable* env) override;
 };
 } // namespace blaze

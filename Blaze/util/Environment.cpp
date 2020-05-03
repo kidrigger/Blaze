@@ -2,10 +2,11 @@
 #include "Environment.hpp"
 
 #include <util/processing.hpp>
+#include <rendering/ARenderer.hpp>
 
 namespace blaze::util
 {
-TextureCube createIrradianceCube(const Renderer& renderer, VkDescriptorSet environment)
+TextureCube createIrradianceCube(const Context& context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
 {
 	struct PCB
 	{
@@ -14,18 +15,13 @@ TextureCube createIrradianceCube(const Renderer& renderer, VkDescriptorSet envir
 	} pcb = {};
 
 	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/vIrradianceMultiview.vert.spv",
-		"shaders/fIrradiance.frag.spv",
-		environment,
-		renderer.get_environmentLayout(),
-		64u,
-		pcb,
+		"shaders/vIrradianceMultiview.vert.spv", "shaders/fIrradiance.frag.spv", environment, envLayout, 64u, pcb,
 	};
 
-	return util::Process<PCB>::convertDescriptorToCubemap(renderer.get_context(), info);
+	return util::Process<PCB>::convertDescriptorToCubemap(context, info);
 }
 
-TextureCube createPrefilteredCube(const Renderer& renderer, VkDescriptorSet environment)
+TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
 {
 	struct PCB
 	{
@@ -33,15 +29,8 @@ TextureCube createPrefilteredCube(const Renderer& renderer, VkDescriptorSet envi
 		float miplevel;
 	};
 
-	const Context& context = renderer.get_context();
-
 	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/vIrradiance.vert.spv",
-		"shaders/fPrefilter.frag.spv",
-		environment,
-		renderer.get_environmentLayout(),
-		128u,
-		{0, 0},
+		"shaders/vIrradiance.vert.spv", "shaders/fPrefilter.frag.spv", environment, envLayout, 128u, {0, 0},
 	};
 	auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
 
@@ -383,5 +372,81 @@ Texture2D createBrdfLut(const Context& context)
 	context.flushCommandBuffer(cmdBuffer);
 
 	return lut;
+}
+
+Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
+{
+	auto& found = renderer->get_shader().uniformLocations.find("skybox");
+	assert(found != renderer->get_shader().uniformLocations.end());
+
+	auto [setIdx, skyboxIdx] = found->second;
+	set = renderer->get_pipelineFactory()->createSet(renderer->get_shader().sets[setIdx]);
+	auto lay = renderer->get_shader().sets[setIdx].layout.get();
+
+	const spirv::UniformInfo* skyboxInfo = nullptr;
+	const spirv::UniformInfo* irradianceInfo = nullptr;
+	const spirv::UniformInfo* prefilteredInfo = nullptr;
+	const spirv::UniformInfo* brdfLutInfo = nullptr;
+	for (auto& uniform : renderer->get_shader().sets[setIdx].uniforms)
+	{
+		if (uniform.name == "skybox")
+		{
+			skyboxInfo = &uniform;
+		}
+		else if (uniform.name == "irradianceMap")
+		{
+			irradianceInfo = &uniform;
+		}
+		else if (uniform.name == "prefilteredMap")
+		{
+			prefilteredInfo = &uniform;
+		}
+		else if (uniform.name == "brdfLUT")
+		{
+			brdfLutInfo = &uniform;
+		}
+		else
+		{
+			std::cerr << "UNKNOWN UNIFORM IN ENVIRONMENT SET" << std::endl;
+		}
+	}
+	assert(skyboxInfo != nullptr);
+	assert(irradianceInfo != nullptr);
+	assert(prefilteredInfo != nullptr);
+	assert(brdfLutInfo != nullptr);
+
+	VkWriteDescriptorSet write = {};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = set.get();
+	write.dstArrayElement = 0;
+	write.descriptorCount = 1;
+
+	this->skybox = std::move(skybox);
+
+	write.dstBinding = skyboxInfo->binding;
+	write.descriptorType = skyboxInfo->type;
+	write.pImageInfo = &this->skybox.get_imageInfo();
+	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+
+	this->irradianceMap = createIrradianceCube(*renderer->get_context(), lay, set.get());
+
+	write.dstBinding = irradianceInfo->binding;
+	write.descriptorType = irradianceInfo->type;
+	write.pImageInfo = &this->irradianceMap.get_imageInfo();
+	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+
+	this->prefilteredMap = createPrefilteredCube(*renderer->get_context(), lay, set.get());
+
+	write.dstBinding = prefilteredInfo->binding;
+	write.descriptorType = prefilteredInfo->type;
+	write.pImageInfo = &this->prefilteredMap.get_imageInfo();
+	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+
+	this->brdfLut = createBrdfLut(*renderer->get_context());
+
+	write.dstBinding = brdfLutInfo->binding;
+	write.descriptorType = brdfLutInfo->type;
+	write.pImageInfo = &this->brdfLut.get_imageInfo();
+	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
 }
 } // namespace blaze::util

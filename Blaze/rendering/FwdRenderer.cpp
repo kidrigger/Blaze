@@ -22,8 +22,6 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
 
-	pcb.model = glm::mat4{1.0f};
-
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
 	isComplete = true;
@@ -52,7 +50,6 @@ void FwdRenderer::recreateSwapchainDependents()
 
 void FwdRenderer::update(uint32_t frame)
 {
-	pcb.model = glm::rotate(pcb.model, glm::radians(0.1f), glm::vec3(0, 1, 0));
 	cameraUBOs[frame].write(camera->getUbo());
 }
 
@@ -92,6 +89,7 @@ void FwdRenderer::recordCommands(uint32_t frame)
 
 	// Do the systemic thing
 	pipeline.bind(commandBuffers[frame]);
+	environment->bind(commandBuffers[frame], shader.pipelineLayout.get());
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
 							&cameraSets[frame], 0, nullptr);
 	for (Drawable* drawable : drawables)
@@ -320,6 +318,11 @@ FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
 	}
 
 	return ubos;
+}
+
+void FwdRenderer::setEnvironment(const Bindable* env)
+{
+	this->environment = env;
 }
 
 const spirv::Shader& FwdRenderer::get_shader() const

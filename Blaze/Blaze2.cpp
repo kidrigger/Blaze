@@ -8,6 +8,7 @@
 #include <drawables/ModelLoader.hpp>
 #include <rendering/FwdRenderer.hpp>
 #include <util/files.hpp>
+#include <util/Environment.hpp>
 
 namespace blaze
 {
@@ -77,8 +78,8 @@ void runRefactored()
 
 	// Variables
 	GLFWwindow* window = nullptr;
-	std::unique_ptr<ARenderer> renderer;
-	std::unique_ptr<ModelLoader> modelLoader;
+	unique_ptr<ARenderer> renderer;
+	unique_ptr<ModelLoader> modelLoader;
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
@@ -108,6 +109,10 @@ void runRefactored()
 	renderer->set_camera(&cam);
 	assert(renderer->complete());
 
+	auto environment = make_unique<util::Environment>(
+		renderer.get(), loadImageCube(*renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
+	renderer->setEnvironment(environment.get());
+
 	modelLoader = make_unique<ModelLoader>();
 	struct SceneInfo
 	{
@@ -133,7 +138,8 @@ void runRefactored()
 	int holderKey = 0;
 	std::map<int, std::shared_ptr<Model2>> modelHolder;
 
-	auto mod = modelHolder[holderKey++] = modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), renderer->createMaterialSet(), sceneInfo.modelIndex);
+	auto mod = modelHolder[holderKey++] = modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
+																 renderer->createMaterialSet(), sceneInfo.modelIndex);
 	auto handle = renderer->submit(mod.get());
 
 	// Run
@@ -151,6 +157,8 @@ void runRefactored()
 
 		for (auto& [k, model] : modelHolder)
 		{
+			model->get_root()->rotation =
+				glm::rotate(model->get_root()->rotation, static_cast<float>(deltaTime), glm::vec3(0, 1, 0));
 			model->update();
 		}
 
@@ -204,12 +212,12 @@ void runRefactored()
 								sceneInfo.modelIndex = i;
 								sceneInfo.modelName = label;
 								handle.destroy();
-								auto mod = modelHolder[holderKey++] =
-									modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), renderer->createMaterialSet(),
-														   sceneInfo.modelIndex); // TODo
+								auto mod = modelHolder[holderKey++] = modelLoader->loadModel(
+									renderer->get_context(), renderer->get_shader(), renderer->createMaterialSet(),
+									sceneInfo.modelIndex); // TODo
 								handle = renderer->submit(mod.get());
 								renderer->waitIdle();
-								modelHolder.erase(holderKey-2);
+								modelHolder.erase(holderKey - 2);
 								// TODO(Improvement) Make this smoother
 							}
 							if (selected)
