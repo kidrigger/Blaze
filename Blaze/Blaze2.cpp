@@ -83,7 +83,7 @@ void runRefactored()
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
-	Camera cam({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
+	Camera cam({3.0f, 3.0f, 3.0f}, {-0.5773f, -0.5773f, -0.5773f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);
 
 	// GLFW Setup
@@ -91,7 +91,8 @@ void runRefactored()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// glfwWindowHint(GLFW_CURSOR_HIDDEN, GLFW_TRUE);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
-	window = glfwCreateWindow(WIDTH, HEIGHT, VERSION.FULL_NAME, FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
+	window =
+		glfwCreateWindow(WIDTH, HEIGHT, VERSION.FULL_NAME, FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
 	assert(window != nullptr);
 
 	{
@@ -105,22 +106,8 @@ void runRefactored()
 
 	// Renderer creation
 	renderer = make_unique<FwdRenderer>(window, enableValidationLayers);
+	renderer->set_camera(&cam);
 	assert(renderer->complete());
-
-	// Shader fun
-	//spirv::PipelineFactory pipelineFactory(renderer->get_context()->get_device());
-	//std::vector<spirv::ShaderStageData> shaderStages = {
-	//	{
-	//		VK_SHADER_STAGE_VERTEX_BIT,
-	//		util::loadBinaryFile("shaders/PBR/vPBR.vert.spv"),
-	//	},
-	//	{
-	//		VK_SHADER_STAGE_FRAGMENT_BIT,
-	//		util::loadBinaryFile("shaders/PBR/fPBR.frag.spv"),
-	//	},
-	//};
-	//auto shader = pipelineFactory.createShader(shaderStages);
-	//std::cerr << shader << std::endl;
 
 	// Run
 	bool onetime = true;
@@ -152,6 +139,21 @@ void runRefactored()
 					if (quit)
 					{
 						glfwSetWindowShouldClose(window, GLFW_TRUE);
+					}
+				}
+				ImGui::End();
+
+				if (ImGui::Begin("Camera"))
+				{
+					glm::vec3 val = cam.get_position();
+					if (ImGui::InputFloat3("Position", &val[0]))
+					{
+						cam.moveTo(val);
+					}
+					val = cam.get_direction();
+					if (ImGui::InputFloat3("Direction", &val[0]))
+					{
+						cam.lookTo(val);
 					}
 				}
 				ImGui::End();

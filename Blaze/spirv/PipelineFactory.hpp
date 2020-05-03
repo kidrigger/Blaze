@@ -112,11 +112,21 @@ struct Framebuffer
 	};
 };
 
-struct DescriptorFrame
+struct SetVector
 {
-	std::map<Shader::Set::FormatID, uint32_t> formatIDmap;
+	Shader::Set::FormatID formatID;
 	vkw::DescriptorPool pool;
-	std::vector<vkw::DescriptorSetVector> sets;
+	vkw::DescriptorSetVector sets;
+
+	const VkDescriptorSet& operator[](uint32_t idx) const
+	{
+		return sets[idx];
+	}
+
+	uint32_t size() const
+	{
+		return static_cast<uint32_t>(sets.size());
+	}
 };
 
 struct RenderPass
@@ -159,8 +169,7 @@ public:
 								const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
 
-	vkw::DescriptorPool createDescriptorPool(const std::vector<Shader::Set*>& sets, uint32_t maxSets);
-	DescriptorFrame createDescriptorSets(const std::vector<Shader::Set*>& sets, uint32_t count);
+	SetVector createSets(const Shader::Set& set, uint32_t count);
 
 	inline bool valid() const
 	{
@@ -168,6 +177,7 @@ public:
 	}
 
 private:
+	vkw::DescriptorPool createDescriptorPool(const Shader::Set& sets, uint32_t maxSets);
 	vkw::PipelineLayout createPipelineLayout(const std::vector<Shader::Set>& info,
 											 const Shader::PushConstant& pcr) const;
 

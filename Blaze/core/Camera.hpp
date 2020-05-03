@@ -20,7 +20,7 @@ class Camera
 	bool uboDirty;
 
 	glm::vec3 position;
-	glm::vec3 target;
+	glm::vec3 direction;
 	glm::vec3 left{-1, 0, 0};
 	glm::vec3 up{0, 1, 0};
 	float fov;
@@ -29,12 +29,12 @@ class Camera
 	float farPlane;
 
 public:
-	Camera(const glm::vec3& pos, const glm::vec3& target, const glm::vec3& up, float fov, float aspect,
+	Camera(const glm::vec3& pos, const glm::vec3& direction, const glm::vec3& up, float fov, float aspect,
 		   float nearPlane = 0.1f, float farPlane = 10.0f)
-		: position(pos), target(glm::normalize(target)), up(up), fov(fov), aspect(aspect), nearPlane(nearPlane),
+		: position(pos), direction(glm::normalize(direction)), up(up), fov(fov), aspect(aspect), nearPlane(nearPlane),
 		  farPlane(farPlane)
 	{
-		ubo.view = glm::lookAt(position, target + position, up);
+		ubo.view = glm::lookAt(position, direction + position, up);
 		ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 		ubo.viewPos = position;
 		ubo.farPlane = farPlane;
@@ -63,7 +63,7 @@ public:
 	 */
 	void rotateTo(const float up, const float right)
 	{
-		target =
+		direction =
 			glm::normalize(glm::vec3(glm::sin(right) * glm::cos(up), glm::sin(up), glm::cos(right) * glm::cos(up)));
 		uboDirty = true;
 	}
@@ -73,9 +73,9 @@ public:
 	 *
 	 * @param direction The direction to look into.
 	 */
-	void lookTo(const glm::vec3& direction)
+	void lookTo(const glm::vec3& dir)
 	{
-		target = glm::normalize(direction);
+		direction = glm::normalize(dir);
 		uboDirty = true;
 	}
 
@@ -89,7 +89,7 @@ public:
 	{
 		if (uboDirty)
 		{
-			ubo.view = glm::lookAt(position, target + position, up);
+			ubo.view = glm::lookAt(position, direction + position, up);
 			ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 			ubo.viewPos = position;
 			ubo.farPlane = farPlane;
@@ -118,7 +118,7 @@ public:
 	}
 	inline const glm::vec3& get_direction()
 	{
-		return target;
+		return direction;
 	}
 	inline const glm::vec3& get_up() const
 	{

@@ -33,7 +33,7 @@ void ARenderer::render()
 							  imageAvailableSem[currentFrame], VK_NULL_HANDLE, &imageIndex);
 	vkWaitForFences(context->get_device(), 1, &inFlightFences[imageIndex], VK_TRUE, numeric_limits<uint64_t>::max());
 
-	update();
+	update(imageIndex);
 	rebuildCommandBuffer(imageIndex);
 
 	if (result != VK_SUCCESS)

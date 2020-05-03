@@ -49,6 +49,11 @@ public:
 
 	void render();
 
+	void set_camera(Camera* p_camera)
+	{
+		camera = p_camera;
+	}
+
 	const Context* get_context() const
 	{
 		return context.get();
@@ -69,10 +74,8 @@ public:
 	}
 
 protected:
-	virtual void update() = 0;
 
 	void recreateSwapchain();
-	virtual void recreateSwapchainDependents() = 0;
 
 	std::pair<uint32_t, uint32_t> get_dimensions() const
 	{
@@ -84,8 +87,11 @@ protected:
 	void clearCommandBuffers();
 	void rebuildAllCommandBuffers();
 	void rebuildCommandBuffer(uint32_t frame);
+
+	virtual void update(uint32_t frame) = 0;
 	// This is ONLY the renderpasses from the renderer
 	virtual void recordCommands(uint32_t frame) = 0;
+	virtual void recreateSwapchainDependents() = 0;
 
 private:
 	vkw::SemaphoreVector createSemaphores(uint32_t imageCount) const;

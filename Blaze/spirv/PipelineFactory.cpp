@@ -578,64 +578,59 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 	return rp;
 }
 
-vkw::DescriptorPool PipelineFactory::createDescriptorPool(const std::vector<Shader::Set*>& sets, uint32_t maxSets)
+vkw::DescriptorPool PipelineFactory::createDescriptorPool(const Shader::Set& set, uint32_t maxSets)
 {
 	std::vector<VkDescriptorPoolSize> poolSizes;
-	for (auto& set : sets)
+	for (auto& uniform : set.uniforms)
 	{
-		for (auto& uniform : set->uniforms)
+		bool found = false;
+		for (auto& poolSize : poolSizes)
 		{
-			bool found = false;
-			for (auto& poolSize : poolSizes)
+			if (poolSize.type == uniform.type)
 			{
-				if (poolSize.type == uniform.type)
-				{
-					poolSize.descriptorCount++;
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-			{
-				auto& ps = poolSizes.emplace_back();
-				ps.type = uniform.type;
-				ps.descriptorCount = 1;
+				poolSize.descriptorCount++;
+				found = true;
+				break;
 			}
 		}
+		if (!found)
+		{
+			auto& ps = poolSizes.emplace_back();
+			ps.type = uniform.type;
+			ps.descriptorCount = 1;
+		}
 	}
-
 	for (auto& ps : poolSizes)
 	{
 		ps.descriptorCount *= maxSets;
 	}
 
-	return vkw::DescriptorPool(util::createDescriptorPool(device, poolSizes, static_cast<uint32_t>(maxSets * sets.size())), device);
+	return vkw::DescriptorPool(
+		util::createDescriptorPool(device, poolSizes, static_cast<uint32_t>(maxSets)), device);
 }
 
-
-DescriptorFrame PipelineFactory::createDescriptorSets(const std::vector<Shader::Set*>& sets, uint32_t count)
+SetVector PipelineFactory::createSets(const Shader::Set& set, uint32_t count)
 {
-	DescriptorFrame frame;
-	frame.pool = createDescriptorPool(sets, count);
-	for (auto& set : sets)
-	{
-		std::vector<VkDescriptorSetLayout> layouts(count, set->layout.get());
-		VkDescriptorSetAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = frame.pool.get();
-		allocInfo.descriptorSetCount = count;
-		allocInfo.pSetLayouts = layouts.data();
+	auto pool = createDescriptorPool(set, count);
+	std::vector<VkDescriptorSetLayout> layouts(count, set.layout.get());
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = pool.get();
+	allocInfo.descriptorSetCount = count;
+	allocInfo.pSetLayouts = layouts.data();
 
-		std::vector<VkDescriptorSet> descriptorSets(count);
-		auto result = vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data());
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
-		}
-		frame.formatIDmap[getFormatKey(set->uniforms)] = static_cast<uint32_t>(frame.sets.size());
-		frame.sets.emplace_back(std::move(descriptorSets));
+	std::vector<VkDescriptorSet> descriptorSets(count);
+	auto result = vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data());
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 	}
 
-	return frame;
+	SetVector sets;
+	sets.formatID = getFormatKey(set.uniforms);
+	sets.pool = std::move(pool);
+	sets.sets = vkw::DescriptorSetVector(std::move(descriptorSets));
+
+	return sets;
 }
 } // namespace blaze::spirv

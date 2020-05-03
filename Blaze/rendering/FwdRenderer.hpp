@@ -15,12 +15,20 @@ namespace blaze
 class FwdRenderer final : public ARenderer
 {
 private:
+	using CameraUBOV = UBOVector<CameraUBlock>;
+
 	spirv::PipelineFactory pipelineFactory;
 	Texture2D depthBuffer;
 	spirv::RenderPass renderPass;
 	vkw::FramebufferVector renderFramebuffers;
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
+	CameraUBOV cameraUBOs;
+	spirv::SetVector cameraSets;
+
+	ModelPushConstantBlock pcb;
+
+	// DBG 
 	IndexedVertexBuffer<Vertex> cube;
 
 public:
@@ -63,9 +71,9 @@ public:
 	}
 
 protected:
-	void update();
-	void recordCommands(uint32_t frame);
-	void recreateSwapchainDependents();
+	void update(uint32_t frame) override;
+	void recordCommands(uint32_t frame) override;
+	void recreateSwapchainDependents() override;
 
 private:
 	spirv::RenderPass createRenderpass();
@@ -73,5 +81,7 @@ private:
 	vkw::FramebufferVector createFramebuffers() const;
 	spirv::Shader createShader();
 	spirv::Pipeline createPipeline();
+	spirv::SetVector createCameraSets();
+	CameraUBOV createCameraUBOs();
 };
 } // namespace blaze

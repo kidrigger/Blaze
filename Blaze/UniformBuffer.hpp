@@ -49,9 +49,10 @@ public:
 	 * @}
 	 */
 
-	void writeData(const void* data, size_t size);
-
 	virtual ~BaseUBO();
+
+protected:
+	void writeData(const void* data, size_t size);
 };
 
 /**
@@ -100,4 +101,60 @@ public:
 		this->writeData(&data, sizeof(T));
 	}
 };
+
+template <typename T>
+class UBOVector
+{
+private:
+	using ubo_t = UBO<T>;
+
+	std::vector<ubo_t> ubos;
+	uint32_t count;
+
+public:
+	UBOVector() noexcept
+	{
+	}
+
+	UBOVector(const Context* context, const T& data, uint32_t numUBOS) noexcept : count(numUBOS)
+	{
+		ubos.reserve(count);
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			ubos.emplace_back(context, data);
+		}
+	}
+
+	UBOVector(const UBOVector& other) = delete;
+	UBOVector& operator=(const UBOVector& other) = delete;
+	UBOVector(UBOVector&& other) = default;
+	UBOVector& operator=(UBOVector&& other) = default;
+
+	const std::vector<ubo_t>& get() const
+	{
+		return ubos;
+	}
+
+	uint32_t size() const
+	{
+		return count;
+	}
+
+	ubo_t& operator[](uint32_t idx)
+	{
+		return ubos[idx];
+	}
+
+	const ubo_t& operator[](uint32_t idx) const
+	{
+		return ubos[idx];
+	}
+
+	~UBOVector()
+	{
+		ubos.clear();
+		count = 0;
+	}
+};
+
 } // namespace blaze

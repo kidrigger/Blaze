@@ -9,28 +9,24 @@ namespace blaze
 FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 	: ARenderer(window, enableValidationLayers)
 {
+	// DEBUG ONLY
+	cube = getUVCube(*context);
+
 	pipelineFactory = spirv::PipelineFactory(context->get_device());
 	// Depthbuffer
 	depthBuffer = createDepthBuffer();
 	renderPass = createRenderpass();
-
-	// All uniform buffer stuff
-
-	// DescriptorPool
 
 	// Pipeline layouts
 	// Pipeline
 	shader = createShader();
 	pipeline = createPipeline();
 
-	std::vector<Vertex> vs(3);
-	vs[0].position = glm::vec3(0.5f, -0.5f, 0.5f);
-	vs[1].position = glm::vec3(0.0f, 0.7f, 0.5f);
-	vs[2].position = glm::vec3(-0.5f, -0.5f, 0.5f);
+	// All uniform buffer stuff
+	cameraSets = createCameraSets();
+	cameraUBOs = createCameraUBOs();
 
-	std::vector<uint32_t> is = {0, 1, 2};
-
-	cube = IndexedVertexBuffer<Vertex>(*context, is, vs);
+	pcb.model = glm::mat4{1.0f};
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -43,21 +39,25 @@ void FwdRenderer::recreateSwapchainDependents()
 	depthBuffer = createDepthBuffer();
 	renderPass = createRenderpass();
 
-	// All uniform buffer stuff
-
-	// DescriptorPool
-
 	// Pipeline layouts
 	// Pipeline
 	shader = createShader();
 	pipeline = createPipeline();
 
+	// All uniform buffer stuff
+	cameraSets = createCameraSets();
+	cameraUBOs = createCameraUBOs();
+
+	// DescriptorPool
+
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
 }
 
-void FwdRenderer::update()
+void FwdRenderer::update(uint32_t frame)
 {
+	pcb.model = glm::rotate(pcb.model, glm::radians(0.1f), glm::vec3(0, 1, 0));
+	cameraUBOs[frame].write(camera->getUbo());
 }
 
 void FwdRenderer::recordCommands(uint32_t frame)
@@ -96,7 +96,11 @@ void FwdRenderer::recordCommands(uint32_t frame)
 
 	// Do the systemic thing
 	pipeline.bind(commandBuffers[frame]);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
+							&cameraSets[frame], 0, nullptr);
 	cube.bind(commandBuffers[frame]);
+	vkCmdPushConstants(commandBuffers[frame], shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
+					   shader.pushConstant.size, &pcb);
 	vkCmdDrawIndexed(commandBuffers[frame], cube.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
@@ -161,7 +165,8 @@ spirv::Shader FwdRenderer::createShader()
 
 spirv::Pipeline FwdRenderer::createPipeline()
 {
-	// TODO BUGFIX!!
+	assert(shader.valid());
+
 	spirv::GraphicsPipelineCreateInfo info = {};
 
 	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -174,7 +179,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_NONE;	// TODO VK_CULL_MODEL_BACK
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_NONE; // TODO VK_CULL_MODEL_BACK
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
@@ -227,6 +232,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 vkw::FramebufferVector FwdRenderer::createFramebuffers() const
 {
 	using namespace std;
+	assert(depthBuffer.valid());
 
 	vector<VkFramebuffer> frameBuffers(maxFrameInFlight);
 	for (uint32_t i = 0; i < maxFrameInFlight; i++)
@@ -257,6 +263,7 @@ vkw::FramebufferVector FwdRenderer::createFramebuffers() const
 
 Texture2D FwdRenderer::createDepthBuffer() const
 {
+	assert(swapchain);
 	VkFormat format =
 		util::findSupportedFormat(context->get_physicalDevice(),
 								  {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
@@ -274,5 +281,46 @@ Texture2D FwdRenderer::createDepthBuffer() const
 	imageData.size = swapchain->get_extent().width * swapchain->get_extent().height;
 
 	return Texture2D(*context, imageData);
+}
+
+spirv::SetVector FwdRenderer::createCameraSets()
+{
+	auto found = shader.uniformLocations.find("camera");
+	assert(found != shader.uniformLocations.end() && "No uniform called 'camera' in shader");
+
+	auto [setIdx, bindingIdx] = found->second;
+
+	auto& set = shader.sets[setIdx];
+
+	return pipelineFactory.createSets(set, swapchain->get_imageCount());
+}
+
+FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
+{
+	assert(cameraSets.size());
+
+	auto found = shader.uniformLocations.find("camera");
+	assert(found != shader.uniformLocations.end() && "No uniform called 'camera' in shader");
+	auto [setIdx, bindingIdx] = found->second;
+
+	auto ubos = CameraUBOV(context.get(), {}, swapchain->get_imageCount());
+
+	for (uint32_t i = 0; i < swapchain->get_imageCount(); i++)
+	{
+		VkDescriptorBufferInfo info = ubos[i].get_descriptorInfo();
+
+		VkWriteDescriptorSet write = {};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.descriptorCount = 1;
+		write.dstSet = cameraSets[i];
+		write.dstBinding = bindingIdx;
+		write.dstArrayElement = 0;
+		write.pBufferInfo = &info;
+
+		vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
+	}
+
+	return ubos;
 }
 } // namespace blaze
