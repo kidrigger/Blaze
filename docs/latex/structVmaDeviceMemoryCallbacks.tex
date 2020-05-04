@@ -1,0 +1,41 @@
+\hypertarget{structVmaDeviceMemoryCallbacks}{}\section{Vma\+Device\+Memory\+Callbacks Struct Reference}
+\label{structVmaDeviceMemoryCallbacks}\index{Vma\+Device\+Memory\+Callbacks@{Vma\+Device\+Memory\+Callbacks}}
+
+
+Set of callbacks that the library will call for {\ttfamily vk\+Allocate\+Memory} and {\ttfamily vk\+Free\+Memory}.  
+
+
+
+
+{\ttfamily \#include $<$vk\+\_\+mem\+\_\+alloc.\+h$>$}
+
+
+
+Collaboration diagram for Vma\+Device\+Memory\+Callbacks\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=226pt]{structVmaDeviceMemoryCallbacks__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structVmaDeviceMemoryCallbacks_a4f17f7b255101e733b44d5633aceabfb}\label{structVmaDeviceMemoryCallbacks_a4f17f7b255101e733b44d5633aceabfb}} 
+P\+F\+N\+\_\+vma\+Allocate\+Device\+Memory\+Function \hyperlink{structVmaDeviceMemoryCallbacks_a4f17f7b255101e733b44d5633aceabfb}{pfn\+Allocate}
+\begin{DoxyCompactList}\small\item\em Optional, can be null. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{structVmaDeviceMemoryCallbacks_abe8a3328bbc916f6f712fdb6b299444c}\label{structVmaDeviceMemoryCallbacks_abe8a3328bbc916f6f712fdb6b299444c}} 
+P\+F\+N\+\_\+vma\+Free\+Device\+Memory\+Function \hyperlink{structVmaDeviceMemoryCallbacks_abe8a3328bbc916f6f712fdb6b299444c}{pfn\+Free}
+\begin{DoxyCompactList}\small\item\em Optional, can be null. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Set of callbacks that the library will call for {\ttfamily vk\+Allocate\+Memory} and {\ttfamily vk\+Free\+Memory}. 
+
+Provided for informative purpose, e.\+g. to gather statistics about number of allocations or total amount of memory allocated in Vulkan.
+
+Used in \hyperlink{structVmaAllocatorCreateInfo_af1380969b5e1ea4c3184a877892d260e}{Vma\+Allocator\+Create\+Info\+::p\+Device\+Memory\+Callbacks}. 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/thirdparty/vma/vk\+\_\+mem\+\_\+alloc.\+h\end{DoxyCompactItemize}

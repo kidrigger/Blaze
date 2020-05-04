@@ -1,0 +1,170 @@
+\hypertarget{classblaze_1_1TextureCube}{}\section{blaze\+:\+:Texture\+Cube Class Reference}
+\label{classblaze_1_1TextureCube}\index{blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}}
+
+
+A wrapper over a vulkan texture that contains all the required data.  
+
+
+
+
+{\ttfamily \#include $<$Texture\+Cube.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_aafca1ecaae4a7d9d8515603c5d25c7af}\label{classblaze_1_1TextureCube_aafca1ecaae4a7d9d8515603c5d25c7af}} 
+\hyperlink{classblaze_1_1TextureCube_aafca1ecaae4a7d9d8515603c5d25c7af}{Texture\+Cube} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1TextureCube_a3c6b2d3d301a4db95fb4a9abb4e9220a}{Texture\+Cube} (const \hyperlink{classblaze_1_1Context}{Context} \&context, const \hyperlink{structblaze_1_1ImageDataCube}{Image\+Data\+Cube} \&image\+\_\+data, bool mipmapped=true)
+\begin{DoxyCompactList}\small\item\em Main constructor for \hyperlink{classblaze_1_1TextureCube}{Texture\+Cube}. \end{DoxyCompactList}\item 
+bool \hyperlink{classblaze_1_1TextureCube_aa1a49eebe8b2a63878b52321149d4c5b}{valid} () const
+\begin{DoxyCompactList}\small\item\em Checks if a texture is valid and usable. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1TextureCube_aafdee6f11a7272e2ff8ccd8514177500}{transfer\+Layout} (Vk\+Command\+Buffer cmdbuffer, Vk\+Image\+Layout new\+Image\+Layout, Vk\+Access\+Flags dst\+Access=0, Vk\+Pipeline\+Stage\+Flags src\+Stage\+Mask=V\+K\+\_\+\+P\+I\+P\+E\+L\+I\+N\+E\+\_\+\+S\+T\+A\+G\+E\+\_\+\+A\+L\+L\+\_\+\+C\+O\+M\+M\+A\+N\+D\+S\+\_\+\+B\+IT, Vk\+Pipeline\+Stage\+Flags dst\+Stage\+Mask=V\+K\+\_\+\+P\+I\+P\+E\+L\+I\+N\+E\+\_\+\+S\+T\+A\+G\+E\+\_\+\+A\+L\+L\+\_\+\+C\+O\+M\+M\+A\+N\+D\+S\+\_\+\+B\+IT)
+\begin{DoxyCompactList}\small\item\em Transfers layout using a pipeline barrier. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1TextureCube_a4eafb0406a5edeebd01d89e325ecf160}{implicit\+Transfer\+Layout} (Vk\+Image\+Layout new\+Image\+Layout, Vk\+Access\+Flags dst\+Access)
+\begin{DoxyCompactList}\small\item\em Changes the image layout and access to note the change occuring due to a renderpass. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors.}\par
+{\em Move only, Copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_abdb69c128fd2e704ac84fea3ae4de4da}\label{classblaze_1_1TextureCube_abdb69c128fd2e704ac84fea3ae4de4da}} 
+{\bfseries Texture\+Cube} (\hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_ab8f643ef1e14690f6f9ff16a86ceff0c}\label{classblaze_1_1TextureCube_ab8f643ef1e14690f6f9ff16a86ceff0c}} 
+\hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} \& {\bfseries operator=} (\hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_abd3d8686bbc93d1b61ce231a91dd9334}\label{classblaze_1_1TextureCube_abd3d8686bbc93d1b61ce231a91dd9334}} 
+{\bfseries Texture\+Cube} (const \hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_ad518187ffe7f305c4dda7b3d37155e85}\label{classblaze_1_1TextureCube_ad518187ffe7f305c4dda7b3d37155e85}} 
+\hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters.}\par
+{\em Getters for private variables. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a8f491ebf6c24b97590157912c3205aef}\label{classblaze_1_1TextureCube_a8f491ebf6c24b97590157912c3205aef}} 
+const Vk\+Image \& {\bfseries get\+\_\+image} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_ab61042e56e8363ac3f74b2dcab35beed}\label{classblaze_1_1TextureCube_ab61042e56e8363ac3f74b2dcab35beed}} 
+const Vk\+Image\+View \& {\bfseries get\+\_\+image\+View} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a19226d2f69a12173be7dc1ebcb810080}\label{classblaze_1_1TextureCube_a19226d2f69a12173be7dc1ebcb810080}} 
+const Vk\+Sampler \& {\bfseries get\+\_\+image\+Sampler} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a6bedfa28b59cb45aecc24532b9692d42}\label{classblaze_1_1TextureCube_a6bedfa28b59cb45aecc24532b9692d42}} 
+const Vk\+Descriptor\+Image\+Info \& {\bfseries get\+\_\+image\+Info} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a6fc4f4025abafa9a7a763112276c0223}\label{classblaze_1_1TextureCube_a6fc4f4025abafa9a7a763112276c0223}} 
+const Vk\+Format \& {\bfseries get\+\_\+format} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a52a14123c19506e7495466f626f89a2a}\label{classblaze_1_1TextureCube_a52a14123c19506e7495466f626f89a2a}} 
+const Vk\+Image\+Usage\+Flags \& {\bfseries get\+\_\+usage} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a65e42e3d8b4e083b068bf1ab1056911d}\label{classblaze_1_1TextureCube_a65e42e3d8b4e083b068bf1ab1056911d}} 
+const Vk\+Image\+Layout \& {\bfseries get\+\_\+layout} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_ac4efd9f1ae22b9cde6883b4b8dc58adb}\label{classblaze_1_1TextureCube_ac4efd9f1ae22b9cde6883b4b8dc58adb}} 
+const Vk\+Access\+Flags \& {\bfseries get\+\_\+access} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_ab655a09d5acd232d34b930185068472f}\label{classblaze_1_1TextureCube_ab655a09d5acd232d34b930185068472f}} 
+const Vk\+Image\+Aspect\+Flags \& {\bfseries get\+\_\+aspect} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1TextureCube_aed94c9af1d67687dfb318f5c66ed1c70}\label{classblaze_1_1TextureCube_aed94c9af1d67687dfb318f5c66ed1c70}} 
+uint32\+\_\+t {\bfseries get\+\_\+miplevels} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+
+
+\subsection{Detailed Description}
+A wrapper over a vulkan texture that contains all the required data. 
+
+A Cube texture that contains the image, memory, view, sampler and metadata. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a3c6b2d3d301a4db95fb4a9abb4e9220a}\label{classblaze_1_1TextureCube_a3c6b2d3d301a4db95fb4a9abb4e9220a}} 
+\index{blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}!Texture\+Cube@{Texture\+Cube}}
+\index{Texture\+Cube@{Texture\+Cube}!blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}}
+\subsubsection{\texorpdfstring{Texture\+Cube()}{TextureCube()}}
+{\footnotesize\ttfamily blaze\+::\+Texture\+Cube\+::\+Texture\+Cube (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} \&}]{context,  }\item[{const \hyperlink{structblaze_1_1ImageDataCube}{Image\+Data\+Cube} \&}]{image\+\_\+data,  }\item[{bool}]{mipmapped = {\ttfamily true} }\end{DoxyParamCaption})}
+
+
+
+Main constructor for \hyperlink{classblaze_1_1TextureCube}{Texture\+Cube}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & The current Vulkan \hyperlink{classblaze_1_1Context}{Context}. \\
+\hline
+{\em image\+\_\+data} & The \hyperlink{structblaze_1_1ImageDataCube}{Image\+Data\+Cube} stuct containing the initialization information. \\
+\hline
+{\em mipmapped} & Enabling mipmapping. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1TextureCube_a4eafb0406a5edeebd01d89e325ecf160}\label{classblaze_1_1TextureCube_a4eafb0406a5edeebd01d89e325ecf160}} 
+\index{blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}!implicit\+Transfer\+Layout@{implicit\+Transfer\+Layout}}
+\index{implicit\+Transfer\+Layout@{implicit\+Transfer\+Layout}!blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}}
+\subsubsection{\texorpdfstring{implicit\+Transfer\+Layout()}{implicitTransferLayout()}}
+{\footnotesize\ttfamily void blaze\+::\+Texture\+Cube\+::implicit\+Transfer\+Layout (\begin{DoxyParamCaption}\item[{Vk\+Image\+Layout}]{new\+Image\+Layout,  }\item[{Vk\+Access\+Flags}]{dst\+Access }\end{DoxyParamCaption})}
+
+
+
+Changes the image layout and access to note the change occuring due to a renderpass. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em new\+Image\+Layout} & The image layout to change to. \\
+\hline
+{\em dst\+Access} & The access flag to set to. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1TextureCube_aafdee6f11a7272e2ff8ccd8514177500}\label{classblaze_1_1TextureCube_aafdee6f11a7272e2ff8ccd8514177500}} 
+\index{blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}!transfer\+Layout@{transfer\+Layout}}
+\index{transfer\+Layout@{transfer\+Layout}!blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}}
+\subsubsection{\texorpdfstring{transfer\+Layout()}{transferLayout()}}
+{\footnotesize\ttfamily void blaze\+::\+Texture\+Cube\+::transfer\+Layout (\begin{DoxyParamCaption}\item[{Vk\+Command\+Buffer}]{cmdbuffer,  }\item[{Vk\+Image\+Layout}]{new\+Image\+Layout,  }\item[{Vk\+Access\+Flags}]{dst\+Access = {\ttfamily 0},  }\item[{Vk\+Pipeline\+Stage\+Flags}]{src\+Stage\+Mask = {\ttfamily VK\+\_\+PIPELINE\+\_\+STAGE\+\_\+ALL\+\_\+COMMANDS\+\_\+BIT},  }\item[{Vk\+Pipeline\+Stage\+Flags}]{dst\+Stage\+Mask = {\ttfamily VK\+\_\+PIPELINE\+\_\+STAGE\+\_\+ALL\+\_\+COMMANDS\+\_\+BIT} }\end{DoxyParamCaption})}
+
+
+
+Transfers layout using a pipeline barrier. 
+
+Transfer layouts use a pipeline barrier to change the layouts between the two specified stages.
+
+
+\begin{DoxyParams}{Parameters}
+{\em cmdbuffer} & The command buffer to execute the transfer on. \\
+\hline
+{\em new\+Image\+Layout} & The final image layout for the texture. \\
+\hline
+{\em dst\+Access} & The access flag of the final image. \\
+\hline
+{\em src\+Stage\+Mask} & The stages after which the texture can start transfer. \\
+\hline
+{\em dst\+Stage\+Mask} & The stages by which the texture needs to finish transfer. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1TextureCube_aa1a49eebe8b2a63878b52321149d4c5b}\label{classblaze_1_1TextureCube_aa1a49eebe8b2a63878b52321149d4c5b}} 
+\index{blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}!valid@{valid}}
+\index{valid@{valid}!blaze\+::\+Texture\+Cube@{blaze\+::\+Texture\+Cube}}
+\subsubsection{\texorpdfstring{valid()}{valid()}}
+{\footnotesize\ttfamily blaze\+::\+Texture\+Cube\+::valid (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Checks if a texture is valid and usable. 
+
+A texture is considered valid if it is constructed using the main constructor and is initialized successfully.
+
+\begin{DoxyReturn}{Returns}
+{\itshape true} If is properly constructed. 
+
+{\itshape false} If is default constructed or had an error. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/core/Texture\+Cube.\+hpp\item 
+Blaze/core/Texture\+Cube.\+cpp\end{DoxyCompactItemize}

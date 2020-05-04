@@ -1,0 +1,161 @@
+\hypertarget{structblaze_1_1Node}{}\section{blaze\+:\+:Node Struct Reference}
+\label{structblaze_1_1Node}\index{blaze\+::\+Node@{blaze\+::\+Node}}
+
+
+A node in the \hyperlink{classblaze_1_1Model}{Model} node tree.  
+
+
+
+
+{\ttfamily \#include $<$Node.\+hpp$>$}
+
+
+
+Collaboration diagram for blaze\+:\+:Node\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=214pt]{structblaze_1_1Node__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{structblaze_1_1Node_a80efd9604109b4b9ddbc72b462e35759}{Node} () noexcept
+\begin{DoxyCompactList}\small\item\em Default constructor. \end{DoxyCompactList}\item 
+\hyperlink{structblaze_1_1Node_a43d19db1208c11f1d2dd4195b699ab43}{Node} (const glm\+::vec3 \&trans, const glm\+::quat \&rot, const glm\+::vec3 \&sc, const std\+::vector$<$ int $>$ \&children, const std\+::pair$<$ int, int $>$ primitive\+\_\+range) noexcept
+\begin{DoxyCompactList}\small\item\em Constructor that takes individual transform parameters. \end{DoxyCompactList}\item 
+\hyperlink{structblaze_1_1Node_ae46aaa123fd42d14f915b7a656449862}{Node} (const glm\+::mat4 \&T\+RS, const std\+::vector$<$ int $>$ \&children, const std\+::pair$<$ int, int $>$ primitive\+\_\+range) noexcept
+\begin{DoxyCompactList}\small\item\em Constructor that takes the entire T\+RS matrix. \end{DoxyCompactList}\item 
+void \hyperlink{structblaze_1_1Node_aae2c0b30b1abb4b0314d2cabdbb867ed}{update} (const glm\+::mat4 parent\+T\+RS=glm\+::mat4(1.\+0f))
+\begin{DoxyCompactList}\small\item\em Updates the World transform of the \hyperlink{structblaze_1_1Node}{Node}. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors}\par
+{\em For moving a \hyperlink{structblaze_1_1Node}{Node}.
+
+Nodes are not copyable. Hance copy constructors are deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_aaae7412f72b9c55374a75b6488186725}\label{structblaze_1_1Node_aaae7412f72b9c55374a75b6488186725}} 
+{\bfseries Node} (\hyperlink{structblaze_1_1Node}{Node} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_abb0f200b8c985f10bd4ff2956154ef9b}\label{structblaze_1_1Node_abb0f200b8c985f10bd4ff2956154ef9b}} 
+\hyperlink{structblaze_1_1Node}{Node} \& {\bfseries operator=} (\hyperlink{structblaze_1_1Node}{Node} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_ad1a0fafd4be3301fddf0a434a2f2ba12}\label{structblaze_1_1Node_ad1a0fafd4be3301fddf0a434a2f2ba12}} 
+{\bfseries Node} (const \hyperlink{structblaze_1_1Node}{Node} \&other)=delete
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_a64d32e746903bb69d8c59fa7518974ce}\label{structblaze_1_1Node_a64d32e746903bb69d8c59fa7518974ce}} 
+\hyperlink{structblaze_1_1Node}{Node} \& {\bfseries operator=} (const \hyperlink{structblaze_1_1Node}{Node} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_a9f0981eeb9569f9135a7604c7d13fb52}\label{structblaze_1_1Node_a9f0981eeb9569f9135a7604c7d13fb52}} 
+glm\+::vec3 {\bfseries translation}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_a6fb776faf88ea9ab605acf79975ebc11}\label{structblaze_1_1Node_a6fb776faf88ea9ab605acf79975ebc11}} 
+glm\+::quat {\bfseries rotation}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_a59018efc4c257991ad1bcabf6087d078}\label{structblaze_1_1Node_a59018efc4c257991ad1bcabf6087d078}} 
+glm\+::vec3 {\bfseries scale}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_a96a4d837006cdc49e802a85b77e4fb67}\label{structblaze_1_1Node_a96a4d837006cdc49e802a85b77e4fb67}} 
+glm\+::mat4 {\bfseries local\+T\+RS}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_ab4e58da330ba682cec0425fe72c1f8b5}\label{structblaze_1_1Node_ab4e58da330ba682cec0425fe72c1f8b5}} 
+\hyperlink{structblaze_1_1ModelPushConstantBlock}{Model\+Push\+Constant\+Block} {\bfseries pcb}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_a84ae34bec74601d72c09c45eea4f8133}\label{structblaze_1_1Node_a84ae34bec74601d72c09c45eea4f8133}} 
+std\+::vector$<$ int $>$ {\bfseries children}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Node_acbdbbfc2dd74227b1154844c200a462a}\label{structblaze_1_1Node_acbdbbfc2dd74227b1154844c200a462a}} 
+std\+::pair$<$ int, int $>$ {\bfseries primitive\+\_\+range}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+A node in the \hyperlink{classblaze_1_1Model}{Model} node tree. 
+
+Each node contains a model transformation that applies to all primitives in the node, as well as the children of the node.
+
+Each node must have atleast one child or one primitive under it. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{structblaze_1_1Node_a80efd9604109b4b9ddbc72b462e35759}\label{structblaze_1_1Node_a80efd9604109b4b9ddbc72b462e35759}} 
+\index{blaze\+::\+Node@{blaze\+::\+Node}!Node@{Node}}
+\index{Node@{Node}!blaze\+::\+Node@{blaze\+::\+Node}}
+\subsubsection{\texorpdfstring{Node()}{Node()}\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily blaze\+::\+Node\+::\+Node (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Default constructor. 
+
+The default constructor of the \hyperlink{structblaze_1_1Node}{Node}. Every value is set to their default. \mbox{\Hypertarget{structblaze_1_1Node_a43d19db1208c11f1d2dd4195b699ab43}\label{structblaze_1_1Node_a43d19db1208c11f1d2dd4195b699ab43}} 
+\index{blaze\+::\+Node@{blaze\+::\+Node}!Node@{Node}}
+\index{Node@{Node}!blaze\+::\+Node@{blaze\+::\+Node}}
+\subsubsection{\texorpdfstring{Node()}{Node()}\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily blaze\+::\+Node\+::\+Node (\begin{DoxyParamCaption}\item[{const glm\+::vec3 \&}]{trans,  }\item[{const glm\+::quat \&}]{rot,  }\item[{const glm\+::vec3 \&}]{sc,  }\item[{const std\+::vector$<$ int $>$ \&}]{children,  }\item[{const std\+::pair$<$ int, int $>$}]{primitive\+\_\+range }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Constructor that takes individual transform parameters. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em trans} & Translation \\
+\hline
+{\em rot} & Rotation \\
+\hline
+{\em sc} & Scale \\
+\hline
+{\em children} & Indices of the children of the node in the \hyperlink{classblaze_1_1Model}{Model}. \\
+\hline
+{\em primitive\+\_\+range} & The range of indices of primitives under this \hyperlink{structblaze_1_1Node}{Node}. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{structblaze_1_1Node_ae46aaa123fd42d14f915b7a656449862}\label{structblaze_1_1Node_ae46aaa123fd42d14f915b7a656449862}} 
+\index{blaze\+::\+Node@{blaze\+::\+Node}!Node@{Node}}
+\index{Node@{Node}!blaze\+::\+Node@{blaze\+::\+Node}}
+\subsubsection{\texorpdfstring{Node()}{Node()}\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily blaze\+::\+Node\+::\+Node (\begin{DoxyParamCaption}\item[{const glm\+::mat4 \&}]{T\+RS,  }\item[{const std\+::vector$<$ int $>$ \&}]{children,  }\item[{const std\+::pair$<$ int, int $>$}]{primitive\+\_\+range }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Constructor that takes the entire T\+RS matrix. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em T\+RS} & Translation Rotation Scale matrix \\
+\hline
+{\em children} & Indices of the children of the node in the \hyperlink{classblaze_1_1Model}{Model}. \\
+\hline
+{\em primitive\+\_\+range} & The range of indices of primitives under this \hyperlink{structblaze_1_1Node}{Node}. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{structblaze_1_1Node_aae2c0b30b1abb4b0314d2cabdbb867ed}\label{structblaze_1_1Node_aae2c0b30b1abb4b0314d2cabdbb867ed}} 
+\index{blaze\+::\+Node@{blaze\+::\+Node}!update@{update}}
+\index{update@{update}!blaze\+::\+Node@{blaze\+::\+Node}}
+\subsubsection{\texorpdfstring{update()}{update()}}
+{\footnotesize\ttfamily blaze\+::\+Node\+::update (\begin{DoxyParamCaption}\item[{const glm\+::mat4}]{parent\+T\+RS = {\ttfamily glm\+:\+:mat4(1.0f)} }\end{DoxyParamCaption})}
+
+
+
+Updates the World transform of the \hyperlink{structblaze_1_1Node}{Node}. 
+
+Updates the local transform according to changes in the three components. Updates the world transform according to local transform and parent transform.
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent\+T\+RS} & Parent transform. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this struct was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/drawables/Node.\+hpp\item 
+Blaze/drawables/Node.\+cpp\end{DoxyCompactItemize}

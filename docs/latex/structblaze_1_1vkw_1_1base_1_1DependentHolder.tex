@@ -1,0 +1,68 @@
+\hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder}{}\section{blaze\+:\+:vkw\+:\+:base\+:\+:Dependent\+Holder$<$ T\+Handle, T\+Dep, T\+Destroy $>$ Struct Template Reference}
+\label{structblaze_1_1vkw_1_1base_1_1DependentHolder}\index{blaze\+::vkw\+::base\+::\+Dependent\+Holder$<$ T\+Handle, T\+Dep, T\+Destroy $>$@{blaze\+::vkw\+::base\+::\+Dependent\+Holder$<$ T\+Handle, T\+Dep, T\+Destroy $>$}}
+
+
+The most important wrapper to wrap handles that require some dependency to be used to deallocate.  
+
+
+
+
+{\ttfamily \#include $<$Vk\+Wrap\+Base.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a1ed19fa0798e21238065d1cb3f600ca5}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a1ed19fa0798e21238065d1cb3f600ca5}} 
+{\bfseries Dependent\+Holder} (T\+Handle handle, T\+Dep dependency) noexcept
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a9da72f8dc993cc3d118c81c149a27f89}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a9da72f8dc993cc3d118c81c149a27f89}} 
+{\bfseries Dependent\+Holder} (const \hyperlink{structblaze_1_1vkw_1_1base_1_1DependentHolder}{Dependent\+Holder} \&other)=delete
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a3d080f63125b31555a302f95c6c5b8fd}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a3d080f63125b31555a302f95c6c5b8fd}} 
+\hyperlink{structblaze_1_1vkw_1_1base_1_1DependentHolder}{Dependent\+Holder} \& {\bfseries operator=} (const \hyperlink{structblaze_1_1vkw_1_1base_1_1DependentHolder}{Dependent\+Holder} \&other)=delete
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a3acc433104c31698c760ddcad583839f}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a3acc433104c31698c760ddcad583839f}} 
+{\bfseries Dependent\+Holder} (\hyperlink{structblaze_1_1vkw_1_1base_1_1DependentHolder}{Dependent\+Holder} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a3f78bf0cdac98d49796f3af32eb6393f}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a3f78bf0cdac98d49796f3af32eb6393f}} 
+\hyperlink{structblaze_1_1vkw_1_1base_1_1DependentHolder}{Dependent\+Holder} \& {\bfseries operator=} (\hyperlink{structblaze_1_1vkw_1_1base_1_1DependentHolder}{Dependent\+Holder} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_ac36f1b078ef4e6fb08be34ebc1101679}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_ac36f1b078ef4e6fb08be34ebc1101679}} 
+const T\+Handle \& {\bfseries get} () const
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a1349c85effef6bbfd027c43603fa4685}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a1349c85effef6bbfd027c43603fa4685}} 
+bool {\bfseries valid} () const
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_a880cec3d6c3f427a492372e0a7fe2589}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_a880cec3d6c3f427a492372e0a7fe2589}} 
+T\+Handle {\bfseries handle} \{V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1vkw_1_1base_1_1DependentHolder_abfec06cf5378b9e9263f1e3f335eeb93}\label{structblaze_1_1vkw_1_1base_1_1DependentHolder_abfec06cf5378b9e9263f1e3f335eeb93}} 
+T\+Dep {\bfseries dependency} \{V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE\}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$typename T\+Handle, typename T\+Dep, void($\ast$)(\+T\+Dep, T\+Handle, const Vk\+Allocation\+Callbacks $\ast$) T\+Destroy$>$\newline
+struct blaze\+::vkw\+::base\+::\+Dependent\+Holder$<$ T\+Handle, T\+Dep, T\+Destroy $>$}
+
+The most important wrapper to wrap handles that require some dependency to be used to deallocate. 
+
+The dependency handle is not owned, while the handle is owned by the wrapper. At destruction, the relevant passed destructor will be called.
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em T\+Handle} & Type of handle \\
+\hline
+{\em T\+Dep} & The Type of handle of dependency. \\
+\hline
+{\em T\+Destroy} & The destroy function. \\
+\hline
+\end{DoxyTemplParams}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/vkwrap/Vk\+Wrap\+Base.\+hpp\end{DoxyCompactItemize}

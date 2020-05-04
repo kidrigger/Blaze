@@ -1,0 +1,110 @@
+\hypertarget{classblaze_1_1UniformBuffer}{}\section{blaze\+:\+:Uniform\+Buffer$<$ T $>$ Class Template Reference}
+\label{classblaze_1_1UniformBuffer}\index{blaze\+::\+Uniform\+Buffer$<$ T $>$@{blaze\+::\+Uniform\+Buffer$<$ T $>$}}
+
+
+The class to handle operations on a uniform buffer.  
+
+
+
+
+{\ttfamily \#include $<$Uniform\+Buffer.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_ace7278a809973ad09965dc372ee9a0d6}\label{classblaze_1_1UniformBuffer_ace7278a809973ad09965dc372ee9a0d6}} 
+\hyperlink{classblaze_1_1UniformBuffer_ace7278a809973ad09965dc372ee9a0d6}{Uniform\+Buffer} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1UniformBuffer_a96dde441b0d31fb0949a864c139c072c}{Uniform\+Buffer} (const \hyperlink{classblaze_1_1Context}{Context} \&context, const T \&data)
+\begin{DoxyCompactList}\small\item\em Main constructor of the class. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1UniformBuffer_a36699598a9fae6985328009a02af8de5}{write} (const \hyperlink{classblaze_1_1Context}{Context} \&context, const T \&data)
+\begin{DoxyCompactList}\small\item\em Writes the new data to the uniform buffer. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors.}\par
+{\em Move only, copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_aa569ddbf07e9597b1e6de52e6b85db6e}\label{classblaze_1_1UniformBuffer_aa569ddbf07e9597b1e6de52e6b85db6e}} 
+{\bfseries Uniform\+Buffer} (\hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_aa5707c20bc30f08bf965c3511035f4e5}\label{classblaze_1_1UniformBuffer_aa5707c20bc30f08bf965c3511035f4e5}} 
+\hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} \& {\bfseries operator=} (\hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_aaa05f134789fce6d1b6a07b38a7fff09}\label{classblaze_1_1UniformBuffer_aaa05f134789fce6d1b6a07b38a7fff09}} 
+{\bfseries Uniform\+Buffer} (const \hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_a7668882a3ce8067e2d8f0c6d5c6cbb1e}\label{classblaze_1_1UniformBuffer_a7668882a3ce8067e2d8f0c6d5c6cbb1e}} 
+\hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters.}\par
+{\em Getters for private variables. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_ac7179f41102e04372d908e5a06558184}\label{classblaze_1_1UniformBuffer_ac7179f41102e04372d908e5a06558184}} 
+Vk\+Buffer {\bfseries get\+\_\+buffer} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_a7cba3219dbf94b52cbc0f5cf649fb7d1}\label{classblaze_1_1UniformBuffer_a7cba3219dbf94b52cbc0f5cf649fb7d1}} 
+Vma\+Allocation {\bfseries get\+\_\+allocation} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_af1492864fff54bc4b845bcf85b582aaa}\label{classblaze_1_1UniformBuffer_af1492864fff54bc4b845bcf85b582aaa}} 
+size\+\_\+t {\bfseries get\+\_\+size} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$typename T$>$\newline
+class blaze\+::\+Uniform\+Buffer$<$ T $>$}
+
+The class to handle operations on a uniform buffer. 
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em T} & The data object to be stored in the \hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer}. \\
+\hline
+\end{DoxyTemplParams}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_a96dde441b0d31fb0949a864c139c072c}\label{classblaze_1_1UniformBuffer_a96dde441b0d31fb0949a864c139c072c}} 
+\index{blaze\+::\+Uniform\+Buffer@{blaze\+::\+Uniform\+Buffer}!Uniform\+Buffer@{Uniform\+Buffer}}
+\index{Uniform\+Buffer@{Uniform\+Buffer}!blaze\+::\+Uniform\+Buffer@{blaze\+::\+Uniform\+Buffer}}
+\subsubsection{\texorpdfstring{Uniform\+Buffer()}{UniformBuffer()}}
+{\footnotesize\ttfamily template$<$typename T$>$ \\
+\hyperlink{classblaze_1_1UniformBuffer}{blaze\+::\+Uniform\+Buffer}$<$ T $>$\+::\hyperlink{classblaze_1_1UniformBuffer}{Uniform\+Buffer} (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} \&}]{context,  }\item[{const T \&}]{data }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Main constructor of the class. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & The current Vulkan \hyperlink{classblaze_1_1Context}{Context}. \\
+\hline
+{\em data} & The data object of type T to store. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1UniformBuffer_a36699598a9fae6985328009a02af8de5}\label{classblaze_1_1UniformBuffer_a36699598a9fae6985328009a02af8de5}} 
+\index{blaze\+::\+Uniform\+Buffer@{blaze\+::\+Uniform\+Buffer}!write@{write}}
+\index{write@{write}!blaze\+::\+Uniform\+Buffer@{blaze\+::\+Uniform\+Buffer}}
+\subsubsection{\texorpdfstring{write()}{write()}}
+{\footnotesize\ttfamily template$<$typename T$>$ \\
+\hyperlink{classblaze_1_1UniformBuffer}{blaze\+::\+Uniform\+Buffer}$<$ T $>$\+::write (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} \&}]{context,  }\item[{const T \&}]{data }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Writes the new data to the uniform buffer. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & The Vulkan \hyperlink{classblaze_1_1Context}{Context} in use. \\
+\hline
+{\em data} & The data to write to the uniform buffer. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/Uniform\+Buffer.\+hpp\end{DoxyCompactItemize}

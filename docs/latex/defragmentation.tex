@@ -1,0 +1,172 @@
+Interleaved allocations and deallocations of many objects of varying size can cause fragmentation over time, which can lead to a situation where the library is unable to find a continuous range of free memory for a new allocation despite there is enough free space, just scattered across many small free ranges between existing allocations.
+
+To mitigate this problem, you can use defragmentation feature\+: structure \hyperlink{structVmaDefragmentationInfo2}{Vma\+Defragmentation\+Info2}, function vma\+Defragmentation\+Begin(), vma\+Defragmentation\+End(). Given set of allocations, this function can move them to compact used memory, ensure more continuous free space and possibly also free some {\ttfamily Vk\+Device\+Memory} blocks.
+
+What the defragmentation does is\+:
+
+
+\begin{DoxyItemize}
+\item Updates \hyperlink{structVmaAllocation}{Vma\+Allocation} objects to point to new {\ttfamily Vk\+Device\+Memory} and offset. After allocation has been moved, its \hyperlink{structVmaAllocationInfo_ae0bfb7dfdf79a76ffefc9a94677a2f67}{Vma\+Allocation\+Info\+::device\+Memory} and/or \hyperlink{structVmaAllocationInfo_a4a3c732388dbdc7a23f9365b00825268}{Vma\+Allocation\+Info\+::offset} changes. You must query them again using vma\+Get\+Allocation\+Info() if you need them.
+\item Moves actual data in memory.
+\end{DoxyItemize}
+
+What it doesn\textquotesingle{}t do, so you need to do it yourself\+:
+
+
+\begin{DoxyItemize}
+\item Recreate buffers and images that were bound to allocations that were defragmented and bind them with their new places in memory. You must use {\ttfamily vk\+Destroy\+Buffer()}, {\ttfamily vk\+Destroy\+Image()}, {\ttfamily vk\+Create\+Buffer()}, {\ttfamily vk\+Create\+Image()}, vma\+Bind\+Buffer\+Memory(), vma\+Bind\+Image\+Memory() for that purpose and N\+OT vma\+Destroy\+Buffer(), vma\+Destroy\+Image(), vma\+Create\+Buffer(), vma\+Create\+Image(), because you don\textquotesingle{}t need to destroy or create allocation objects!
+\item Recreate views and update descriptors that point to these buffers and images.
+\end{DoxyItemize}\hypertarget{defragmentation_defragmentation_cpu}{}\section{Defragmenting C\+P\+U memory}\label{defragmentation_defragmentation_cpu}
+Following example demonstrates how you can run defragmentation on C\+PU. Only allocations created in memory types that are {\ttfamily H\+O\+S\+T\+\_\+\+V\+I\+S\+I\+B\+LE} can be defragmented. Others are ignored.
+
+The way it works is\+:
+
+
+\begin{DoxyItemize}
+\item It temporarily maps entire memory blocks when necessary.
+\item It moves data using {\ttfamily memmove()} function.
+\end{DoxyItemize}
+
+
+\begin{DoxyCode}
+\textcolor{comment}{// Given following variables already initialized:}
+VkDevice device;
+\hyperlink{structVmaAllocator}{VmaAllocator} allocator;
+std::vector<VkBuffer> buffers;
+std::vector<VmaAllocation> allocations;
+
+
+\textcolor{keyword}{const} uint32\_t allocCount = (uint32\_t)allocations.size();
+std::vector<VkBool32> allocationsChanged(allocCount);
+
+\hyperlink{structVmaDefragmentationInfo2}{VmaDefragmentationInfo2} defragInfo = \{\};
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a3cf86ab32c1da779b4923d301a3056ba}{allocationCount} = allocCount;
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a8943f8d65969ce8e2189a1cdf3205e96}{pAllocations} = allocations.data();
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a76d51a644dc7f5405d0cdd0025ecd0cc}{pAllocationsChanged} = allocationsChanged.data();
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_af78e1ea40c22d85137b65f6b384a4d0a}{maxCpuBytesToMove} = VK\_WHOLE\_SIZE; \textcolor{comment}{// No limit.}
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a94c2c7223d52878445a8cccce396b671}{maxCpuAllocationsToMove} = UINT32\_MAX; \textcolor{comment}{// No limit.}
+
+\hyperlink{structVmaDefragmentationContext}{VmaDefragmentationContext} defragCtx;
+vmaDefragmentationBegin(allocator, &defragInfo, \textcolor{keyword}{nullptr}, &defragCtx);
+vmaDefragmentationEnd(allocator, defragCtx);
+
+\textcolor{keywordflow}{for}(uint32\_t i = 0; i < allocCount; ++i)
+\{
+    \textcolor{keywordflow}{if}(allocationsChanged[i])
+    \{
+        \textcolor{comment}{// Destroy buffer that is immutably bound to memory region which is no longer valid.}
+        vkDestroyBuffer(device, buffers[i], \textcolor{keyword}{nullptr});
+
+        \textcolor{comment}{// Create new buffer with same parameters.}
+        VkBufferCreateInfo bufferInfo = ...;
+        vkCreateBuffer(device, &bufferInfo, \textcolor{keyword}{nullptr}, &buffers[i]);
+
+        \textcolor{comment}{// You can make dummy call to vkGetBufferMemoryRequirements here to silence validation layer
+       warning.}
+
+        \textcolor{comment}{// Bind new buffer to new memory region. Data contained in it is already moved.}
+        \hyperlink{structVmaAllocationInfo}{VmaAllocationInfo} allocInfo;
+        vmaGetAllocationInfo(allocator, allocations[i], &allocInfo);
+        vmaBindBufferMemory(allocator, allocations[i], buffers[i]);
+    \}
+\}
+\end{DoxyCode}
+
+
+Setting \hyperlink{structVmaDefragmentationInfo2_a76d51a644dc7f5405d0cdd0025ecd0cc}{Vma\+Defragmentation\+Info2\+::p\+Allocations\+Changed} is optional. This output array tells whether particular allocation in \hyperlink{structVmaDefragmentationInfo2_a8943f8d65969ce8e2189a1cdf3205e96}{Vma\+Defragmentation\+Info2\+::p\+Allocations} at the same index has been modified during defragmentation. You can pass null, but you then need to query every allocation passed to defragmentation for new parameters using vma\+Get\+Allocation\+Info() if you might need to recreate and rebind a buffer or image associated with it.
+
+If you use \hyperlink{choosing_memory_type_choosing_memory_type_custom_memory_pools}{Custom memory pools}, you can fill \hyperlink{structVmaDefragmentationInfo2_a7e70aa2a1081d849dcc7829b19d3ec9d}{Vma\+Defragmentation\+Info2\+::pool\+Count} and \hyperlink{structVmaDefragmentationInfo2_a0b3effd57f3fcdeb2ed62210b4ef20e1}{Vma\+Defragmentation\+Info2\+::p\+Pools} instead of \hyperlink{structVmaDefragmentationInfo2_a3cf86ab32c1da779b4923d301a3056ba}{Vma\+Defragmentation\+Info2\+::allocation\+Count} and \hyperlink{structVmaDefragmentationInfo2_a8943f8d65969ce8e2189a1cdf3205e96}{Vma\+Defragmentation\+Info2\+::p\+Allocations} to defragment all allocations in given pools. You cannot use \hyperlink{structVmaDefragmentationInfo2_a76d51a644dc7f5405d0cdd0025ecd0cc}{Vma\+Defragmentation\+Info2\+::p\+Allocations\+Changed} in that case. You can also combine both methods.\hypertarget{defragmentation_defragmentation_gpu}{}\section{Defragmenting G\+P\+U memory}\label{defragmentation_defragmentation_gpu}
+It is also possible to defragment allocations created in memory types that are not {\ttfamily H\+O\+S\+T\+\_\+\+V\+I\+S\+I\+B\+LE}. To do that, you need to pass a command buffer that meets requirements as described in \hyperlink{structVmaDefragmentationInfo2_a7f71f39590c5316771493d2333f9c1bd}{Vma\+Defragmentation\+Info2\+::command\+Buffer}. The way it works is\+:
+
+
+\begin{DoxyItemize}
+\item It creates temporary buffers and binds them to entire memory blocks when necessary.
+\item It issues {\ttfamily vk\+Cmd\+Copy\+Buffer()} to passed command buffer.
+\end{DoxyItemize}
+
+Example\+:
+
+
+\begin{DoxyCode}
+\textcolor{comment}{// Given following variables already initialized:}
+VkDevice device;
+\hyperlink{structVmaAllocator}{VmaAllocator} allocator;
+VkCommandBuffer commandBuffer;
+std::vector<VkBuffer> buffers;
+std::vector<VmaAllocation> allocations;
+
+
+\textcolor{keyword}{const} uint32\_t allocCount = (uint32\_t)allocations.size();
+std::vector<VkBool32> allocationsChanged(allocCount);
+
+VkCommandBufferBeginInfo cmdBufBeginInfo = ...;
+vkBeginCommandBuffer(commandBuffer, &cmdBufBeginInfo);
+
+\hyperlink{structVmaDefragmentationInfo2}{VmaDefragmentationInfo2} defragInfo = \{\};
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a3cf86ab32c1da779b4923d301a3056ba}{allocationCount} = allocCount;
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a8943f8d65969ce8e2189a1cdf3205e96}{pAllocations} = allocations.data();
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a76d51a644dc7f5405d0cdd0025ecd0cc}{pAllocationsChanged} = allocationsChanged.data();
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a4ddbc898d0afe1518f863a3763628f08}{maxGpuBytesToMove} = VK\_WHOLE\_SIZE; \textcolor{comment}{// Notice it's "GPU" this time.}
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a40d53d33e71ba0b66f844ed63c05a3f6}{maxGpuAllocationsToMove} = UINT32\_MAX; \textcolor{comment}{// Notice it's "GPU" this time.}
+defragInfo.\hyperlink{structVmaDefragmentationInfo2_a7f71f39590c5316771493d2333f9c1bd}{commandBuffer} = commandBuffer;
+
+\hyperlink{structVmaDefragmentationContext}{VmaDefragmentationContext} defragCtx;
+vmaDefragmentationBegin(allocator, &defragInfo, \textcolor{keyword}{nullptr}, &defragCtx);
+
+vkEndCommandBuffer(commandBuffer);
+
+\textcolor{comment}{// Submit commandBuffer.}
+\textcolor{comment}{// Wait for a fence that ensures commandBuffer execution finished.}
+
+vmaDefragmentationEnd(allocator, defragCtx);
+
+\textcolor{keywordflow}{for}(uint32\_t i = 0; i < allocCount; ++i)
+\{
+    \textcolor{keywordflow}{if}(allocationsChanged[i])
+    \{
+        \textcolor{comment}{// Destroy buffer that is immutably bound to memory region which is no longer valid.}
+        vkDestroyBuffer(device, buffers[i], \textcolor{keyword}{nullptr});
+
+        \textcolor{comment}{// Create new buffer with same parameters.}
+        VkBufferCreateInfo bufferInfo = ...;
+        vkCreateBuffer(device, &bufferInfo, \textcolor{keyword}{nullptr}, &buffers[i]);
+
+        \textcolor{comment}{// You can make dummy call to vkGetBufferMemoryRequirements here to silence validation layer
+       warning.}
+
+        \textcolor{comment}{// Bind new buffer to new memory region. Data contained in it is already moved.}
+        \hyperlink{structVmaAllocationInfo}{VmaAllocationInfo} allocInfo;
+        vmaGetAllocationInfo(allocator, allocations[i], &allocInfo);
+        vmaBindBufferMemory(allocator, allocations[i], buffers[i]);
+    \}
+\}
+\end{DoxyCode}
+
+
+You can combine these two methods by specifying non-\/zero {\ttfamily max\+Gpu$\ast$} as well as {\ttfamily max\+Cpu$\ast$} parameters. The library automatically chooses best method to defragment each memory pool.
+
+You may try not to block your entire program to wait until defragmentation finishes, but do it in the background, as long as you carefully fullfill requirements described in function vma\+Defragmentation\+Begin().\hypertarget{defragmentation_defragmentation_additional_notes}{}\section{Additional notes}\label{defragmentation_defragmentation_additional_notes}
+It is only legal to defragment allocations bound to\+:
+
+
+\begin{DoxyItemize}
+\item buffers
+\item images created with {\ttfamily V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+A\+L\+I\+A\+S\+\_\+\+B\+IT}, {\ttfamily V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+T\+I\+L\+I\+N\+G\+\_\+\+L\+I\+N\+E\+AR}, and being currently in {\ttfamily V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+G\+E\+N\+E\+R\+AL} or {\ttfamily V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+P\+R\+E\+I\+N\+I\+T\+I\+A\+L\+I\+Z\+ED}.
+\end{DoxyItemize}
+
+Defragmentation of images created with {\ttfamily V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+T\+I\+L\+I\+N\+G\+\_\+\+O\+P\+T\+I\+M\+AL} or in any other layout may give undefined results.
+
+If you defragment allocations bound to images, new images to be bound to new memory region after defragmentation should be created with {\ttfamily V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+P\+R\+E\+I\+N\+I\+T\+I\+A\+L\+I\+Z\+ED} and then transitioned to their original layout from before defragmentation if needed using an image memory barrier.
+
+While using defragmentation, you may experience validation layer warnings, which you just need to ignore. See \hyperlink{general_considerations_general_considerations_validation_layer_warnings}{Validation layer warnings}.
+
+Please don\textquotesingle{}t expect memory to be fully compacted after defragmentation. Algorithms inside are based on some heuristics that try to maximize number of Vulkan memory blocks to make totally empty to release them, as well as to maximimze continuous empty space inside remaining blocks, while minimizing the number and size of allocations that need to be moved. Some fragmentation may still remain -\/ this is normal.\hypertarget{defragmentation_defragmentation_custom_algorithm}{}\section{Writing custom defragmentation algorithm}\label{defragmentation_defragmentation_custom_algorithm}
+If you want to implement your own, custom defragmentation algorithm, there is infrastructure prepared for that, but it is not exposed through the library A\+PI -\/ you need to hack its source code. Here are steps needed to do this\+:
+
+
+\begin{DoxyEnumerate}
+\item Main thing you need to do is to define your own class derived from base abstract class {\ttfamily Vma\+Defragmentation\+Algorithm} and implement your version of its pure virtual methods. See definition and comments of this class for details.
+\item Your code needs to interact with device memory block metadata. If you need more access to its data than it\textquotesingle{}s provided by its public interface, declare your new class as a friend class e.\+g. in class {\ttfamily Vma\+Block\+Metadata\+\_\+\+Generic}.
+\item If you want to create a flag that would enable your algorithm or pass some additional flags to configure it, add them to {\ttfamily Vma\+Defragmentation\+Flag\+Bits} and use them in \hyperlink{structVmaDefragmentationInfo2_a53e844ee5633e229cf6daf14b2d9fff9}{Vma\+Defragmentation\+Info2\+::flags}.
+\item Modify function {\ttfamily Vma\+Block\+Vector\+Defragmentation\+Context\+::\+Begin} to create object of your new class whenever needed. 
+\end{DoxyEnumerate}

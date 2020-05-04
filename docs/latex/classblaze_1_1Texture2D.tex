@@ -1,0 +1,176 @@
+\hypertarget{classblaze_1_1Texture2D}{}\section{blaze\+:\+:Texture2D Class Reference}
+\label{classblaze_1_1Texture2D}\index{blaze\+::\+Texture2D@{blaze\+::\+Texture2D}}
+
+
+A wrapper over a vulkan texture that contains all the required data.  
+
+
+
+
+{\ttfamily \#include $<$Texture2\+D.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_ac2c630eccb2ac79ee331e03980622cc3}\label{classblaze_1_1Texture2D_ac2c630eccb2ac79ee331e03980622cc3}} 
+\hyperlink{classblaze_1_1Texture2D_ac2c630eccb2ac79ee331e03980622cc3}{Texture2D} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1Texture2D_abf1fad7d391f59d068c13683c3fe014a}{Texture2D} (const \hyperlink{classblaze_1_1Context}{Context} \&context, const \hyperlink{structblaze_1_1ImageData2D}{Image\+Data2D} \&image\+\_\+data, bool mipmapped=false)
+\begin{DoxyCompactList}\small\item\em Constructor for the texture. \end{DoxyCompactList}\item 
+bool \hyperlink{classblaze_1_1Texture2D_af8ce33dec5506e1f52df11f7aef8c9fc}{valid} () const
+\begin{DoxyCompactList}\small\item\em Checks if a texture is valid and usable. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1Texture2D_a14cd835af0b1c5e137f10dbb7b968e83}{transfer\+Layout} (Vk\+Command\+Buffer cmdbuffer, Vk\+Image\+Layout new\+Image\+Layout, Vk\+Access\+Flags dst\+Access=0, Vk\+Pipeline\+Stage\+Flags src\+Stage\+Mask=V\+K\+\_\+\+P\+I\+P\+E\+L\+I\+N\+E\+\_\+\+S\+T\+A\+G\+E\+\_\+\+A\+L\+L\+\_\+\+C\+O\+M\+M\+A\+N\+D\+S\+\_\+\+B\+IT, Vk\+Pipeline\+Stage\+Flags dst\+Stage\+Mask=V\+K\+\_\+\+P\+I\+P\+E\+L\+I\+N\+E\+\_\+\+S\+T\+A\+G\+E\+\_\+\+A\+L\+L\+\_\+\+C\+O\+M\+M\+A\+N\+D\+S\+\_\+\+B\+IT)
+\begin{DoxyCompactList}\small\item\em Transfers layout using a pipeline barrier. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1Texture2D_a497022dcbd0538d8507f5818c5ad8b75}{implicit\+Transfer\+Layout} (Vk\+Image\+Layout new\+Image\+Layout, Vk\+Access\+Flags dst\+Access)
+\begin{DoxyCompactList}\small\item\em Changes the image layout and access to note the change occuring due to a renderpass. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constuctors.}\par
+{\em Move only, Copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a69c8ccf57480ae64384d2afa23c3db03}\label{classblaze_1_1Texture2D_a69c8ccf57480ae64384d2afa23c3db03}} 
+{\bfseries Texture2D} (\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_aa5ae3a40bbd85081e27cd016237cde9a}\label{classblaze_1_1Texture2D_aa5ae3a40bbd85081e27cd016237cde9a}} 
+\hyperlink{classblaze_1_1Texture2D}{Texture2D} \& {\bfseries operator=} (\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a4ae63b40d403f6408d07feaae9a7f896}\label{classblaze_1_1Texture2D_a4ae63b40d403f6408d07feaae9a7f896}} 
+{\bfseries Texture2D} (const \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a24cc9c38ae303a41cc16146c5b371456}\label{classblaze_1_1Texture2D_a24cc9c38ae303a41cc16146c5b371456}} 
+\hyperlink{classblaze_1_1Texture2D}{Texture2D} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters.}\par
+{\em Getters for private members. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_ac004b5247e312ce79785f219bde06225}\label{classblaze_1_1Texture2D_ac004b5247e312ce79785f219bde06225}} 
+const Vk\+Image \& {\bfseries get\+\_\+image} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_aed70b91996d8f47e9d15886c064cba30}\label{classblaze_1_1Texture2D_aed70b91996d8f47e9d15886c064cba30}} 
+const Vk\+Image\+View \& {\bfseries get\+\_\+all\+Image\+Views} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a5952f292ce062a2b40c99ff8afc91021}\label{classblaze_1_1Texture2D_a5952f292ce062a2b40c99ff8afc91021}} 
+const Vk\+Image\+View \& {\bfseries get\+\_\+image\+View} (uint32\+\_\+t index=0) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a93898119be7c0b4dbfc52b82b5ce3357}\label{classblaze_1_1Texture2D_a93898119be7c0b4dbfc52b82b5ce3357}} 
+const Vk\+Sampler \& {\bfseries get\+\_\+image\+Sampler} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a6b2aaf7b3134201e4824d0716bbc6628}\label{classblaze_1_1Texture2D_a6b2aaf7b3134201e4824d0716bbc6628}} 
+const Vk\+Descriptor\+Image\+Info \& {\bfseries get\+\_\+image\+Info} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_ace9f44533af55d17b0326af0a5657047}\label{classblaze_1_1Texture2D_ace9f44533af55d17b0326af0a5657047}} 
+const Vk\+Format \& {\bfseries get\+\_\+format} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a4cae2c2e2b80a6da7631a8f6a4cf7389}\label{classblaze_1_1Texture2D_a4cae2c2e2b80a6da7631a8f6a4cf7389}} 
+const Vk\+Image\+Usage\+Flags \& {\bfseries get\+\_\+usage} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_ab0527830d0530c2023a4cb4989218ba5}\label{classblaze_1_1Texture2D_ab0527830d0530c2023a4cb4989218ba5}} 
+const Vk\+Image\+Layout \& {\bfseries get\+\_\+layout} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a64f03437a05b13cdfbe4bc438977e1eb}\label{classblaze_1_1Texture2D_a64f03437a05b13cdfbe4bc438977e1eb}} 
+const Vk\+Access\+Flags \& {\bfseries get\+\_\+access} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a1e19506b9f45670b71432a4b0fb90269}\label{classblaze_1_1Texture2D_a1e19506b9f45670b71432a4b0fb90269}} 
+const Vk\+Image\+Aspect\+Flags \& {\bfseries get\+\_\+aspect} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a76d9dc00563db38ebd45a0e8a36c10e8}\label{classblaze_1_1Texture2D_a76d9dc00563db38ebd45a0e8a36c10e8}} 
+uint32\+\_\+t {\bfseries get\+\_\+miplevels} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a83a2c19482249263e2f1cec9e9f4698e}\label{classblaze_1_1Texture2D_a83a2c19482249263e2f1cec9e9f4698e}} 
+uint32\+\_\+t {\bfseries get\+\_\+layer\+Count} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+
+
+\subsection{Detailed Description}
+A wrapper over a vulkan texture that contains all the required data. 
+
+A 2D texture that contains the image, memory, view, sampler and metadata. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1Texture2D_abf1fad7d391f59d068c13683c3fe014a}\label{classblaze_1_1Texture2D_abf1fad7d391f59d068c13683c3fe014a}} 
+\index{blaze\+::\+Texture2D@{blaze\+::\+Texture2D}!Texture2D@{Texture2D}}
+\index{Texture2D@{Texture2D}!blaze\+::\+Texture2D@{blaze\+::\+Texture2D}}
+\subsubsection{\texorpdfstring{Texture2\+D()}{Texture2D()}}
+{\footnotesize\ttfamily blaze\+::\+Texture2\+D\+::\+Texture2D (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} \&}]{context,  }\item[{const \hyperlink{structblaze_1_1ImageData2D}{Image\+Data2D} \&}]{image\+\_\+data,  }\item[{bool}]{mipmapped = {\ttfamily false} }\end{DoxyParamCaption})}
+
+
+
+Constructor for the texture. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & The current Vulkan \hyperlink{classblaze_1_1Context}{Context}. \\
+\hline
+{\em image\+\_\+data} & The \hyperlink{structblaze_1_1ImageData2D}{Image\+Data2D} struct containing the initialization information. \\
+\hline
+{\em mipmapped} & Enabling mipmapping. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a497022dcbd0538d8507f5818c5ad8b75}\label{classblaze_1_1Texture2D_a497022dcbd0538d8507f5818c5ad8b75}} 
+\index{blaze\+::\+Texture2D@{blaze\+::\+Texture2D}!implicit\+Transfer\+Layout@{implicit\+Transfer\+Layout}}
+\index{implicit\+Transfer\+Layout@{implicit\+Transfer\+Layout}!blaze\+::\+Texture2D@{blaze\+::\+Texture2D}}
+\subsubsection{\texorpdfstring{implicit\+Transfer\+Layout()}{implicitTransferLayout()}}
+{\footnotesize\ttfamily void blaze\+::\+Texture2\+D\+::implicit\+Transfer\+Layout (\begin{DoxyParamCaption}\item[{Vk\+Image\+Layout}]{new\+Image\+Layout,  }\item[{Vk\+Access\+Flags}]{dst\+Access }\end{DoxyParamCaption})}
+
+
+
+Changes the image layout and access to note the change occuring due to a renderpass. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em new\+Image\+Layout} & The image layout to change to. \\
+\hline
+{\em dst\+Access} & The access flag of the final image. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1Texture2D_a14cd835af0b1c5e137f10dbb7b968e83}\label{classblaze_1_1Texture2D_a14cd835af0b1c5e137f10dbb7b968e83}} 
+\index{blaze\+::\+Texture2D@{blaze\+::\+Texture2D}!transfer\+Layout@{transfer\+Layout}}
+\index{transfer\+Layout@{transfer\+Layout}!blaze\+::\+Texture2D@{blaze\+::\+Texture2D}}
+\subsubsection{\texorpdfstring{transfer\+Layout()}{transferLayout()}}
+{\footnotesize\ttfamily void blaze\+::\+Texture2\+D\+::transfer\+Layout (\begin{DoxyParamCaption}\item[{Vk\+Command\+Buffer}]{cmdbuffer,  }\item[{Vk\+Image\+Layout}]{new\+Image\+Layout,  }\item[{Vk\+Access\+Flags}]{dst\+Access = {\ttfamily 0},  }\item[{Vk\+Pipeline\+Stage\+Flags}]{src\+Stage\+Mask = {\ttfamily VK\+\_\+PIPELINE\+\_\+STAGE\+\_\+ALL\+\_\+COMMANDS\+\_\+BIT},  }\item[{Vk\+Pipeline\+Stage\+Flags}]{dst\+Stage\+Mask = {\ttfamily VK\+\_\+PIPELINE\+\_\+STAGE\+\_\+ALL\+\_\+COMMANDS\+\_\+BIT} }\end{DoxyParamCaption})}
+
+
+
+Transfers layout using a pipeline barrier. 
+
+Transfer layouts use a pipeline barrier to change the layouts between the two specified stages.
+
+
+\begin{DoxyParams}{Parameters}
+{\em cmdbuffer} & The command buffer to execute the transfer on. \\
+\hline
+{\em new\+Image\+Layout} & The final image layout for the texture. \\
+\hline
+{\em dst\+Access} & The access flag of the final image. \\
+\hline
+{\em src\+Stage\+Mask} & The stages after which the texture can start transfer. \\
+\hline
+{\em dst\+Stage\+Mask} & The stages by which the texture needs to finish transfer. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1Texture2D_af8ce33dec5506e1f52df11f7aef8c9fc}\label{classblaze_1_1Texture2D_af8ce33dec5506e1f52df11f7aef8c9fc}} 
+\index{blaze\+::\+Texture2D@{blaze\+::\+Texture2D}!valid@{valid}}
+\index{valid@{valid}!blaze\+::\+Texture2D@{blaze\+::\+Texture2D}}
+\subsubsection{\texorpdfstring{valid()}{valid()}}
+{\footnotesize\ttfamily blaze\+::\+Texture2\+D\+::valid (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Checks if a texture is valid and usable. 
+
+A texture is considered valid if it is constructed using the main constructor and is initialized successfully.
+
+\begin{DoxyReturn}{Returns}
+{\itshape true} If is properly constructed. 
+
+{\itshape false} If is default constructed or had an error. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/core/Texture2\+D.\+hpp\item 
+Blaze/core/Texture2\+D.\+cpp\end{DoxyCompactItemize}

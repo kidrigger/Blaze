@@ -1,0 +1,13 @@
+<map id="ImFontAtlas" name="ImFontAtlas">
+<area shape="rect" id="node5" href="$structImFont.html" title="ImFont" alt="" coords="597,213,660,240"/>
+<area shape="rect" id="node2" href="$structImVec2.html" title="ImVec2" alt="" coords="21,295,87,321"/>
+<area shape="rect" id="node4" href="$structImFontConfig.html" title="ImFontConfig" alt="" coords="826,189,927,216"/>
+<area shape="rect" id="node12" href="$structImFontAtlasCustomRect.html" title="ImFontAtlasCustomRect" alt="" coords="793,411,960,437"/>
+<area shape="rect" id="node3" href="$structImVector.html" title="ImVector\&lt; ImFontConfig \&gt;" alt="" coords="1054,347,1233,373"/>
+<area shape="rect" id="node10" href="$structImVector.html" title="ImVector\&lt; ImFont *\&gt;" alt="" coords="804,261,949,288"/>
+<area shape="rect" id="node6" href="$structImVector.html" title="ImVector\&lt; ImFontGlyph \&gt;" alt="" coords="257,19,432,45"/>
+<area shape="rect" id="node7" href="$structImFontGlyph.html" title="ImFontGlyph" alt="" coords="5,101,103,128"/>
+<area shape="rect" id="node8" href="$structImVector.html" title="ImVector\&lt; float \&gt;" alt="" coords="283,300,407,327"/>
+<area shape="rect" id="node9" href="$structImVector.html" title="ImVector\&lt; ImWchar \&gt;" alt="" coords="269,124,421,151"/>
+<area shape="rect" id="node11" href="$structImVector.html" title="ImVector\&lt; ImFontAtlasCustom\lRect \&gt;" alt="" coords="1041,419,1245,461"/>
+</map>

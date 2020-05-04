@@ -2,6 +2,7 @@
 #include "debugMessenger.hpp"
 
 #include <fstream>
+#include <cstring>
 
 namespace blaze::util
 {

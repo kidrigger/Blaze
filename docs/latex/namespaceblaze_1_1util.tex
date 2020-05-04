@@ -1,0 +1,479 @@
+\hypertarget{namespaceblaze_1_1util}{}\section{blaze\+:\+:util Namespace Reference}
+\label{namespaceblaze_1_1util}\index{blaze\+::util@{blaze\+::util}}
+
+
+Contains all the utility classes and functions used in Blaze.  
+
+
+\subsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+class \hyperlink{classblaze_1_1util_1_1AutoTimer}{Auto\+Timer}
+\item 
+struct \hyperlink{structblaze_1_1util_1_1DebugCounts}{Debug\+Counts}
+\item 
+class \hyperlink{classblaze_1_1util_1_1Environment}{Environment}
+\item 
+class \hyperlink{classblaze_1_1util_1_1Managed}{Managed}
+\begin{DoxyCompactList}\small\item\em Scope managed R\+A\+II class. \end{DoxyCompactList}\item 
+class \hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector}
+\begin{DoxyCompactList}\small\item\em Manages lifetime of the handles of entire vector. \end{DoxyCompactList}\item 
+class \hyperlink{classblaze_1_1util_1_1ManagedVector_3_01T_00_01false_01_4}{Managed\+Vector$<$ T, false $>$}
+\begin{DoxyCompactList}\small\item\em Manages lifetime of the handles of entire vector. \end{DoxyCompactList}\item 
+class \hyperlink{classblaze_1_1util_1_1PackedHandler}{Packed\+Handler}
+\item 
+class \hyperlink{classblaze_1_1util_1_1Process}{Process}
+\begin{DoxyCompactList}\small\item\em The static processing class for converting from a descriptor to a cubemap. \end{DoxyCompactList}\item 
+struct \hyperlink{structblaze_1_1util_1_1QueueFamilyIndices}{Queue\+Family\+Indices}
+\begin{DoxyCompactList}\small\item\em Holds the indices for the queue families to use in the context. \end{DoxyCompactList}\item 
+struct \hyperlink{structblaze_1_1util_1_1SwapchainSupportDetails}{Swapchain\+Support\+Details}
+\begin{DoxyCompactList}\small\item\em Holds supported swapchain features. \end{DoxyCompactList}\item 
+class \hyperlink{structblaze_1_1util_1_1Texture2CubemapInfo}{Texture2\+Cubemap\+Info}
+\begin{DoxyCompactList}\small\item\em The information to use for the processing. \end{DoxyCompactList}\item 
+class \hyperlink{classblaze_1_1util_1_1Unmanaged}{Unmanaged}
+\begin{DoxyCompactList}\small\item\em A wrapper for handle for uniformity. \end{DoxyCompactList}\item 
+class \hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector}
+\begin{DoxyCompactList}\small\item\em Wrapper on vector of handles for consistency. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+Vk\+Shader\+Module \hyperlink{namespaceblaze_1_1util_a8d7a2f0c8db42c93f89e319a727c6591}{create\+Shader\+Module} (Vk\+Device device, const std\+::vector$<$ uint32\+\_\+t $>$ \&shader\+Code)
+\begin{DoxyCompactList}\small\item\em Creates a shader module from the code. \end{DoxyCompactList}\item 
+Vk\+Semaphore \hyperlink{namespaceblaze_1_1util_add9b9a89cbb94d263d59af682ad6c482}{create\+Semaphore} (Vk\+Device device)
+\begin{DoxyCompactList}\small\item\em Creates a semaphore on the device. \end{DoxyCompactList}\item 
+Vk\+Fence \hyperlink{namespaceblaze_1_1util_aff4f820d4c849f27184a49151063f2ae}{create\+Fence} (Vk\+Device device)
+\begin{DoxyCompactList}\small\item\em Creates a fence on the device. \end{DoxyCompactList}\item 
+Vk\+Image\+View \hyperlink{namespaceblaze_1_1util_a940696ad8258e65b95e2c10e553f0525}{create\+Image\+View} (Vk\+Device device, Vk\+Image image, Vk\+Image\+View\+Type view\+Type, Vk\+Format format, Vk\+Image\+Aspect\+Flags aspect, uint32\+\_\+t miplevels, uint32\+\_\+t num\+Layers, uint32\+\_\+t base\+Layer=0)
+\begin{DoxyCompactList}\small\item\em Creates an image view. \end{DoxyCompactList}\item 
+Vk\+Descriptor\+Pool \hyperlink{namespaceblaze_1_1util_aaed1ad5722a1038338250760d95d5b48}{create\+Descriptor\+Pool} (Vk\+Device device, std\+::vector$<$ Vk\+Descriptor\+Pool\+Size $>$ \&pool\+Sizes, uint32\+\_\+t max\+Sets)
+\begin{DoxyCompactList}\small\item\em Creates a new descriptor pool as per the poolsizes. \end{DoxyCompactList}\item 
+Vk\+Descriptor\+Set\+Layout \hyperlink{namespaceblaze_1_1util_a972063630bc98ebe3805b77d73848250}{create\+Descriptor\+Set\+Layout} (Vk\+Device device, std\+::vector$<$ Vk\+Descriptor\+Set\+Layout\+Binding $>$ \&layout\+Bindings)
+\begin{DoxyCompactList}\small\item\em Creates a descriptor set layout as per the bindings. \end{DoxyCompactList}\item 
+Vk\+Render\+Pass \hyperlink{namespaceblaze_1_1util_a8bfb96e0326c09767cafb5e66c6ac25b}{create\+Render\+Pass\+Multi\+View} (Vk\+Device device, uint32\+\_\+t view\+Mask, Vk\+Format color\+Attachment\+Format, Vk\+Format depth\+Attachment\+Format=V\+K\+\_\+\+F\+O\+R\+M\+A\+T\+\_\+\+U\+N\+D\+E\+F\+I\+N\+ED, Vk\+Image\+Layout final\+Layout=V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+C\+O\+L\+O\+R\+\_\+\+A\+T\+T\+A\+C\+H\+M\+E\+N\+T\+\_\+\+O\+P\+T\+I\+M\+AL, Vk\+Image\+Layout initial\+Layout=V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+U\+N\+D\+E\+F\+I\+N\+ED, Vk\+Attachment\+Load\+Op color\+Load\+Op=V\+K\+\_\+\+A\+T\+T\+A\+C\+H\+M\+E\+N\+T\+\_\+\+L\+O\+A\+D\+\_\+\+O\+P\+\_\+\+C\+L\+E\+AR)
+\begin{DoxyCompactList}\small\item\em Creates a renderpass for multiview framebuffer as per the configuration. \end{DoxyCompactList}\item 
+Vk\+Render\+Pass \hyperlink{namespaceblaze_1_1util_afae587cb481573dc62dbf7d67de1aff9}{create\+Render\+Pass} (Vk\+Device device, Vk\+Format color\+Attachment\+Format, Vk\+Format depth\+Attachment\+Format=V\+K\+\_\+\+F\+O\+R\+M\+A\+T\+\_\+\+U\+N\+D\+E\+F\+I\+N\+ED, Vk\+Image\+Layout final\+Layout=V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+C\+O\+L\+O\+R\+\_\+\+A\+T\+T\+A\+C\+H\+M\+E\+N\+T\+\_\+\+O\+P\+T\+I\+M\+AL, Vk\+Image\+Layout initial\+Layout=V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+U\+N\+D\+E\+F\+I\+N\+ED, Vk\+Attachment\+Load\+Op color\+Load\+Op=V\+K\+\_\+\+A\+T\+T\+A\+C\+H\+M\+E\+N\+T\+\_\+\+L\+O\+A\+D\+\_\+\+O\+P\+\_\+\+C\+L\+E\+AR)
+\begin{DoxyCompactList}\small\item\em Creates a renderpass as per the configuration. \end{DoxyCompactList}\item 
+Vk\+Render\+Pass \hyperlink{namespaceblaze_1_1util_ab60653fd3d81b99d9bbd45be383aff43}{create\+Shadow\+Render\+Pass} (Vk\+Device device, Vk\+Format depth\+Attachment\+Format=V\+K\+\_\+\+F\+O\+R\+M\+A\+T\+\_\+\+D32\+\_\+\+S\+F\+L\+O\+AT, Vk\+Image\+Layout final\+Layout=V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+D\+E\+P\+T\+H\+\_\+\+S\+T\+E\+N\+C\+I\+L\+\_\+\+R\+E\+A\+D\+\_\+\+O\+N\+L\+Y\+\_\+\+O\+P\+T\+I\+M\+AL)
+\begin{DoxyCompactList}\small\item\em Creates a renderpass for shadow as per the configuration. \end{DoxyCompactList}\item 
+Vk\+Pipeline\+Layout \hyperlink{namespaceblaze_1_1util_ad61009184ca26f9847dbf7d3d025ce8b}{create\+Pipeline\+Layout} (Vk\+Device device, const std\+::vector$<$ Vk\+Descriptor\+Set\+Layout $>$ descriptor\+Set\+Layouts, const std\+::vector$<$ Vk\+Push\+Constant\+Range $>$ \&push\+Constant\+Ranges)
+\begin{DoxyCompactList}\small\item\em Creates a pipeline layout. \end{DoxyCompactList}\item 
+Vk\+Pipeline \hyperlink{namespaceblaze_1_1util_a601f0f6b171e21ad20e0d4a384fdba6c}{create\+Graphics\+Pipeline} (Vk\+Device device, Vk\+Pipeline\+Layout pipeline\+Layout, Vk\+Render\+Pass render\+Pass, Vk\+Extent2D view\+Port\+Size, const std\+::string \&v\+Shader, const std\+::string \&f\+Shader, const std\+::vector$<$ Vk\+Dynamic\+State $>$ \&dynamic\+States=\{\}, Vk\+Cull\+Mode\+Flags cull\+Mode=V\+K\+\_\+\+C\+U\+L\+L\+\_\+\+M\+O\+D\+E\+\_\+\+B\+A\+C\+K\+\_\+\+B\+IT, Vk\+Bool32 depth\+Test=V\+K\+\_\+\+T\+R\+UE, Vk\+Bool32 depth\+Write=V\+K\+\_\+\+T\+R\+UE, Vk\+Compare\+Op depth\+Compare\+Op=V\+K\+\_\+\+C\+O\+M\+P\+A\+R\+E\+\_\+\+O\+P\+\_\+\+L\+E\+SS, Vk\+Vertex\+Input\+Binding\+Description vert\+Binding\+Description=\hyperlink{structblaze_1_1Vertex_a81e9b6e602df735ad45fcc5d2c3305c6}{Vertex\+::get\+Binding\+Description}(), const std\+::vector$<$ Vk\+Vertex\+Input\+Attribute\+Description $>$ \&vert\+Attribute\+Description=\hyperlink{structblaze_1_1Vertex_aa9ee165c3cfdac311ca8ffc382524d4b}{Vertex\+::get\+Attribute\+Descriptions}())
+\begin{DoxyCompactList}\small\item\em Create the graphics pipeline. \end{DoxyCompactList}\item 
+\hyperlink{structblaze_1_1util_1_1QueueFamilyIndices}{Queue\+Family\+Indices} \hyperlink{namespaceblaze_1_1util_a8ecc9f88fa3db013b808a859e07eb944}{get\+Queue\+Families} (Vk\+Physical\+Device device, Vk\+Surface\+K\+HR surface)
+\begin{DoxyCompactList}\small\item\em Returns the queue family indices of the physical device. \end{DoxyCompactList}\item 
+\hyperlink{structblaze_1_1util_1_1SwapchainSupportDetails}{Swapchain\+Support\+Details} \hyperlink{namespaceblaze_1_1util_a11dc99b58ff4a58b45175e005acbf406}{get\+Swapchain\+Support} (Vk\+Physical\+Device device, Vk\+Surface\+K\+HR surface)
+\begin{DoxyCompactList}\small\item\em Returns the details of the features supported by the swapchain. \end{DoxyCompactList}\item 
+bool \hyperlink{namespaceblaze_1_1util_aba6d1d4fa38d54444eb861c08919af34}{check\+Device\+Extension\+Support} (Vk\+Physical\+Device device, const std\+::vector$<$ const char $\ast$ $>$ \&device\+Extensions)
+\begin{DoxyCompactList}\small\item\em Check if the device supports the list of extensions. \end{DoxyCompactList}\item 
+bool \hyperlink{namespaceblaze_1_1util_a084200da1446d1dabeb9b83eaf43dcb8}{is\+Device\+Suitable} (Vk\+Physical\+Device device, Vk\+Surface\+K\+HR surface, const std\+::vector$<$ const char $\ast$ $>$ \&device\+Extensions)
+\begin{DoxyCompactList}\small\item\em Checks if a device is suitable according to multiple conditions. \end{DoxyCompactList}\item 
+bool \hyperlink{namespaceblaze_1_1util_a84a8343ca8455d39e1d2cfacf1c23ac2}{check\+Validation\+Layer\+Support} (const std\+::vector$<$ const char $\ast$ $>$ \&validation\+Layers)
+\begin{DoxyCompactList}\small\item\em Check if all the validation layers are support. \end{DoxyCompactList}\item 
+Vk\+Format \hyperlink{namespaceblaze_1_1util_ab5bcba41a9c9ae6ea4b4673a64f67a23}{find\+Supported\+Format} (Vk\+Physical\+Device device, const std\+::vector$<$ Vk\+Format $>$ \&candidates, Vk\+Image\+Tiling tiling, Vk\+Format\+Feature\+Flags features)
+\begin{DoxyCompactList}\small\item\em Finds a format from the candidates that is supported by the device. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{namespaceblaze_1_1util_ae038f8e92528d9414b1b885c07ed4319}\label{namespaceblaze_1_1util_ae038f8e92528d9414b1b885c07ed4319}} 
+\hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} {\bfseries create\+Irradiance\+Cube} (const \hyperlink{classblaze_1_1Context}{Context} \&context, Vk\+Descriptor\+Set\+Layout env\+Layout, Vk\+Descriptor\+Set environment)
+\item 
+\mbox{\Hypertarget{namespaceblaze_1_1util_a9390345ac842e0f40ee51b78fb42ba21}\label{namespaceblaze_1_1util_a9390345ac842e0f40ee51b78fb42ba21}} 
+\hyperlink{classblaze_1_1TextureCube}{Texture\+Cube} {\bfseries create\+Prefiltered\+Cube} (const \hyperlink{classblaze_1_1Context}{Context} \&context, Vk\+Descriptor\+Set\+Layout env\+Layout, Vk\+Descriptor\+Set environment)
+\item 
+\mbox{\Hypertarget{namespaceblaze_1_1util_a40178769f61c84588316821b38ea0a48}\label{namespaceblaze_1_1util_a40178769f61c84588316821b38ea0a48}} 
+\hyperlink{classblaze_1_1Texture2D}{Texture2D} {\bfseries create\+Brdf\+Lut} (const \hyperlink{classblaze_1_1Context}{Context} \&context)
+\item 
+std\+::vector$<$ uint32\+\_\+t $>$ \hyperlink{namespaceblaze_1_1util_a0157eaabde62d86926906bb797d7ada8}{load\+Binary\+File} (const std\+::string \&filename)
+\begin{DoxyCompactList}\small\item\em Loads a binary file into memory and returns the data. \end{DoxyCompactList}\item 
+bool \hyperlink{namespaceblaze_1_1util_a33c7b989ef9f0b2f56ca8632cd6784c5}{file\+Exists} (const std\+::string \&filename)
+\begin{DoxyCompactList}\small\item\em Checks if a file exists. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains all the utility classes and functions used in Blaze. 
+
+\subsection{Function Documentation}
+\mbox{\Hypertarget{namespaceblaze_1_1util_aba6d1d4fa38d54444eb861c08919af34}\label{namespaceblaze_1_1util_aba6d1d4fa38d54444eb861c08919af34}} 
+\index{blaze\+::util@{blaze\+::util}!check\+Device\+Extension\+Support@{check\+Device\+Extension\+Support}}
+\index{check\+Device\+Extension\+Support@{check\+Device\+Extension\+Support}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{check\+Device\+Extension\+Support()}{checkDeviceExtensionSupport()}}
+{\footnotesize\ttfamily bool blaze\+::util\+::check\+Device\+Extension\+Support (\begin{DoxyParamCaption}\item[{Vk\+Physical\+Device}]{device,  }\item[{const std\+::vector$<$ const char $\ast$ $>$ \&}]{device\+Extensions }\end{DoxyParamCaption})}
+
+
+
+Check if the device supports the list of extensions. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The physical device to query. \\
+\hline
+{\em device\+Extensions} & The list of extensions required from the device. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a84a8343ca8455d39e1d2cfacf1c23ac2}\label{namespaceblaze_1_1util_a84a8343ca8455d39e1d2cfacf1c23ac2}} 
+\index{blaze\+::util@{blaze\+::util}!check\+Validation\+Layer\+Support@{check\+Validation\+Layer\+Support}}
+\index{check\+Validation\+Layer\+Support@{check\+Validation\+Layer\+Support}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{check\+Validation\+Layer\+Support()}{checkValidationLayerSupport()}}
+{\footnotesize\ttfamily bool blaze\+::util\+::check\+Validation\+Layer\+Support (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ const char $\ast$ $>$ \&}]{validation\+Layers }\end{DoxyParamCaption})}
+
+
+
+Check if all the validation layers are support. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em validation\+Layers} & The layers to check support for. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_aaed1ad5722a1038338250760d95d5b48}\label{namespaceblaze_1_1util_aaed1ad5722a1038338250760d95d5b48}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Descriptor\+Pool@{create\+Descriptor\+Pool}}
+\index{create\+Descriptor\+Pool@{create\+Descriptor\+Pool}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Descriptor\+Pool()}{createDescriptorPool()}}
+{\footnotesize\ttfamily Vk\+Descriptor\+Pool blaze\+::util\+::create\+Descriptor\+Pool (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{std\+::vector$<$ Vk\+Descriptor\+Pool\+Size $>$ \&}]{pool\+Sizes,  }\item[{uint32\+\_\+t}]{max\+Sets }\end{DoxyParamCaption})}
+
+
+
+Creates a new descriptor pool as per the poolsizes. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em pool\+Sizes} & The vector of pool sizes to support. \\
+\hline
+{\em max\+Sets} & The maximum number of descriptor sets to support. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a972063630bc98ebe3805b77d73848250}\label{namespaceblaze_1_1util_a972063630bc98ebe3805b77d73848250}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Descriptor\+Set\+Layout@{create\+Descriptor\+Set\+Layout}}
+\index{create\+Descriptor\+Set\+Layout@{create\+Descriptor\+Set\+Layout}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Descriptor\+Set\+Layout()}{createDescriptorSetLayout()}}
+{\footnotesize\ttfamily Vk\+Descriptor\+Set\+Layout blaze\+::util\+::create\+Descriptor\+Set\+Layout (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{std\+::vector$<$ Vk\+Descriptor\+Set\+Layout\+Binding $>$ \&}]{layout\+Bindings }\end{DoxyParamCaption})}
+
+
+
+Creates a descriptor set layout as per the bindings. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em layout\+Bindings} & The vector of layout bindings in the descriptor set. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_aff4f820d4c849f27184a49151063f2ae}\label{namespaceblaze_1_1util_aff4f820d4c849f27184a49151063f2ae}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Fence@{create\+Fence}}
+\index{create\+Fence@{create\+Fence}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Fence()}{createFence()}}
+{\footnotesize\ttfamily Vk\+Fence blaze\+::util\+::create\+Fence (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device }\end{DoxyParamCaption})}
+
+
+
+Creates a fence on the device. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a601f0f6b171e21ad20e0d4a384fdba6c}\label{namespaceblaze_1_1util_a601f0f6b171e21ad20e0d4a384fdba6c}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Graphics\+Pipeline@{create\+Graphics\+Pipeline}}
+\index{create\+Graphics\+Pipeline@{create\+Graphics\+Pipeline}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Graphics\+Pipeline()}{createGraphicsPipeline()}}
+{\footnotesize\ttfamily Vk\+Pipeline blaze\+::util\+::create\+Graphics\+Pipeline (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{Vk\+Pipeline\+Layout}]{pipeline\+Layout,  }\item[{Vk\+Render\+Pass}]{render\+Pass,  }\item[{Vk\+Extent2D}]{view\+Port\+Size,  }\item[{const std\+::string \&}]{v\+Shader,  }\item[{const std\+::string \&}]{f\+Shader,  }\item[{const std\+::vector$<$ Vk\+Dynamic\+State $>$ \&}]{dynamic\+States = {\ttfamily \{\}},  }\item[{Vk\+Cull\+Mode\+Flags}]{cull\+Mode = {\ttfamily VK\+\_\+CULL\+\_\+MODE\+\_\+BACK\+\_\+BIT},  }\item[{Vk\+Bool32}]{depth\+Test = {\ttfamily VK\+\_\+TRUE},  }\item[{Vk\+Bool32}]{depth\+Write = {\ttfamily VK\+\_\+TRUE},  }\item[{Vk\+Compare\+Op}]{depth\+Compare\+Op = {\ttfamily VK\+\_\+COMPARE\+\_\+OP\+\_\+LESS},  }\item[{Vk\+Vertex\+Input\+Binding\+Description}]{vert\+Binding\+Description = {\ttfamily \hyperlink{structblaze_1_1Vertex_a81e9b6e602df735ad45fcc5d2c3305c6}{Vertex\+::get\+Binding\+Description}()},  }\item[{const std\+::vector$<$ Vk\+Vertex\+Input\+Attribute\+Description $>$ \&}]{vert\+Attribute\+Description = {\ttfamily \hyperlink{structblaze_1_1Vertex_aa9ee165c3cfdac311ca8ffc382524d4b}{Vertex\+::get\+Attribute\+Descriptions}()} }\end{DoxyParamCaption})}
+
+
+
+Create the graphics pipeline. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device in use. \\
+\hline
+{\em pipeline\+Layout} & The layout to use for the pipeline. \\
+\hline
+{\em render\+Pass} & The renderpass to be used. \\
+\hline
+{\em view\+Port\+Size} & The extent2D for the viewport. \\
+\hline
+{\em v\+Shader} & The file location of the vertex shader. \\
+\hline
+{\em f\+Shader} & The file location of the fragment shader. \\
+\hline
+{\em dynamic\+States} & The vector of dynamic states to support. \\
+\hline
+{\em cull\+Mode} & The pipeline cull mode. \\
+\hline
+{\em depth\+Test} & Is depth test enabled? \\
+\hline
+{\em depth\+Write} & Should write to depth map? \\
+\hline
+{\em depth\+Compare\+Op} & How to compare depth? \\
+\hline
+{\em vert\+Binding\+Description} & The binding description for the vertices. \\
+\hline
+{\em vert\+Attribute\+Description} & The attribute description for the vertices. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a940696ad8258e65b95e2c10e553f0525}\label{namespaceblaze_1_1util_a940696ad8258e65b95e2c10e553f0525}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Image\+View@{create\+Image\+View}}
+\index{create\+Image\+View@{create\+Image\+View}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Image\+View()}{createImageView()}}
+{\footnotesize\ttfamily Vk\+Image\+View blaze\+::util\+::create\+Image\+View (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{Vk\+Image}]{image,  }\item[{Vk\+Image\+View\+Type}]{view\+Type,  }\item[{Vk\+Format}]{format,  }\item[{Vk\+Image\+Aspect\+Flags}]{aspect,  }\item[{uint32\+\_\+t}]{miplevels,  }\item[{uint32\+\_\+t}]{num\+Layers,  }\item[{uint32\+\_\+t}]{base\+Layer = {\ttfamily 0} }\end{DoxyParamCaption})}
+
+
+
+Creates an image view. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em image} & The image to create the view for. \\
+\hline
+{\em view\+Type} & The type of the image\+View. \\
+\hline
+{\em format} & The format of the image. \\
+\hline
+{\em aspect} & The aspect to use the image as. \\
+\hline
+{\em miplevels} & The number of levels of mipmapping in the image. \\
+\hline
+{\em num\+Layers} & The number of layers in the image to construct a view for. \\
+\hline
+{\em base\+Layer} & The first layer from which to construct views. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_ad61009184ca26f9847dbf7d3d025ce8b}\label{namespaceblaze_1_1util_ad61009184ca26f9847dbf7d3d025ce8b}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Pipeline\+Layout@{create\+Pipeline\+Layout}}
+\index{create\+Pipeline\+Layout@{create\+Pipeline\+Layout}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Pipeline\+Layout()}{createPipelineLayout()}}
+{\footnotesize\ttfamily Vk\+Pipeline\+Layout blaze\+::util\+::create\+Pipeline\+Layout (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{const std\+::vector$<$ Vk\+Descriptor\+Set\+Layout $>$}]{descriptor\+Set\+Layouts,  }\item[{const std\+::vector$<$ Vk\+Push\+Constant\+Range $>$ \&}]{push\+Constant\+Ranges }\end{DoxyParamCaption})}
+
+
+
+Creates a pipeline layout. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device in use. \\
+\hline
+{\em descriptor\+Set\+Layouts} & All the descriptor\+Set\+Layouts to support. \\
+\hline
+{\em push\+Constant\+Ranges} & The push constant ranges to use. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_afae587cb481573dc62dbf7d67de1aff9}\label{namespaceblaze_1_1util_afae587cb481573dc62dbf7d67de1aff9}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Render\+Pass@{create\+Render\+Pass}}
+\index{create\+Render\+Pass@{create\+Render\+Pass}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Render\+Pass()}{createRenderPass()}}
+{\footnotesize\ttfamily Vk\+Render\+Pass blaze\+::util\+::create\+Render\+Pass (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{Vk\+Format}]{color\+Attachment\+Format,  }\item[{Vk\+Format}]{depth\+Attachment\+Format = {\ttfamily VK\+\_\+FORMAT\+\_\+UNDEFINED},  }\item[{Vk\+Image\+Layout}]{final\+Layout = {\ttfamily VK\+\_\+IMAGE\+\_\+LAYOUT\+\_\+COLOR\+\_\+ATTACHMENT\+\_\+OPTIMAL},  }\item[{Vk\+Image\+Layout}]{initial\+Layout = {\ttfamily VK\+\_\+IMAGE\+\_\+LAYOUT\+\_\+UNDEFINED},  }\item[{Vk\+Attachment\+Load\+Op}]{color\+Load\+Op = {\ttfamily VK\+\_\+ATTACHMENT\+\_\+LOAD\+\_\+OP\+\_\+CLEAR} }\end{DoxyParamCaption})}
+
+
+
+Creates a renderpass as per the configuration. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em color\+Attachment\+Format} & The format used in the color attachment. \\
+\hline
+{\em depth\+Attachment\+Format} & The format used for the depth attachment (V\+K\+\_\+\+F\+O\+R\+M\+A\+T\+\_\+\+U\+N\+D\+E\+F\+I\+N\+ED if no depth attachment) \\
+\hline
+{\em final\+Layout} & The layout the color attachment should end in. \\
+\hline
+{\em initial\+Layout} & The initial layout of color attachments attached. \\
+\hline
+{\em color\+Load\+Op} & The load operation for color attachment. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a8bfb96e0326c09767cafb5e66c6ac25b}\label{namespaceblaze_1_1util_a8bfb96e0326c09767cafb5e66c6ac25b}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Render\+Pass\+Multi\+View@{create\+Render\+Pass\+Multi\+View}}
+\index{create\+Render\+Pass\+Multi\+View@{create\+Render\+Pass\+Multi\+View}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Render\+Pass\+Multi\+View()}{createRenderPassMultiView()}}
+{\footnotesize\ttfamily Vk\+Render\+Pass blaze\+::util\+::create\+Render\+Pass\+Multi\+View (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{uint32\+\_\+t}]{view\+Mask,  }\item[{Vk\+Format}]{color\+Attachment\+Format,  }\item[{Vk\+Format}]{depth\+Attachment\+Format = {\ttfamily VK\+\_\+FORMAT\+\_\+UNDEFINED},  }\item[{Vk\+Image\+Layout}]{final\+Layout = {\ttfamily VK\+\_\+IMAGE\+\_\+LAYOUT\+\_\+COLOR\+\_\+ATTACHMENT\+\_\+OPTIMAL},  }\item[{Vk\+Image\+Layout}]{initial\+Layout = {\ttfamily VK\+\_\+IMAGE\+\_\+LAYOUT\+\_\+UNDEFINED},  }\item[{Vk\+Attachment\+Load\+Op}]{color\+Load\+Op = {\ttfamily VK\+\_\+ATTACHMENT\+\_\+LOAD\+\_\+OP\+\_\+CLEAR} }\end{DoxyParamCaption})}
+
+
+
+Creates a renderpass for multiview framebuffer as per the configuration. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em view\+Mask} & The mask defining the multiview indices to write to. \\
+\hline
+{\em color\+Attachment\+Format} & The format used in the color attachment. \\
+\hline
+{\em depth\+Attachment\+Format} & The format used for the depth attachment (V\+K\+\_\+\+F\+O\+R\+M\+A\+T\+\_\+\+U\+N\+D\+E\+F\+I\+N\+ED if no depth attachment) \\
+\hline
+{\em final\+Layout} & The layout the color attachment should end in. \\
+\hline
+{\em initial\+Layout} & The initial layout of color attachments attached. \\
+\hline
+{\em color\+Load\+Op} & The load operation for color attachment. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_add9b9a89cbb94d263d59af682ad6c482}\label{namespaceblaze_1_1util_add9b9a89cbb94d263d59af682ad6c482}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Semaphore@{create\+Semaphore}}
+\index{create\+Semaphore@{create\+Semaphore}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Semaphore()}{createSemaphore()}}
+{\footnotesize\ttfamily Vk\+Semaphore blaze\+::util\+::create\+Semaphore (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device }\end{DoxyParamCaption})}
+
+
+
+Creates a semaphore on the device. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a8d7a2f0c8db42c93f89e319a727c6591}\label{namespaceblaze_1_1util_a8d7a2f0c8db42c93f89e319a727c6591}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Shader\+Module@{create\+Shader\+Module}}
+\index{create\+Shader\+Module@{create\+Shader\+Module}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Shader\+Module()}{createShaderModule()}}
+{\footnotesize\ttfamily Vk\+Shader\+Module blaze\+::util\+::create\+Shader\+Module (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{const std\+::vector$<$ uint32\+\_\+t $>$ \&}]{shader\+Code }\end{DoxyParamCaption})}
+
+
+
+Creates a shader module from the code. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em shader\+Code} & The code as a vector$<$uint32\+\_\+t$>$ \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_ab60653fd3d81b99d9bbd45be383aff43}\label{namespaceblaze_1_1util_ab60653fd3d81b99d9bbd45be383aff43}} 
+\index{blaze\+::util@{blaze\+::util}!create\+Shadow\+Render\+Pass@{create\+Shadow\+Render\+Pass}}
+\index{create\+Shadow\+Render\+Pass@{create\+Shadow\+Render\+Pass}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{create\+Shadow\+Render\+Pass()}{createShadowRenderPass()}}
+{\footnotesize\ttfamily Vk\+Render\+Pass blaze\+::util\+::create\+Shadow\+Render\+Pass (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{Vk\+Format}]{depth\+Attachment\+Format = {\ttfamily VK\+\_\+FORMAT\+\_\+D32\+\_\+SFLOAT},  }\item[{Vk\+Image\+Layout}]{final\+Layout = {\ttfamily VK\+\_\+IMAGE\+\_\+LAYOUT\+\_\+DEPTH\+\_\+STENCIL\+\_\+READ\+\_\+ONLY\+\_\+OPTIMAL} }\end{DoxyParamCaption})}
+
+
+
+Creates a renderpass for shadow as per the configuration. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device used. \\
+\hline
+{\em depth\+Attachment\+Format} & The format used for the depth attachment \\
+\hline
+{\em final\+Layout} & The layout the depth attachment should end in. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a33c7b989ef9f0b2f56ca8632cd6784c5}\label{namespaceblaze_1_1util_a33c7b989ef9f0b2f56ca8632cd6784c5}} 
+\index{blaze\+::util@{blaze\+::util}!file\+Exists@{file\+Exists}}
+\index{file\+Exists@{file\+Exists}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{file\+Exists()}{fileExists()}}
+{\footnotesize\ttfamily bool blaze\+::util\+::file\+Exists (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{filename }\end{DoxyParamCaption})}
+
+
+
+Checks if a file exists. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em filename} & The path of the file to check.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true If file exists. 
+
+false Otherwise. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{namespaceblaze_1_1util_ab5bcba41a9c9ae6ea4b4673a64f67a23}\label{namespaceblaze_1_1util_ab5bcba41a9c9ae6ea4b4673a64f67a23}} 
+\index{blaze\+::util@{blaze\+::util}!find\+Supported\+Format@{find\+Supported\+Format}}
+\index{find\+Supported\+Format@{find\+Supported\+Format}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{find\+Supported\+Format()}{findSupportedFormat()}}
+{\footnotesize\ttfamily Vk\+Format blaze\+::util\+::find\+Supported\+Format (\begin{DoxyParamCaption}\item[{Vk\+Physical\+Device}]{device,  }\item[{const std\+::vector$<$ Vk\+Format $>$ \&}]{candidates,  }\item[{Vk\+Image\+Tiling}]{tiling,  }\item[{Vk\+Format\+Feature\+Flags}]{features }\end{DoxyParamCaption})}
+
+
+
+Finds a format from the candidates that is supported by the device. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The physical device to query. \\
+\hline
+{\em candidates} & The formats to choose from. \\
+\hline
+{\em tiling} & The image tiling to be supported. \\
+\hline
+{\em features} & The features needed to be supported by the format. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a8ecc9f88fa3db013b808a859e07eb944}\label{namespaceblaze_1_1util_a8ecc9f88fa3db013b808a859e07eb944}} 
+\index{blaze\+::util@{blaze\+::util}!get\+Queue\+Families@{get\+Queue\+Families}}
+\index{get\+Queue\+Families@{get\+Queue\+Families}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{get\+Queue\+Families()}{getQueueFamilies()}}
+{\footnotesize\ttfamily \hyperlink{structblaze_1_1util_1_1QueueFamilyIndices}{Queue\+Family\+Indices} blaze\+::util\+::get\+Queue\+Families (\begin{DoxyParamCaption}\item[{Vk\+Physical\+Device}]{device,  }\item[{Vk\+Surface\+K\+HR}]{surface }\end{DoxyParamCaption})}
+
+
+
+Returns the queue family indices of the physical device. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The physical device being queried. \\
+\hline
+{\em surface} & The surface used. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a11dc99b58ff4a58b45175e005acbf406}\label{namespaceblaze_1_1util_a11dc99b58ff4a58b45175e005acbf406}} 
+\index{blaze\+::util@{blaze\+::util}!get\+Swapchain\+Support@{get\+Swapchain\+Support}}
+\index{get\+Swapchain\+Support@{get\+Swapchain\+Support}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{get\+Swapchain\+Support()}{getSwapchainSupport()}}
+{\footnotesize\ttfamily \hyperlink{structblaze_1_1util_1_1SwapchainSupportDetails}{Swapchain\+Support\+Details} blaze\+::util\+::get\+Swapchain\+Support (\begin{DoxyParamCaption}\item[{Vk\+Physical\+Device}]{device,  }\item[{Vk\+Surface\+K\+HR}]{surface }\end{DoxyParamCaption})}
+
+
+
+Returns the details of the features supported by the swapchain. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The physical device being queried. \\
+\hline
+{\em surface} & The surface used. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a084200da1446d1dabeb9b83eaf43dcb8}\label{namespaceblaze_1_1util_a084200da1446d1dabeb9b83eaf43dcb8}} 
+\index{blaze\+::util@{blaze\+::util}!is\+Device\+Suitable@{is\+Device\+Suitable}}
+\index{is\+Device\+Suitable@{is\+Device\+Suitable}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{is\+Device\+Suitable()}{isDeviceSuitable()}}
+{\footnotesize\ttfamily bool blaze\+::util\+::is\+Device\+Suitable (\begin{DoxyParamCaption}\item[{Vk\+Physical\+Device}]{device,  }\item[{Vk\+Surface\+K\+HR}]{surface,  }\item[{const std\+::vector$<$ const char $\ast$ $>$ \&}]{device\+Extensions }\end{DoxyParamCaption})}
+
+
+
+Checks if a device is suitable according to multiple conditions. 
+
+\begin{DoxyItemize}
+\item The device must be a {\bfseries Discrete} G\+PU. \item The device must contain at least one Graphics Queue and one Present Queue. \item The device must support all the device\+Extensions required. \item The device must support at least one format and one present\+Modes \item The device must support shader\+Sampled\+Image\+Array\+Dynamic\+Indexing and sampler\+Anisotrpy.\end{DoxyItemize}
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The physical device to query. \\
+\hline
+{\em surface} & The surface used. \\
+\hline
+{\em device\+Extensions} & The extensions required to be supported. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{namespaceblaze_1_1util_a0157eaabde62d86926906bb797d7ada8}\label{namespaceblaze_1_1util_a0157eaabde62d86926906bb797d7ada8}} 
+\index{blaze\+::util@{blaze\+::util}!load\+Binary\+File@{load\+Binary\+File}}
+\index{load\+Binary\+File@{load\+Binary\+File}!blaze\+::util@{blaze\+::util}}
+\subsubsection{\texorpdfstring{load\+Binary\+File()}{loadBinaryFile()}}
+{\footnotesize\ttfamily std\+::vector$<$ uint32\+\_\+t $>$ blaze\+::util\+::load\+Binary\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{filename }\end{DoxyParamCaption})}
+
+
+
+Loads a binary file into memory and returns the data. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em filename} & The path of the binary file to open.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The binary data loaded from the file as {\itshape vector$<$char$>$} 
+\end{DoxyReturn}

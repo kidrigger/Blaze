@@ -1,0 +1,152 @@
+\hypertarget{classblaze_1_1ARenderer}{}\section{blaze\+:\+:A\+Renderer Class Reference}
+\label{classblaze_1_1ARenderer}\index{blaze\+::\+A\+Renderer@{blaze\+::\+A\+Renderer}}
+
+
+Inheritance diagram for blaze\+:\+:A\+Renderer\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=184pt]{classblaze_1_1ARenderer__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for blaze\+:\+:A\+Renderer\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classblaze_1_1ARenderer__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a50df05637f7901c6c250cac7589339b3}\label{classblaze_1_1ARenderer_a50df05637f7901c6c250cac7589339b3}} 
+{\bfseries A\+Renderer} (G\+L\+F\+Wwindow $\ast$window, bool enable\+Validation\+Layers=true) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a6afdc08bbc3b63db882d905da16e21d6}\label{classblaze_1_1ARenderer_a6afdc08bbc3b63db882d905da16e21d6}} 
+{\bfseries A\+Renderer} (\hyperlink{classblaze_1_1ARenderer}{A\+Renderer} \&\&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a88a86e280f936a5c87869f933a753e7c}\label{classblaze_1_1ARenderer_a88a86e280f936a5c87869f933a753e7c}} 
+\hyperlink{classblaze_1_1ARenderer}{A\+Renderer} \& {\bfseries operator=} (\hyperlink{classblaze_1_1ARenderer}{A\+Renderer} \&\&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a5569c604df77ac33fdb245bc71b8ed32}\label{classblaze_1_1ARenderer_a5569c604df77ac33fdb245bc71b8ed32}} 
+{\bfseries A\+Renderer} (const \hyperlink{classblaze_1_1ARenderer}{A\+Renderer} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ab805d9247321d41fae868da36fe83d91}\label{classblaze_1_1ARenderer_ab805d9247321d41fae868da36fe83d91}} 
+\hyperlink{classblaze_1_1ARenderer}{A\+Renderer} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1ARenderer}{A\+Renderer} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_acf2380c5d2277beec46cddcc6f6a1ecb}\label{classblaze_1_1ARenderer_acf2380c5d2277beec46cddcc6f6a1ecb}} 
+void {\bfseries render} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a0d1b8749a57e76e1b77500b1f0ee5156}\label{classblaze_1_1ARenderer_a0d1b8749a57e76e1b77500b1f0ee5156}} 
+virtual \hyperlink{structblaze_1_1spirv_1_1SetSingleton}{spirv\+::\+Set\+Singleton} {\bfseries create\+Material\+Set} ()=0
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a902ff28fc355bc4d076a9bb8fde8e646}\label{classblaze_1_1ARenderer_a902ff28fc355bc4d076a9bb8fde8e646}} 
+virtual void {\bfseries set\+Environment} (const \hyperlink{classblaze_1_1Bindable}{Bindable} $\ast$env)=0
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a1d11ebeeb512737eb6a83e41e08dd4b7}\label{classblaze_1_1ARenderer_a1d11ebeeb512737eb6a83e41e08dd4b7}} 
+virtual const \hyperlink{structblaze_1_1spirv_1_1Shader}{spirv\+::\+Shader} \& {\bfseries get\+\_\+shader} () const =0
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ae7d0ba1357bb08846d9e1560d216f941}\label{classblaze_1_1ARenderer_ae7d0ba1357bb08846d9e1560d216f941}} 
+void {\bfseries set\+\_\+camera} (\hyperlink{classblaze_1_1Camera}{Camera} $\ast$p\+\_\+camera)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_aac99ae31776dd569358e5c3789698eda}\label{classblaze_1_1ARenderer_aac99ae31776dd569358e5c3789698eda}} 
+const \hyperlink{classblaze_1_1Context}{Context} $\ast$ {\bfseries get\+\_\+context} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ad51e674928ead1dd0de3b47eac1016e8}\label{classblaze_1_1ARenderer_ad51e674928ead1dd0de3b47eac1016e8}} 
+\hyperlink{classblaze_1_1spirv_1_1PipelineFactory}{spirv\+::\+Pipeline\+Factory} $\ast$ {\bfseries get\+\_\+pipeline\+Factory} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a16f2a88de5037de409395d7c372a78b1}\label{classblaze_1_1ARenderer_a16f2a88de5037de409395d7c372a78b1}} 
+Draw\+List\+::\+Handle {\bfseries submit} (\hyperlink{classblaze_1_1Drawable}{Drawable} $\ast$sub)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a96980e0eb62b07195e3bb0e028b51da1}\label{classblaze_1_1ARenderer_a96980e0eb62b07195e3bb0e028b51da1}} 
+bool {\bfseries complete} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ae6042349671dc48ec48c73ff60934a56}\label{classblaze_1_1ARenderer_ae6042349671dc48ec48c73ff60934a56}} 
+void {\bfseries wait\+Idle} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Types}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_afe4f1ac0fa4f6af7c49d0421020d7cec}\label{classblaze_1_1ARenderer_afe4f1ac0fa4f6af7c49d0421020d7cec}} 
+using {\bfseries Draw\+List} = \hyperlink{classblaze_1_1util_1_1PackedHandler}{util\+::\+Packed\+Handler}$<$ \hyperlink{classblaze_1_1Drawable}{Drawable} $\ast$ $>$
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_abc172e917d52ebd9684fbfc91e83fded}\label{classblaze_1_1ARenderer_abc172e917d52ebd9684fbfc91e83fded}} 
+void {\bfseries recreate\+Swapchain} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ad9f386a77a9ce923901d9aa0f8379faa}\label{classblaze_1_1ARenderer_ad9f386a77a9ce923901d9aa0f8379faa}} 
+std\+::pair$<$ uint32\+\_\+t, uint32\+\_\+t $>$ {\bfseries get\+\_\+dimensions} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a47d147ed52d4e01b2b1e84e73bf4f383}\label{classblaze_1_1ARenderer_a47d147ed52d4e01b2b1e84e73bf4f383}} 
+void {\bfseries clear\+Command\+Buffers} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a2a157380cb98e09ca023abc79663a0b6}\label{classblaze_1_1ARenderer_a2a157380cb98e09ca023abc79663a0b6}} 
+void {\bfseries rebuild\+All\+Command\+Buffers} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ae0f6fef0b400eefa7e1403dac4ff1cfd}\label{classblaze_1_1ARenderer_ae0f6fef0b400eefa7e1403dac4ff1cfd}} 
+void {\bfseries rebuild\+Command\+Buffer} (uint32\+\_\+t frame)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a45d78544834276139f73316b80e18577}\label{classblaze_1_1ARenderer_a45d78544834276139f73316b80e18577}} 
+virtual void {\bfseries update} (uint32\+\_\+t frame)=0
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a364ef6ff07211f5b3d611c230c413cea}\label{classblaze_1_1ARenderer_a364ef6ff07211f5b3d611c230c413cea}} 
+virtual void {\bfseries record\+Commands} (uint32\+\_\+t frame)=0
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a1db2f2b5de282cb85e5344744e91a7ab}\label{classblaze_1_1ARenderer_a1db2f2b5de282cb85e5344744e91a7ab}} 
+virtual void {\bfseries recreate\+Swapchain\+Dependents} ()=0
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a1d729975bd96063dfbd3821a4bc222a1}\label{classblaze_1_1ARenderer_a1d729975bd96063dfbd3821a4bc222a1}} 
+uint32\+\_\+t {\bfseries max\+Frame\+In\+Flight} \{2\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a920af9542eed368dfd37523f7584a6ba}\label{classblaze_1_1ARenderer_a920af9542eed368dfd37523f7584a6ba}} 
+bool {\bfseries is\+Complete} \{false\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ae3afe1ea7a452bb0ec29c210639b56b0}\label{classblaze_1_1ARenderer_ae3afe1ea7a452bb0ec29c210639b56b0}} 
+bool {\bfseries window\+Resized} \{false\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a79cf50d4481bfb4a21d57fa5c4ddfc93}\label{classblaze_1_1ARenderer_a79cf50d4481bfb4a21d57fa5c4ddfc93}} 
+uint32\+\_\+t {\bfseries current\+Frame} \{0\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a4ffd40adc9cabeda6612b7cdaa0f399e}\label{classblaze_1_1ARenderer_a4ffd40adc9cabeda6612b7cdaa0f399e}} 
+std\+::unique\+\_\+ptr$<$ \hyperlink{classblaze_1_1Context}{Context} $>$ {\bfseries context}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a0c22712edcd9d888fe0756db095d1593}\label{classblaze_1_1ARenderer_a0c22712edcd9d888fe0756db095d1593}} 
+std\+::unique\+\_\+ptr$<$ \hyperlink{classblaze_1_1Swapchain}{Swapchain} $>$ {\bfseries swapchain}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a20d9e0ae9052051bb130435aee323861}\label{classblaze_1_1ARenderer_a20d9e0ae9052051bb130435aee323861}} 
+std\+::unique\+\_\+ptr$<$ \hyperlink{classblaze_1_1GUI}{G\+UI} $>$ {\bfseries gui}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a66f91ba2792d8678a15c3ce6e64df353}\label{classblaze_1_1ARenderer_a66f91ba2792d8678a15c3ce6e64df353}} 
+\hyperlink{classblaze_1_1Camera}{Camera} $\ast$ {\bfseries camera} \{nullptr\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ac7a96d61032c07c7166720a80b68c81e}\label{classblaze_1_1ARenderer_ac7a96d61032c07c7166720a80b68c81e}} 
+\hyperlink{structblaze_1_1vkw_1_1CommandBufferVector}{vkw\+::\+Command\+Buffer\+Vector} {\bfseries command\+Buffers}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_accaa640496d736ae46f0cc0549b0b59e}\label{classblaze_1_1ARenderer_accaa640496d736ae46f0cc0549b0b59e}} 
+vkw\+::\+Semaphore\+Vector {\bfseries image\+Available\+Sem}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a351ea8ada814a74953b624e34d91c7a1}\label{classblaze_1_1ARenderer_a351ea8ada814a74953b624e34d91c7a1}} 
+vkw\+::\+Semaphore\+Vector {\bfseries render\+Finished\+Sem}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ac7a5a6d1ab20ead4d903d4867aa6c81b}\label{classblaze_1_1ARenderer_ac7a5a6d1ab20ead4d903d4867aa6c81b}} 
+vkw\+::\+Fence\+Vector {\bfseries in\+Flight\+Fences}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_ae5ca0812615c13266803055936c6fdd0}\label{classblaze_1_1ARenderer_ae5ca0812615c13266803055936c6fdd0}} 
+std\+::unique\+\_\+ptr$<$ \hyperlink{classblaze_1_1spirv_1_1PipelineFactory}{spirv\+::\+Pipeline\+Factory} $>$ {\bfseries pipeline\+Factory}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ARenderer_a2131f0ab8880d1165fcfa9586b4a32f0}\label{classblaze_1_1ARenderer_a2131f0ab8880d1165fcfa9586b4a32f0}} 
+\hyperlink{classblaze_1_1util_1_1PackedHandler}{Draw\+List} {\bfseries drawables}
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/rendering/A\+Renderer.\+hpp\item 
+Blaze/rendering/A\+Renderer.\+cpp\end{DoxyCompactItemize}

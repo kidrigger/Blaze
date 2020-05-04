@@ -1,0 +1,73 @@
+If your game oversubscribes video memory, if may work OK in previous-\/generation graphics A\+P\+Is (DirectX 9, 10, 11, Open\+GL) because resources are automatically paged to system R\+AM. In Vulkan you can\textquotesingle{}t do it because when you run out of memory, an allocation just fails. If you have more data (e.\+g. textures) that can fit into V\+R\+AM and you don\textquotesingle{}t need it all at once, you may want to upload them to G\+PU on demand and \char`\"{}push out\char`\"{} ones that are not used for a long time to make room for the new ones, effectively using V\+R\+AM (or a cartain memory pool) as a form of cache. Vulkan Memory Allocator can help you with that by supporting a concept of \char`\"{}lost allocations\char`\"{}.
+
+To create an allocation that can become lost, include \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+C\+A\+N\+\_\+\+B\+E\+C\+O\+M\+E\+\_\+\+L\+O\+S\+T\+\_\+\+B\+IT flag in \hyperlink{structVmaAllocationCreateInfo_add09658ac14fe290ace25470ddd6d41b}{Vma\+Allocation\+Create\+Info\+::flags}. Before using a buffer or image bound to such allocation in every new frame, you need to query it if it\textquotesingle{}s not lost. To check it, call vma\+Touch\+Allocation(). If the allocation is lost, you should not use it or buffer/image bound to it. You mustn\textquotesingle{}t forget to destroy this allocation and this buffer/image. vma\+Get\+Allocation\+Info() can also be used for checking status of the allocation. Allocation is lost when returned \hyperlink{structVmaAllocationInfo_ae0bfb7dfdf79a76ffefc9a94677a2f67}{Vma\+Allocation\+Info\+::device\+Memory} == {\ttfamily V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE}.
+
+To create an allocation that can make some other allocations lost to make room for it, use \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+C\+A\+N\+\_\+\+M\+A\+K\+E\+\_\+\+O\+T\+H\+E\+R\+\_\+\+L\+O\+S\+T\+\_\+\+B\+IT flag. You will usually use both flags \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+C\+A\+N\+\_\+\+M\+A\+K\+E\+\_\+\+O\+T\+H\+E\+R\+\_\+\+L\+O\+S\+T\+\_\+\+B\+IT and \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+C\+A\+N\+\_\+\+B\+E\+C\+O\+M\+E\+\_\+\+L\+O\+S\+T\+\_\+\+B\+IT at the same time.
+
+Warning! Current implementation uses quite naive, brute force algorithm, which can make allocation calls that use \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+C\+A\+N\+\_\+\+M\+A\+K\+E\+\_\+\+O\+T\+H\+E\+R\+\_\+\+L\+O\+S\+T\+\_\+\+B\+IT flag quite slow. A new, more optimal algorithm and data structure to speed this up is planned for the future.
+
+{\bfseries Q\+: When interleaving creation of new allocations with usage of existing ones, how do you make sure that an allocation won\textquotesingle{}t become lost while it\textquotesingle{}s used in the current frame?}
+
+It is ensured because vma\+Touch\+Allocation() / vma\+Get\+Allocation\+Info() not only returns allocation status/parameters and checks whether it\textquotesingle{}s not lost, but when it\textquotesingle{}s not, it also atomically marks it as used in the current frame, which makes it impossible to become lost in that frame. It uses lockless algorithm, so it works fast and doesn\textquotesingle{}t involve locking any internal mutex.
+
+{\bfseries Q\+: What if my allocation may still be in use by the G\+PU when it\textquotesingle{}s rendering a previous frame while I already submit new frame on the C\+PU?}
+
+You can make sure that allocations \char`\"{}touched\char`\"{} by vma\+Touch\+Allocation() / vma\+Get\+Allocation\+Info() will not become lost for a number of additional frames back from the current one by specifying this number as \hyperlink{structVmaAllocatorCreateInfo_a21ea188dd212b8171cb9ecbed4a2a3a7}{Vma\+Allocator\+Create\+Info\+::frame\+In\+Use\+Count} (for default memory pool) and \hyperlink{structVmaPoolCreateInfo_a9437e43ffbb644dbbf7fc4e50cfad6aa}{Vma\+Pool\+Create\+Info\+::frame\+In\+Use\+Count} (for custom pool).
+
+{\bfseries Q\+: How do you inform the library when new frame starts?}
+
+You need to call function vma\+Set\+Current\+Frame\+Index().
+
+Example code\+:
+
+
+\begin{DoxyCode}
+\textcolor{keyword}{struct }MyBuffer
+\{
+    VkBuffer m\_Buf = \textcolor{keyword}{nullptr};
+    \hyperlink{structVmaAllocation}{VmaAllocation} m\_Alloc = \textcolor{keyword}{nullptr};
+
+    \textcolor{comment}{// Called when the buffer is really needed in the current frame.}
+    \textcolor{keywordtype}{void} EnsureBuffer();
+\};
+
+\textcolor{keywordtype}{void} MyBuffer::EnsureBuffer()
+\{
+    \textcolor{comment}{// Buffer has been created.}
+    \textcolor{keywordflow}{if}(m\_Buf != VK\_NULL\_HANDLE)
+    \{
+        \textcolor{comment}{// Check if its allocation is not lost + mark it as used in current frame.}
+        \textcolor{keywordflow}{if}(vmaTouchAllocation(allocator, m\_Alloc))
+        \{
+            \textcolor{comment}{// It's all OK - safe to use m\_Buf.}
+            \textcolor{keywordflow}{return};
+        \}
+    \}
+
+    \textcolor{comment}{// Buffer not yet exists or lost - destroy and recreate it.}
+
+    vmaDestroyBuffer(allocator, m\_Buf, m\_Alloc);
+
+    VkBufferCreateInfo bufCreateInfo = \{ VK\_STRUCTURE\_TYPE\_BUFFER\_CREATE\_INFO \};
+    bufCreateInfo.size = 1024;
+    bufCreateInfo.usage = VK\_BUFFER\_USAGE\_UNIFORM\_BUFFER\_BIT | VK\_BUFFER\_USAGE\_TRANSFER\_DST\_BIT;
+
+    \hyperlink{structVmaAllocationCreateInfo}{VmaAllocationCreateInfo} allocCreateInfo = \{\};
+    allocCreateInfo.\hyperlink{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}{usage} = VMA\_MEMORY\_USAGE\_GPU\_ONLY;
+    allocCreateInfo.\hyperlink{structVmaAllocationCreateInfo_add09658ac14fe290ace25470ddd6d41b}{flags} = VMA\_ALLOCATION\_CREATE\_CAN\_BECOME\_LOST\_BIT |
+        VMA\_ALLOCATION\_CREATE\_CAN\_MAKE\_OTHER\_LOST\_BIT;
+
+    vmaCreateBuffer(allocator, &bufCreateInfo, &allocCreateInfo, &m\_Buf, &m\_Alloc, \textcolor{keyword}{nullptr});
+\}
+\end{DoxyCode}
+
+
+When using lost allocations, you may see some Vulkan validation layer warnings about overlapping regions of memory bound to different kinds of buffers and images. This is still valid as long as you implement proper handling of lost allocations (like in the example above) and don\textquotesingle{}t use them.
+
+You can create an allocation that is already in lost state from the beginning using function vma\+Create\+Lost\+Allocation(). It may be useful if you need a \char`\"{}dummy\char`\"{} allocation that is not null.
+
+You can call function vma\+Make\+Pool\+Allocations\+Lost() to set all eligible allocations in a specified custom pool to lost state. Allocations that have been \char`\"{}touched\char`\"{} in current frame or \hyperlink{structVmaPoolCreateInfo_a9437e43ffbb644dbbf7fc4e50cfad6aa}{Vma\+Pool\+Create\+Info\+::frame\+In\+Use\+Count} frames back cannot become lost.
+
+{\bfseries Q\+: Can I touch allocation that cannot become lost?}
+
+Yes, although it has no visible effect. Calls to vma\+Get\+Allocation\+Info() and vma\+Touch\+Allocation() update last use frame index also for allocations that cannot become lost, but the only way to observe it is to dump internal allocator state using vma\+Build\+Stats\+String(). You can use this feature for debugging purposes to explicitly mark allocations that you use in current frame and then analyze J\+S\+ON dump to see for how long each allocation stays unused. 

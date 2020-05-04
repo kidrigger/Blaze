@@ -8,6 +8,15 @@
 
 namespace blaze::vkw
 {
+/**
+ * @struct CommandBufferVector
+ *
+ * @brief Specialized wrapper for VkCommandBuffer
+ *
+ * CommandBuffers are constructed and deleted as an array of buffers instead of one at a time,
+ * hence instead of iterating and destroying, a single destroy call is used to destroy all of the
+ * CommandBuffers owned.
+ */
 struct CommandBufferVector
 {
 	std::vector<VkCommandBuffer> handles;
@@ -74,6 +83,14 @@ struct CommandBufferVector
 	}
 };
 
+/**
+ * @struct MemAllocator
+ *
+ * @brief VmaAllocator wrapper.
+ *
+ * VmaAllocator is an independent, but the function prototype for destroy is void(VmaAllocator)
+ * which disallows the usage of the available wrapper class.
+ */
 struct MemAllocator
 {
 	VmaAllocator handle{VK_NULL_HANDLE};

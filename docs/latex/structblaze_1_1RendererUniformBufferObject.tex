@@ -1,0 +1,64 @@
+\hypertarget{structblaze_1_1RendererUniformBufferObject}{}\section{blaze\+:\+:Renderer\+Uniform\+Buffer\+Object Struct Reference}
+\label{structblaze_1_1RendererUniformBufferObject}\index{blaze\+::\+Renderer\+Uniform\+Buffer\+Object@{blaze\+::\+Renderer\+Uniform\+Buffer\+Object}}
+
+
+The actual data sent to the G\+PU.  
+
+
+
+
+{\ttfamily \#include $<$Datatypes.\+hpp$>$}
+
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_ad6783e280b81e7d310d1ea83b4bdcb7d}\label{structblaze_1_1RendererUniformBufferObject_ad6783e280b81e7d310d1ea83b4bdcb7d}} 
+glm\+::mat4 {\bfseries view}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a136d803fd393e2f3e2880ff4b38954fc}\label{structblaze_1_1RendererUniformBufferObject_a136d803fd393e2f3e2880ff4b38954fc}} 
+glm\+::mat4 {\bfseries projection}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a67d792d66684cd9c2498e1d96a516b57}\label{structblaze_1_1RendererUniformBufferObject_a67d792d66684cd9c2498e1d96a516b57}} 
+glm\+::vec3 {\bfseries view\+Pos}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a4aafe7e01910fd77afbb751fc56f70c0}\label{structblaze_1_1RendererUniformBufferObject_a4aafe7e01910fd77afbb751fc56f70c0}} 
+float {\bfseries far\+Plane}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_aed34a397173ccbd75938578a44279f28}\label{structblaze_1_1RendererUniformBufferObject_aed34a397173ccbd75938578a44279f28}} 
+glm\+::mat4 {\bfseries dir\+Light\+Transform} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}\mbox{[}M\+A\+X\+\_\+\+C\+S\+M\+\_\+\+S\+P\+L\+I\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a5d2a2cdf14f07fab78883f538a12c4b6}\label{structblaze_1_1RendererUniformBufferObject_a5d2a2cdf14f07fab78883f538a12c4b6}} 
+glm\+::vec4 {\bfseries light\+Dir} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_afc4770224643d2cca738ecbf8f30c5f4}\label{structblaze_1_1RendererUniformBufferObject_afc4770224643d2cca738ecbf8f30c5f4}} 
+glm\+::vec4 {\bfseries csm\+Splits} \mbox{[}M\+A\+X\+\_\+\+C\+S\+M\+\_\+\+S\+P\+L\+I\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a5a67be2e4e6179065a038453bfba22b5}\label{structblaze_1_1RendererUniformBufferObject_a5a67be2e4e6179065a038453bfba22b5}} 
+glm\+::vec4 {\bfseries light\+Pos} \mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a5d5d31e10cf970bdba48636fcfb88c02}\label{structblaze_1_1RendererUniformBufferObject_a5d5d31e10cf970bdba48636fcfb88c02}} 
+int {\bfseries shadow\+Idx} \mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a8b030be21bd19e5391e6244c4f79c117}\label{structblaze_1_1RendererUniformBufferObject_a8b030be21bd19e5391e6244c4f79c117}} 
+int {\bfseries num\+Lights}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUniformBufferObject_a8c2e99201439b70840256052576371fa}\label{structblaze_1_1RendererUniformBufferObject_a8c2e99201439b70840256052576371fa}} 
+int {\bfseries num\+Dir\+Lights}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+The actual data sent to the G\+PU. 
+
+This struct is a aggregation of \hyperlink{structblaze_1_1CameraUniformBufferObject}{Camera\+Uniform\+Buffer\+Object} and \hyperlink{structblaze_1_1LightsUniformBufferObject}{Lights\+Uniform\+Buffer\+Object}. They can be directly copied before sending to G\+PU view U\+BO update.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{structblaze_1_1CameraUniformBufferObject}{Camera\+Uniform\+Buffer\+Object} 
+
+\hyperlink{structblaze_1_1LightsUniformBufferObject}{Lights\+Uniform\+Buffer\+Object} 
+\end{DoxySeeAlso}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/Datatypes.\+hpp\end{DoxyCompactItemize}

@@ -1,0 +1,30 @@
+\hypertarget{structblaze_1_1ShadowPushConstantBlock}{}\section{blaze\+:\+:Shadow\+Push\+Constant\+Block Struct Reference}
+\label{structblaze_1_1ShadowPushConstantBlock}\index{blaze\+::\+Shadow\+Push\+Constant\+Block@{blaze\+::\+Shadow\+Push\+Constant\+Block}}
+
+
+P\+CB for sending projection matrix and position to the G\+PU.  
+
+
+
+
+{\ttfamily \#include $<$Datatypes.\+hpp$>$}
+
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ShadowPushConstantBlock_af459f4655cc68b9394867648fcb48fb9}\label{structblaze_1_1ShadowPushConstantBlock_af459f4655cc68b9394867648fcb48fb9}} 
+glm\+::mat4 {\bfseries projection}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ShadowPushConstantBlock_a2215b39c0cbb7d737a98702e28f07032}\label{structblaze_1_1ShadowPushConstantBlock_a2215b39c0cbb7d737a98702e28f07032}} 
+glm\+::vec3 {\bfseries position}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+P\+CB for sending projection matrix and position to the G\+PU. 
+
+During omnidirectional shadow mapping, \hyperlink{structblaze_1_1ShadowUBlock}{Shadow\+U\+Block} provides The view matrix for each face of the cubemap. The Projection and position change per shadow, and hence are a part of the P\+CB 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/Datatypes.\+hpp\end{DoxyCompactItemize}

@@ -1,0 +1,106 @@
+\hypertarget{classblaze_1_1util_1_1UnmanagedVector}{}\section{blaze\+:\+:util\+:\+:Unmanaged\+Vector$<$ T $>$ Class Template Reference}
+\label{classblaze_1_1util_1_1UnmanagedVector}\index{blaze\+::util\+::\+Unmanaged\+Vector$<$ T $>$@{blaze\+::util\+::\+Unmanaged\+Vector$<$ T $>$}}
+
+
+Wrapper on vector of handles for consistency.  
+
+
+
+
+{\ttfamily \#include $<$Managed.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_ae2e722d08c5247bceff137c73e7447d6}\label{classblaze_1_1util_1_1UnmanagedVector_ae2e722d08c5247bceff137c73e7447d6}} 
+\hyperlink{classblaze_1_1util_1_1UnmanagedVector_ae2e722d08c5247bceff137c73e7447d6}{Unmanaged\+Vector} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a3a2030e5b1f1e1b3fd7d083d2d17d798}\label{classblaze_1_1util_1_1UnmanagedVector_a3a2030e5b1f1e1b3fd7d083d2d17d798}} 
+\hyperlink{classblaze_1_1util_1_1UnmanagedVector_a3a2030e5b1f1e1b3fd7d083d2d17d798}{Unmanaged\+Vector} (const std\+::vector$<$ T $>$ \&handles) noexcept
+\begin{DoxyCompactList}\small\item\em Copies the handles for construction. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a13a25be3b436be664beb83b13c3f1378}\label{classblaze_1_1util_1_1UnmanagedVector_a13a25be3b436be664beb83b13c3f1378}} 
+\hyperlink{classblaze_1_1util_1_1UnmanagedVector_a13a25be3b436be664beb83b13c3f1378}{Unmanaged\+Vector} (std\+::vector$<$ T $>$ \&\&handles) noexcept
+\begin{DoxyCompactList}\small\item\em Moves the handles for construction. \end{DoxyCompactList}\item 
+bool \hyperlink{classblaze_1_1util_1_1UnmanagedVector_a13e031e44e8ddfa77492bedbf1c82780}{valid} () const
+\begin{DoxyCompactList}\small\item\em Returns the validity of the construction. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors.}\par
+{\em Move only, copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_adde99e03709712a5555c769ccaa93ecc}\label{classblaze_1_1util_1_1UnmanagedVector_adde99e03709712a5555c769ccaa93ecc}} 
+{\bfseries Unmanaged\+Vector} (\hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a071f358ea12fa14456483fdd63d6d8c5}\label{classblaze_1_1util_1_1UnmanagedVector_a071f358ea12fa14456483fdd63d6d8c5}} 
+\hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector} \& {\bfseries operator=} (\hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a854f58df88590cb705768eb408ab7f4a}\label{classblaze_1_1util_1_1UnmanagedVector_a854f58df88590cb705768eb408ab7f4a}} 
+{\bfseries Unmanaged\+Vector} (const \hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a58ff760293fd63e1eaa84d2fddb93a2d}\label{classblaze_1_1util_1_1UnmanagedVector_a58ff760293fd63e1eaa84d2fddb93a2d}} 
+\hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1util_1_1UnmanagedVector}{Unmanaged\+Vector} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters.}\par
+{\em Getters for private members. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a3676adcb36f6c460b77d58d066d86920}\label{classblaze_1_1util_1_1UnmanagedVector_a3676adcb36f6c460b77d58d066d86920}} 
+const std\+::vector$<$ T $>$ \& {\bfseries get} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_aeb328d698db37ac813e6977914d38208}\label{classblaze_1_1util_1_1UnmanagedVector_aeb328d698db37ac813e6977914d38208}} 
+const T \& {\bfseries get} (size\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a786430b2b037993cd3996a5c73f2a2cb}\label{classblaze_1_1util_1_1UnmanagedVector_a786430b2b037993cd3996a5c73f2a2cb}} 
+void {\bfseries set} (size\+\_\+t index, const T \&val)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a12fee5564f693695745f8c98c852c13b}\label{classblaze_1_1util_1_1UnmanagedVector_a12fee5564f693695745f8c98c852c13b}} 
+T \& {\bfseries operator\mbox{[}$\,$\mbox{]}} (size\+\_\+t index)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a0309e57150e45c3fd801aae55d423a5c}\label{classblaze_1_1util_1_1UnmanagedVector_a0309e57150e45c3fd801aae55d423a5c}} 
+const T \& {\bfseries operator\mbox{[}$\,$\mbox{]}} (size\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_aab508ac9a2288fa20915e2f3025a1afd}\label{classblaze_1_1util_1_1UnmanagedVector_aab508ac9a2288fa20915e2f3025a1afd}} 
+T $\ast$ {\bfseries data} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a3565245fa593d9928acac754d353ca33}\label{classblaze_1_1util_1_1UnmanagedVector_a3565245fa593d9928acac754d353ca33}} 
+void {\bfseries resize} (size\+\_\+t size)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a7df456122f8074b1029f713b33586954}\label{classblaze_1_1util_1_1UnmanagedVector_a7df456122f8074b1029f713b33586954}} 
+size\+\_\+t {\bfseries size} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$typename T$>$\newline
+class blaze\+::util\+::\+Unmanaged\+Vector$<$ T $>$}
+
+Wrapper on vector of handles for consistency. 
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em T} & Type of the handle. \\
+\hline
+\end{DoxyTemplParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1util_1_1UnmanagedVector_a13e031e44e8ddfa77492bedbf1c82780}\label{classblaze_1_1util_1_1UnmanagedVector_a13e031e44e8ddfa77492bedbf1c82780}} 
+\index{blaze\+::util\+::\+Unmanaged\+Vector@{blaze\+::util\+::\+Unmanaged\+Vector}!valid@{valid}}
+\index{valid@{valid}!blaze\+::util\+::\+Unmanaged\+Vector@{blaze\+::util\+::\+Unmanaged\+Vector}}
+\subsubsection{\texorpdfstring{valid()}{valid()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+\hyperlink{classblaze_1_1util_1_1UnmanagedVector}{blaze\+::util\+::\+Unmanaged\+Vector}$<$ T $>$\+::valid (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Returns the validity of the construction. 
+
+\begin{DoxyReturn}{Returns}
+false if default constructed. 
+
+true otherwise. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/util/Managed.\+hpp\end{DoxyCompactItemize}

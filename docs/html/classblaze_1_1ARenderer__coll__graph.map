@@ -1,0 +1,5 @@
+<map id="blaze::ARenderer" name="blaze::ARenderer">
+<area shape="rect" id="node2" href="$structblaze_1_1vkw_1_1CommandBufferVector.html" title="Specialized wrapper for VkCommandBuffer. " alt="" coords="5,5,193,47"/>
+<area shape="rect" id="node3" href="$classblaze_1_1util_1_1PackedHandler.html" title="blaze::util::PackedHandler\l\&lt; Drawable * \&gt;" alt="" coords="12,71,187,112"/>
+<area shape="rect" id="node4" href="$classblaze_1_1Camera.html" title="Utility class enclosing the UBO and associated calculations. " alt="" coords="46,137,153,163"/>
+</map>

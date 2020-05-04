@@ -1,0 +1,206 @@
+\hypertarget{classblaze_1_1ForwardRenderer}{}\section{blaze\+:\+:Forward\+Renderer Class Reference}
+\label{classblaze_1_1ForwardRenderer}\index{blaze\+::\+Forward\+Renderer@{blaze\+::\+Forward\+Renderer}}
+
+
+Contains entire rendering logic.  
+
+
+
+
+{\ttfamily \#include $<$Forward\+Renderer.\+hpp$>$}
+
+
+
+Inheritance diagram for blaze\+:\+:Forward\+Renderer\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=201pt]{classblaze_1_1ForwardRenderer__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for blaze\+:\+:Forward\+Renderer\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=201pt]{classblaze_1_1ForwardRenderer__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_afdb79d0a5f62e871d166f0e621520a5d}\label{classblaze_1_1ForwardRenderer_afdb79d0a5f62e871d166f0e621520a5d}} 
+\hyperlink{classblaze_1_1ForwardRenderer_afdb79d0a5f62e871d166f0e621520a5d}{Forward\+Renderer} () noexcept
+\begin{DoxyCompactList}\small\item\em Default empty constructor. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1ForwardRenderer_abf0b80128aa61686461b3069004b65a9}{Forward\+Renderer} (G\+L\+F\+Wwindow $\ast$window, bool enable\+Validation\+Layers=true) noexcept
+\begin{DoxyCompactList}\small\item\em Actual constructor. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ae547518efb38283e0111899bccabbe9f}\label{classblaze_1_1ForwardRenderer_ae547518efb38283e0111899bccabbe9f}} 
+void \hyperlink{classblaze_1_1ForwardRenderer_ae547518efb38283e0111899bccabbe9f}{render\+Frame} ()
+\begin{DoxyCompactList}\small\item\em Actually rendering a frame and submitting to the present queue. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_acfacb0d44b7f1f1f90bbdbeb762c0ac0}\label{classblaze_1_1ForwardRenderer_acfacb0d44b7f1f1f90bbdbeb762c0ac0}} 
+H\+Sub \hyperlink{classblaze_1_1ForwardRenderer_acfacb0d44b7f1f1f90bbdbeb762c0ac0}{submit} (\hyperlink{classblaze_1_1Drawable}{Drawable} $\ast$cmd)
+\begin{DoxyCompactList}\small\item\em Submits a \hyperlink{classblaze_1_1Drawable}{Drawable} to draw to screen. \end{DoxyCompactList}\item 
+bool \hyperlink{classblaze_1_1ForwardRenderer_a78175e4b430f0046db968f8476ec121c}{complete} () const
+\begin{DoxyCompactList}\small\item\em Checks if the renderer is complete. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors.}\par
+{\em Move only, Copy is deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a0a6c8cf08a058fe3fbd25b9ecdc3c28b}\label{classblaze_1_1ForwardRenderer_a0a6c8cf08a058fe3fbd25b9ecdc3c28b}} 
+{\bfseries Forward\+Renderer} (\hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a027a5ab5ab27a6248c40eaa57ecd140d}\label{classblaze_1_1ForwardRenderer_a027a5ab5ab27a6248c40eaa57ecd140d}} 
+\hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} \& {\bfseries operator=} (\hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a6b60ffa32fc81b846ce05729e000693e}\label{classblaze_1_1ForwardRenderer_a6b60ffa32fc81b846ce05729e000693e}} 
+{\bfseries Forward\+Renderer} (const \hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a3a9d723f9618259735a292a264ebcf05}\label{classblaze_1_1ForwardRenderer_a3a9d723f9618259735a292a264ebcf05}} 
+\hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters}\par
+{\em Getters for private members. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a871a10ee38277a2cb2c0ef9e3d65712f}\label{classblaze_1_1ForwardRenderer_a871a10ee38277a2cb2c0ef9e3d65712f}} 
+std\+::pair$<$ uint32\+\_\+t, uint32\+\_\+t $>$ {\bfseries get\+\_\+dimensions} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ab0c14f3daed7186b1e726f7efd122e7d}\label{classblaze_1_1ForwardRenderer_ab0c14f3daed7186b1e726f7efd122e7d}} 
+const Vk\+Format \& {\bfseries get\+\_\+swapchain\+Format} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ae4a6f9234ad9454acd3edafec772480e}\label{classblaze_1_1ForwardRenderer_ae4a6f9234ad9454acd3edafec772480e}} 
+const Vk\+Extent2D \& {\bfseries get\+\_\+swapchain\+Extent} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_afb27e80c004057dc8aec9652d160e53b}\label{classblaze_1_1ForwardRenderer_afb27e80c004057dc8aec9652d160e53b}} 
+size\+\_\+t {\bfseries get\+\_\+swapchain\+Image\+Count} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_aa442b4f23e7db5f9650802a56bfc37f5}\label{classblaze_1_1ForwardRenderer_aa442b4f23e7db5f9650802a56bfc37f5}} 
+const Vk\+Image\+View \& {\bfseries get\+\_\+swapchain\+Image\+View} (uint32\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a3f103d7524870ec1bc7b8a1a9ee9d85f}\label{classblaze_1_1ForwardRenderer_a3f103d7524870ec1bc7b8a1a9ee9d85f}} 
+const std\+::vector$<$ Vk\+Image\+View $>$ \& {\bfseries get\+\_\+swapchain\+Image\+Views} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ae50e653d1321151a9f9c9809d660958c}\label{classblaze_1_1ForwardRenderer_ae50e653d1321151a9f9c9809d660958c}} 
+const Vk\+Render\+Pass \& {\bfseries get\+\_\+render\+Pass} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_afb5a01c431387ae87f2b69f1a95faa0a}\label{classblaze_1_1ForwardRenderer_afb5a01c431387ae87f2b69f1a95faa0a}} 
+const Vk\+Pipeline \& {\bfseries get\+\_\+graphics\+Pipeline} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_aa13a6c13d0688cafd96aecf19dce466c}\label{classblaze_1_1ForwardRenderer_aa13a6c13d0688cafd96aecf19dce466c}} 
+size\+\_\+t {\bfseries get\+\_\+framebuffer\+Count} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a269ca18ba0efb64bb895a9c179a9c4e0}\label{classblaze_1_1ForwardRenderer_a269ca18ba0efb64bb895a9c179a9c4e0}} 
+const Vk\+Framebuffer \& {\bfseries get\+\_\+framebuffer} (size\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a39079fb0955406b7d080a8768a518d82}\label{classblaze_1_1ForwardRenderer_a39079fb0955406b7d080a8768a518d82}} 
+size\+\_\+t {\bfseries get\+\_\+command\+Buffer\+Count} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ae55781002a3ab027efc89513559bd848}\label{classblaze_1_1ForwardRenderer_ae55781002a3ab027efc89513559bd848}} 
+const Vk\+Command\+Buffer \& {\bfseries get\+\_\+command\+Buffer} (size\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a81ce45e3acc00ec286bfa2fa17d0bc4a}\label{classblaze_1_1ForwardRenderer_a81ce45e3acc00ec286bfa2fa17d0bc4a}} 
+const Vk\+Descriptor\+Set\+Layout \& {\bfseries get\+\_\+ubo\+Layout} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_af15b7613cd44e32ef27128766eaa5fc5}\label{classblaze_1_1ForwardRenderer_af15b7613cd44e32ef27128766eaa5fc5}} 
+const Vk\+Descriptor\+Set\+Layout \& {\bfseries get\+\_\+material\+Layout} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a76cad25fcb3b9f08e0fa257c9f2b9e94}\label{classblaze_1_1ForwardRenderer_a76cad25fcb3b9f08e0fa257c9f2b9e94}} 
+const Vk\+Descriptor\+Set\+Layout \& {\bfseries get\+\_\+environment\+Layout} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a68211e939eaba2537bc51df33cc35823}\label{classblaze_1_1ForwardRenderer_a68211e939eaba2537bc51df33cc35823}} 
+\hyperlink{classblaze_1_1LightSystem}{Light\+System} \& {\bfseries get\+\_\+light\+System} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a9dab699dc44eb3b2fb21fe4d1c55f04b}\label{classblaze_1_1ForwardRenderer_a9dab699dc44eb3b2fb21fe4d1c55f04b}} 
+Vk\+Device {\bfseries get\+\_\+device} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ad650c175a5b4d01fbae664dc7923fba2}\label{classblaze_1_1ForwardRenderer_ad650c175a5b4d01fbae664dc7923fba2}} 
+Vk\+Physical\+Device {\bfseries get\+\_\+physical\+Device} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_adc1a5b6c9a65095ff8522700299bf01f}\label{classblaze_1_1ForwardRenderer_adc1a5b6c9a65095ff8522700299bf01f}} 
+Vk\+Queue {\bfseries get\+\_\+transfer\+Queue} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a621f7347a28af51ab7cd058a0d87526d}\label{classblaze_1_1ForwardRenderer_a621f7347a28af51ab7cd058a0d87526d}} 
+Vk\+Command\+Pool {\bfseries get\+\_\+transfer\+Command\+Pool} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a4e4c901e8abac21a3004cb21efe76ffa}\label{classblaze_1_1ForwardRenderer_a4e4c901e8abac21a3004cb21efe76ffa}} 
+const \hyperlink{classblaze_1_1Context}{Context} \& {\bfseries get\+\_\+context} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Setters}\par
+{\em Setters for various properties. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_aa3efcc09e6fa7bd7d24852e1604dc74a}\label{classblaze_1_1ForwardRenderer_aa3efcc09e6fa7bd7d24852e1604dc74a}} 
+void {\bfseries set\+\_\+environment\+Descriptor} (Vk\+Descriptor\+Set env\+DS)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a350c02de6852b53cd716d2bd658ae6ba}\label{classblaze_1_1ForwardRenderer_a350c02de6852b53cd716d2bd658ae6ba}} 
+void {\bfseries set\+\_\+skybox\+Command} (const Render\+Command \&cmd)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ad803f802a4c790f3eace6478b40ada10}\label{classblaze_1_1ForwardRenderer_ad803f802a4c790f3eace6478b40ada10}} 
+void {\bfseries set\+\_\+camera\+U\+BO} (const \hyperlink{structblaze_1_1CameraUBlock}{Camera\+U\+Block} \&ubo)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_aee7c41ff828dca60051e49b512621bb4}\label{classblaze_1_1ForwardRenderer_aee7c41ff828dca60051e49b512621bb4}} 
+void {\bfseries set\+\_\+camera} (\hyperlink{classblaze_1_1Camera}{Camera} $\ast$cam)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a9859c881ae01d21f8b9be2660d8b02bc}\label{classblaze_1_1ForwardRenderer_a9859c881ae01d21f8b9be2660d8b02bc}} 
+void {\bfseries set\+\_\+light\+U\+BO} (const \hyperlink{structblaze_1_1LightsUBlock}{Lights\+U\+Block} \&ubo)
+\item 
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_ac70cb2eea41211cf964e883cfe663e9b}\label{classblaze_1_1ForwardRenderer_ac70cb2eea41211cf964e883cfe663e9b}} 
+void {\bfseries set\+\_\+settings\+U\+BO} (const \hyperlink{structblaze_1_1SettingsUBlock}{Settings\+U\+Block} \&ubo)
+\end{DoxyCompactItemize}
+\end{Indent}
+\subsection*{Additional Inherited Members}
+
+
+\subsection{Detailed Description}
+Contains entire rendering logic. 
+
+This class contains the main drawing logic and all the related components. This is a forward renderer that supports P\+BR rendering. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_abf0b80128aa61686461b3069004b65a9}\label{classblaze_1_1ForwardRenderer_abf0b80128aa61686461b3069004b65a9}} 
+\index{blaze\+::\+Forward\+Renderer@{blaze\+::\+Forward\+Renderer}!Forward\+Renderer@{Forward\+Renderer}}
+\index{Forward\+Renderer@{Forward\+Renderer}!blaze\+::\+Forward\+Renderer@{blaze\+::\+Forward\+Renderer}}
+\subsubsection{\texorpdfstring{Forward\+Renderer()}{ForwardRenderer()}}
+{\footnotesize\ttfamily blaze\+::\+Forward\+Renderer\+::\+Forward\+Renderer (\begin{DoxyParamCaption}\item[{G\+L\+F\+Wwindow $\ast$}]{window,  }\item[{bool}]{enable\+Validation\+Layers = {\ttfamily true} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Actual constructor. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em window} & The G\+L\+FW window pointer. \\
+\hline
+{\em enable\+Validation\+Layers} & Enable for Debugging. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1ForwardRenderer_a78175e4b430f0046db968f8476ec121c}\label{classblaze_1_1ForwardRenderer_a78175e4b430f0046db968f8476ec121c}} 
+\index{blaze\+::\+Forward\+Renderer@{blaze\+::\+Forward\+Renderer}!complete@{complete}}
+\index{complete@{complete}!blaze\+::\+Forward\+Renderer@{blaze\+::\+Forward\+Renderer}}
+\subsubsection{\texorpdfstring{complete()}{complete()}}
+{\footnotesize\ttfamily blaze\+::\+Forward\+Renderer\+::complete (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+
+
+Checks if the renderer is complete. 
+
+A \hyperlink{classblaze_1_1ForwardRenderer}{Forward\+Renderer} is considered complete if and only if every member is initialized.
+
+\begin{DoxyReturn}{Returns}
+{\itshape true} If the renderer sucessfully initialized 
+
+{\itshape false} If the renderer was empty or had initialization errors. 
+\end{DoxyReturn}
+
+
+Implements \hyperlink{classblaze_1_1Renderer}{blaze\+::\+Renderer}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/rendering/Forward\+Renderer.\+hpp\item 
+Blaze/rendering/Forward\+Renderer.\+cpp\end{DoxyCompactItemize}

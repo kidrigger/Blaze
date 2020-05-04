@@ -1,0 +1,121 @@
+\hypertarget{classblaze_1_1BaseUBO}{}\section{blaze\+:\+:Base\+U\+BO Class Reference}
+\label{classblaze_1_1BaseUBO}\index{blaze\+::\+Base\+U\+BO@{blaze\+::\+Base\+U\+BO}}
+
+
+The base class for all U\+B\+Os.  
+
+
+
+
+{\ttfamily \#include $<$Uniform\+Buffer.\+hpp$>$}
+
+
+
+Inheritance diagram for blaze\+:\+:Base\+U\+BO\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=312pt]{classblaze_1_1BaseUBO__inherit__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a09e8e765c69b703b4479b919ff5862de}\label{classblaze_1_1BaseUBO_a09e8e765c69b703b4479b919ff5862de}} 
+\hyperlink{classblaze_1_1BaseUBO_a09e8e765c69b703b4479b919ff5862de}{Base\+U\+BO} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1BaseUBO_abc55449d131e9bb970f057ee129d3728}{Base\+U\+BO} (const \hyperlink{classblaze_1_1Context}{Context} $\ast$context, size\+\_\+t size) noexcept
+\begin{DoxyCompactList}\small\item\em Main Constructor. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_af9d9c0c2ddf95090773412488c14fa9e}\label{classblaze_1_1BaseUBO_af9d9c0c2ddf95090773412488c14fa9e}} 
+Vk\+Descriptor\+Buffer\+Info \hyperlink{classblaze_1_1BaseUBO_af9d9c0c2ddf95090773412488c14fa9e}{get\+\_\+descriptor\+Info} () const
+\begin{DoxyCompactList}\small\item\em Creates a new Vk\+Descriptor\+Buffer\+Info for the \hyperlink{classblaze_1_1UBO}{U\+BO}. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a4a07203396a3ac3b29eca729149de8ca}\label{classblaze_1_1BaseUBO_a4a07203396a3ac3b29eca729149de8ca}} 
+virtual \hyperlink{classblaze_1_1BaseUBO_a4a07203396a3ac3b29eca729149de8ca}{$\sim$\+Base\+U\+BO} ()
+\begin{DoxyCompactList}\small\item\em Destructor. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors.}\par
+{\em Move only, copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_aa4e8c0e3f7e7fd07dc58683813e5d033}\label{classblaze_1_1BaseUBO_aa4e8c0e3f7e7fd07dc58683813e5d033}} 
+{\bfseries Base\+U\+BO} (\hyperlink{classblaze_1_1BaseUBO}{Base\+U\+BO} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a6f81e5b988d6693ff9ac377b7e2d11ea}\label{classblaze_1_1BaseUBO_a6f81e5b988d6693ff9ac377b7e2d11ea}} 
+\hyperlink{classblaze_1_1BaseUBO}{Base\+U\+BO} \& {\bfseries operator=} (\hyperlink{classblaze_1_1BaseUBO}{Base\+U\+BO} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_abc3f978bfb601096b6d0014de995ee42}\label{classblaze_1_1BaseUBO_abc3f978bfb601096b6d0014de995ee42}} 
+{\bfseries Base\+U\+BO} (const \hyperlink{classblaze_1_1BaseUBO}{Base\+U\+BO} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_af29582dab41fdc03211a425ab2c09427}\label{classblaze_1_1BaseUBO_af29582dab41fdc03211a425ab2c09427}} 
+\hyperlink{classblaze_1_1BaseUBO}{Base\+U\+BO} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1BaseUBO}{Base\+U\+BO} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classblaze_1_1BaseUBO_a76859304045ec034ea2cffe68ea1db65}{write\+Data} (const void $\ast$data, size\+\_\+t size)
+\begin{DoxyCompactList}\small\item\em Writes data to the buffer. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a1a8439adc16530d7630ba918251f3f74}\label{classblaze_1_1BaseUBO_a1a8439adc16530d7630ba918251f3f74}} 
+Vk\+Buffer {\bfseries buffer} \{V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a14f3711ae432dc6d3dcfc9cc26547152}\label{classblaze_1_1BaseUBO_a14f3711ae432dc6d3dcfc9cc26547152}} 
+Vma\+Allocation {\bfseries allocation} \{V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a880896ef02c52bb2d7e4ddd566cd9cab}\label{classblaze_1_1BaseUBO_a880896ef02c52bb2d7e4ddd566cd9cab}} 
+Vma\+Allocator {\bfseries allocator} \{V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE\}
+\item 
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a8e0a6327bf61125c790d5fc036fcef62}\label{classblaze_1_1BaseUBO_a8e0a6327bf61125c790d5fc036fcef62}} 
+size\+\_\+t {\bfseries size} \{0\}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+The base class for all U\+B\+Os. 
+
+The type independent size dependent generic class to implement a buffer for uniforms. Mostly not to be used directly, but extended by a type safe derived class. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_abc55449d131e9bb970f057ee129d3728}\label{classblaze_1_1BaseUBO_abc55449d131e9bb970f057ee129d3728}} 
+\index{blaze\+::\+Base\+U\+BO@{blaze\+::\+Base\+U\+BO}!Base\+U\+BO@{Base\+U\+BO}}
+\index{Base\+U\+BO@{Base\+U\+BO}!blaze\+::\+Base\+U\+BO@{blaze\+::\+Base\+U\+BO}}
+\subsubsection{\texorpdfstring{Base\+U\+B\+O()}{BaseUBO()}}
+{\footnotesize\ttfamily blaze\+::\+Base\+U\+B\+O\+::\+Base\+U\+BO (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} $\ast$}]{context,  }\item[{size\+\_\+t}]{size }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Main Constructor. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & Pointer to the \hyperlink{classblaze_1_1Context}{Context} in use. \\
+\hline
+{\em size} & The size of the actual buffer to allocate. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1BaseUBO_a76859304045ec034ea2cffe68ea1db65}\label{classblaze_1_1BaseUBO_a76859304045ec034ea2cffe68ea1db65}} 
+\index{blaze\+::\+Base\+U\+BO@{blaze\+::\+Base\+U\+BO}!write\+Data@{write\+Data}}
+\index{write\+Data@{write\+Data}!blaze\+::\+Base\+U\+BO@{blaze\+::\+Base\+U\+BO}}
+\subsubsection{\texorpdfstring{write\+Data()}{writeData()}}
+{\footnotesize\ttfamily void blaze\+::\+Base\+U\+B\+O\+::write\+Data (\begin{DoxyParamCaption}\item[{const void $\ast$}]{data,  }\item[{size\+\_\+t}]{size }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Writes data to the buffer. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em data} & The pointer to the data to write into buffer. \\
+\hline
+{\em size} & The size of the data to write into the buffer. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/core/Uniform\+Buffer.\+hpp\item 
+Blaze/core/Uniform\+Buffer.\+cpp\end{DoxyCompactItemize}

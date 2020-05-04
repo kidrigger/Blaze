@@ -12,6 +12,7 @@ namespace blaze
 {
 /**
  * @class Camera
+ *
  * @brief Utility class enclosing the UBO and associated calculations.
  */
 class Camera
@@ -71,7 +72,7 @@ public:
 	/**
 	 * @brief Rotates the camera to face the given direction.
 	 *
-	 * @param direction The direction to look into.
+	 * @param dir The direction to look into.
 	 */
 	void lookTo(const glm::vec3& dir)
 	{

@@ -1,0 +1,9 @@
+<map id="SpvReflectTypeDescription" name="SpvReflectTypeDescription">
+<area shape="rect" id="node2" href="$structSpvReflectTypeDescription_1_1Traits.html" title="SpvReflectTypeDescription\l::Traits" alt="" coords="532,49,715,90"/>
+<area shape="rect" id="node3" href="$structSpvReflectImageTraits.html" title="SpvReflectImageTraits" alt="" coords="271,5,427,32"/>
+<area shape="rect" id="node4" href="$structSpvReflectArrayTraits.html" title="SpvReflectArrayTraits" alt="" coords="273,56,424,83"/>
+<area shape="rect" id="node5" href="$structSpvReflectNumericTraits.html" title="SpvReflectNumericTraits" alt="" coords="264,107,433,133"/>
+<area shape="rect" id="node6" href="$structSpvReflectNumericTraits_1_1Scalar.html" title="SpvReflectNumericTraits\l::Scalar" alt="" coords="5,34,175,75"/>
+<area shape="rect" id="node7" href="$structSpvReflectNumericTraits_1_1Matrix.html" title="SpvReflectNumericTraits\l::Matrix" alt="" coords="5,99,175,141"/>
+<area shape="rect" id="node8" href="$structSpvReflectNumericTraits_1_1Vector.html" title="SpvReflectNumericTraits\l::Vector" alt="" coords="5,165,175,206"/>
+</map>

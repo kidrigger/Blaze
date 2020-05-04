@@ -1,0 +1,77 @@
+Physical devices in Vulkan support various combinations of memory heaps and types. Help with choosing correct and optimal memory type for your specific resource is one of the key features of this library. You can use it by filling appropriate members of \hyperlink{structVmaAllocationCreateInfo}{Vma\+Allocation\+Create\+Info} structure, as described below. You can also combine multiple methods.
+
+
+\begin{DoxyEnumerate}
+\item If you just want to find memory type index that meets your requirements, you can use function\+: vma\+Find\+Memory\+Type\+Index(), vma\+Find\+Memory\+Type\+Index\+For\+Buffer\+Info(), vma\+Find\+Memory\+Type\+Index\+For\+Image\+Info().
+\item If you want to allocate a region of device memory without association with any specific image or buffer, you can use function vma\+Allocate\+Memory(). Usage of this function is not recommended and usually not needed. vma\+Allocate\+Memory\+Pages() function is also provided for creating multiple allocations at once, which may be useful for sparse binding.
+\item If you already have a buffer or an image created, you want to allocate memory for it and then you will bind it yourself, you can use function vma\+Allocate\+Memory\+For\+Buffer(), vma\+Allocate\+Memory\+For\+Image(). For binding you should use functions\+: vma\+Bind\+Buffer\+Memory(), vma\+Bind\+Image\+Memory() or their extended versions\+: vma\+Bind\+Buffer\+Memory2(), vma\+Bind\+Image\+Memory2().
+\item If you want to create a buffer or an image, allocate memory for it and bind them together, all in one call, you can use function vma\+Create\+Buffer(), vma\+Create\+Image(). This is the easiest and recommended way to use this library.
+\end{DoxyEnumerate}
+
+When using 3. or 4., the library internally queries Vulkan for memory types supported for that buffer or image (function {\ttfamily vk\+Get\+Buffer\+Memory\+Requirements()}) and uses only one of these types.
+
+If no memory type can be found that meets all the requirements, these functions return {\ttfamily V\+K\+\_\+\+E\+R\+R\+O\+R\+\_\+\+F\+E\+A\+T\+U\+R\+E\+\_\+\+N\+O\+T\+\_\+\+P\+R\+E\+S\+E\+NT}.
+
+You can leave \hyperlink{structVmaAllocationCreateInfo}{Vma\+Allocation\+Create\+Info} structure completely filled with zeros. It means no requirements are specified for memory type. It is valid, although not very useful.\hypertarget{choosing_memory_type_choosing_memory_type_usage}{}\section{Usage}\label{choosing_memory_type_choosing_memory_type_usage}
+The easiest way to specify memory requirements is to fill member \hyperlink{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}{Vma\+Allocation\+Create\+Info\+::usage} using one of the values of enum \#\+Vma\+Memory\+Usage. It defines high level, common usage types. For more details, see description of this enum.
+
+For example, if you want to create a uniform buffer that will be filled using transfer only once or infrequently and used for rendering every frame, you can do it using following code\+:
+
+
+\begin{DoxyCode}
+VkBufferCreateInfo bufferInfo = \{ VK\_STRUCTURE\_TYPE\_BUFFER\_CREATE\_INFO \};
+bufferInfo.size = 65536;
+bufferInfo.usage = VK\_BUFFER\_USAGE\_UNIFORM\_BUFFER\_BIT | VK\_BUFFER\_USAGE\_TRANSFER\_DST\_BIT;
+
+\hyperlink{structVmaAllocationCreateInfo}{VmaAllocationCreateInfo} allocInfo = \{\};
+allocInfo.\hyperlink{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}{usage} = VMA\_MEMORY\_USAGE\_GPU\_ONLY;
+
+VkBuffer buffer;
+\hyperlink{structVmaAllocation}{VmaAllocation} allocation;
+vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, \textcolor{keyword}{nullptr});
+\end{DoxyCode}
+\hypertarget{choosing_memory_type_choosing_memory_type_required_preferred_flags}{}\section{Required and preferred flags}\label{choosing_memory_type_choosing_memory_type_required_preferred_flags}
+You can specify more detailed requirements by filling members \hyperlink{structVmaAllocationCreateInfo_a9166390303ff42d783305bc31c2b6b90}{Vma\+Allocation\+Create\+Info\+::required\+Flags} and \hyperlink{structVmaAllocationCreateInfo_a7fe8d81a1ad10b2a2faacacee5b15d6d}{Vma\+Allocation\+Create\+Info\+::preferred\+Flags} with a combination of bits from enum {\ttfamily Vk\+Memory\+Property\+Flags}. For example, if you want to create a buffer that will be persistently mapped on host (so it must be {\ttfamily H\+O\+S\+T\+\_\+\+V\+I\+S\+I\+B\+LE}) and preferably will also be {\ttfamily H\+O\+S\+T\+\_\+\+C\+O\+H\+E\+R\+E\+NT} and {\ttfamily H\+O\+S\+T\+\_\+\+C\+A\+C\+H\+ED}, use following code\+:
+
+
+\begin{DoxyCode}
+\hyperlink{structVmaAllocationCreateInfo}{VmaAllocationCreateInfo} allocInfo = \{\};
+allocInfo.\hyperlink{structVmaAllocationCreateInfo_a9166390303ff42d783305bc31c2b6b90}{requiredFlags} = VK\_MEMORY\_PROPERTY\_HOST\_VISIBLE\_BIT;
+allocInfo.\hyperlink{structVmaAllocationCreateInfo_a7fe8d81a1ad10b2a2faacacee5b15d6d}{preferredFlags} = VK\_MEMORY\_PROPERTY\_HOST\_COHERENT\_BIT | 
+      VK\_MEMORY\_PROPERTY\_HOST\_CACHED\_BIT;
+allocInfo.\hyperlink{structVmaAllocationCreateInfo_add09658ac14fe290ace25470ddd6d41b}{flags} = VMA\_ALLOCATION\_CREATE\_MAPPED\_BIT;
+
+VkBuffer buffer;
+\hyperlink{structVmaAllocation}{VmaAllocation} allocation;
+vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, \textcolor{keyword}{nullptr});
+\end{DoxyCode}
+
+
+A memory type is chosen that has all the required flags and as many preferred flags set as possible.
+
+If you use \hyperlink{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}{Vma\+Allocation\+Create\+Info\+::usage}, it is just internally converted to a set of required and preferred flags.\hypertarget{choosing_memory_type_choosing_memory_type_explicit_memory_types}{}\section{Explicit memory types}\label{choosing_memory_type_choosing_memory_type_explicit_memory_types}
+If you inspected memory types available on the physical device and you have a preference for memory types that you want to use, you can fill member \hyperlink{structVmaAllocationCreateInfo_a3bf940c0271d85d6ba32a4d820075055}{Vma\+Allocation\+Create\+Info\+::memory\+Type\+Bits}. It is a bit mask, where each bit set means that a memory type with that index is allowed to be used for the allocation. Special value 0, just like {\ttfamily U\+I\+N\+T32\+\_\+\+M\+AX}, means there are no restrictions to memory type index.
+
+Please note that this member is N\+OT just a memory type index. Still you can use it to choose just one, specific memory type. For example, if you already determined that your buffer should be created in memory type 2, use following code\+:
+
+
+\begin{DoxyCode}
+uint32\_t memoryTypeIndex = 2;
+
+\hyperlink{structVmaAllocationCreateInfo}{VmaAllocationCreateInfo} allocInfo = \{\};
+allocInfo.\hyperlink{structVmaAllocationCreateInfo_a3bf940c0271d85d6ba32a4d820075055}{memoryTypeBits} = 1u << memoryTypeIndex;
+
+VkBuffer buffer;
+\hyperlink{structVmaAllocation}{VmaAllocation} allocation;
+vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, \textcolor{keyword}{nullptr});
+\end{DoxyCode}
+\hypertarget{choosing_memory_type_choosing_memory_type_custom_memory_pools}{}\section{Custom memory pools}\label{choosing_memory_type_choosing_memory_type_custom_memory_pools}
+If you allocate from custom memory pool, all the ways of specifying memory requirements described above are not applicable and the aforementioned members of \hyperlink{structVmaAllocationCreateInfo}{Vma\+Allocation\+Create\+Info} structure are ignored. Memory type is selected explicitly when creating the pool and then used to make all the allocations from that pool. For further details, see \hyperlink{custom_memory_pools}{Custom memory pools}.\hypertarget{choosing_memory_type_choosing_memory_type_dedicated_allocations}{}\section{Dedicated allocations}\label{choosing_memory_type_choosing_memory_type_dedicated_allocations}
+Memory for allocations is reserved out of larger block of {\ttfamily Vk\+Device\+Memory} allocated from Vulkan internally. That\textquotesingle{}s the main feature of this whole library. You can still request a separate memory block to be created for an allocation, just like you would do in a trivial solution without using any allocator. In that case, a buffer or image is always bound to that memory at offset 0. This is called a \char`\"{}dedicated allocation\char`\"{}. You can explicitly request it by using flag \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+D\+E\+D\+I\+C\+A\+T\+E\+D\+\_\+\+M\+E\+M\+O\+R\+Y\+\_\+\+B\+IT. The library can also internally decide to use dedicated allocation in some cases, e.\+g.\+:
+
+
+\begin{DoxyItemize}
+\item When the size of the allocation is large.
+\item When \hyperlink{vk_khr_dedicated_allocation}{V\+K\+\_\+\+K\+H\+R\+\_\+dedicated\+\_\+allocation} extension is enabled and it reports that dedicated allocation is required or recommended for the resource.
+\item When allocation of next big memory block fails due to not enough device memory, but allocation with the exact requested size succeeds. 
+\end{DoxyItemize}

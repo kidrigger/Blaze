@@ -1,0 +1,7 @@
+var searchData=
+[
+  ['ubo',['UBO',['../classblaze_1_1UBO.html#a23097bbba43a080b7ea2b99781896e6a',1,'blaze::UBO::UBO() noexcept'],['../classblaze_1_1UBO.html#a3df93d52c42c21080258f142862490bd',1,'blaze::UBO::UBO(const Context *context, const T &amp;data) noexcept']]],
+  ['unmanaged',['Unmanaged',['../classblaze_1_1util_1_1Unmanaged.html#a5d9bf18bd244088eacfbd9222ffe4443',1,'blaze::util::Unmanaged::Unmanaged() noexcept'],['../classblaze_1_1util_1_1Unmanaged.html#a1cd09eebfad8e92f75798127fb783f9d',1,'blaze::util::Unmanaged::Unmanaged(T handle) noexcept']]],
+  ['unmanagedvector',['UnmanagedVector',['../classblaze_1_1util_1_1UnmanagedVector.html#ae2e722d08c5247bceff137c73e7447d6',1,'blaze::util::UnmanagedVector::UnmanagedVector() noexcept'],['../classblaze_1_1util_1_1UnmanagedVector.html#a3a2030e5b1f1e1b3fd7d083d2d17d798',1,'blaze::util::UnmanagedVector::UnmanagedVector(const std::vector&lt; T &gt; &amp;handles) noexcept'],['../classblaze_1_1util_1_1UnmanagedVector.html#a13a25be3b436be664beb83b13c3f1378',1,'blaze::util::UnmanagedVector::UnmanagedVector(std::vector&lt; T &gt; &amp;&amp;handles) noexcept']]],
+  ['update',['update',['../classblaze_1_1Model.html#a622eb89c06d2adbff32a65c9cf9ba6ce',1,'blaze::Model::update()'],['../classblaze_1_1Model2.html#a05ebcffe0281b9cba1518fd9406e6911',1,'blaze::Model2::update()'],['../structblaze_1_1Node.html#aae2c0b30b1abb4b0314d2cabdbb867ed',1,'blaze::Node::update()'],['../classblaze_1_1LightSystem.html#ab69f30e8484a49a116c8d5333f77b146',1,'blaze::LightSystem::update()']]]
+];

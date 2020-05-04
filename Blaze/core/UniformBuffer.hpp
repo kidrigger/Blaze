@@ -8,6 +8,13 @@
 
 namespace blaze
 {
+/**
+ * @brief The base class for all UBOs
+ *
+ * The type independent size dependent generic class to implement a buffer for
+ * uniforms.
+ * Mostly not to be used directly, but extended by a type safe derived class.
+ */
 class BaseUBO
 {
 protected:
@@ -17,10 +24,19 @@ protected:
 	size_t size{0};
 
 public:
+    /**
+     * @brief Default Constructor.
+     */
 	BaseUBO() noexcept
 	{
 	}
 
+    /**
+     * @brief Main Constructor.
+     *
+     * @param context Pointer to the Context in use.
+     * @param size The size of the actual buffer to allocate.
+     */
 	BaseUBO(const Context* context, size_t size) noexcept;
 
 	/**
@@ -49,9 +65,18 @@ public:
 	 * @}
 	 */
 
-	virtual ~BaseUBO();
+    /**
+     * @brief Destructor
+     */
+    virtual ~BaseUBO();
 
 protected:
+    /**
+     * @brief Writes data to the buffer.
+     *
+     * @param data The pointer to the data to write into buffer.
+     * @param size The size of the data to write into the buffer.
+     */
 	void writeData(const void* data, size_t size);
 };
 
@@ -67,8 +92,6 @@ class UBO : public BaseUBO
 {
 public:
 	/**
-	 * @fn UBO()
-	 *
 	 * @brief Default Constructor.
 	 */
 	UBO() noexcept : BaseUBO()
@@ -76,11 +99,9 @@ public:
 	}
 
 	/**
-	 * @fn UBO(const Context& context, const T& data)
-	 *
 	 * @brief Main constructor of the class.
 	 *
-	 * @param context The current Vulkan Context.
+	 * @param context Pointer to the current Vulkan Context.
 	 * @param data The data object of type T to store.
 	 */
 	UBO(const Context* context, const T& data) noexcept : BaseUBO(context, sizeof(data))
@@ -89,11 +110,8 @@ public:
 	}
 
 	/**
-	 * @fn write(const Context& context, const T& data)
-	 *
 	 * @brief Writes the new data to the uniform buffer.
 	 *
-	 * @param context The Vulkan Context in use.
 	 * @param data The data to write to the uniform buffer.
 	 */
 	void write(const T& data)

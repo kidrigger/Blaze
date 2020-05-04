@@ -1,0 +1,85 @@
+\hypertarget{structtinygltf_1_1Parameter}{}\section{tinygltf\+:\+:Parameter Struct Reference}
+\label{structtinygltf_1_1Parameter}\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{structtinygltf_1_1Parameter_a042b94ab31b2a1a76956765cdf560a87}{Texture\+Index} () const
+\item 
+int \hyperlink{structtinygltf_1_1Parameter_abc90421a12bb284886450d206d1a8a59}{Texture\+Tex\+Coord} () const
+\item 
+double \hyperlink{structtinygltf_1_1Parameter_a4e50edb053c78f7c947578ad5c562cd5}{Texture\+Scale} () const
+\item 
+double \hyperlink{structtinygltf_1_1Parameter_a8c3d0b034b3a7912363f8fd13f0f2a5c}{Texture\+Strength} () const
+\item 
+double \hyperlink{structtinygltf_1_1Parameter_adc4de712403e8e7cfab1340409b103b8}{Factor} () const
+\item 
+Color\+Value \hyperlink{structtinygltf_1_1Parameter_abb8f9eafdac3746a5858ca89612e2516}{Color\+Factor} () const
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_a1c4588916ae9a66a7d88a363d7386553}\label{structtinygltf_1_1Parameter_a1c4588916ae9a66a7d88a363d7386553}} 
+bool {\bfseries operator==} (const \hyperlink{structtinygltf_1_1Parameter}{Parameter} \&) const
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_afc435ef3a415e761bf6c9818f24eca3f}\label{structtinygltf_1_1Parameter_afc435ef3a415e761bf6c9818f24eca3f}} 
+bool {\bfseries bool\+\_\+value} = false
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_aabd39c19961f29867ed056654ebfe230}\label{structtinygltf_1_1Parameter_aabd39c19961f29867ed056654ebfe230}} 
+bool {\bfseries has\+\_\+number\+\_\+value} = false
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_ac506199702869bd7ae4df72c57324d8a}\label{structtinygltf_1_1Parameter_ac506199702869bd7ae4df72c57324d8a}} 
+std\+::string {\bfseries string\+\_\+value}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_a5c133aced84fa8e0a1b2c97ca74d865d}\label{structtinygltf_1_1Parameter_a5c133aced84fa8e0a1b2c97ca74d865d}} 
+std\+::vector$<$ double $>$ {\bfseries number\+\_\+array}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_a3da37eec32874272dcdb55ea0cb4a650}\label{structtinygltf_1_1Parameter_a3da37eec32874272dcdb55ea0cb4a650}} 
+std\+::map$<$ std\+::string, double $>$ {\bfseries json\+\_\+double\+\_\+value}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_a445b16f857b4f4386446f0e6da5fe17a}\label{structtinygltf_1_1Parameter_a445b16f857b4f4386446f0e6da5fe17a}} 
+double {\bfseries number\+\_\+value} = 0.\+0
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{structtinygltf_1_1Parameter_abb8f9eafdac3746a5858ca89612e2516}\label{structtinygltf_1_1Parameter_abb8f9eafdac3746a5858ca89612e2516}} 
+\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}!Color\+Factor@{Color\+Factor}}
+\index{Color\+Factor@{Color\+Factor}!tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsubsection{\texorpdfstring{Color\+Factor()}{ColorFactor()}}
+{\footnotesize\ttfamily Color\+Value tinygltf\+::\+Parameter\+::\+Color\+Factor (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the color of a material Returned value is only valid if the parameter represent a texture from a material \mbox{\Hypertarget{structtinygltf_1_1Parameter_adc4de712403e8e7cfab1340409b103b8}\label{structtinygltf_1_1Parameter_adc4de712403e8e7cfab1340409b103b8}} 
+\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}!Factor@{Factor}}
+\index{Factor@{Factor}!tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsubsection{\texorpdfstring{Factor()}{Factor()}}
+{\footnotesize\ttfamily double tinygltf\+::\+Parameter\+::\+Factor (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\hyperlink{structtinygltf_1_1Material}{Material} factor, like the roughness or metalness of a material Returned value is only valid if the parameter represent a texture from a material \mbox{\Hypertarget{structtinygltf_1_1Parameter_a042b94ab31b2a1a76956765cdf560a87}\label{structtinygltf_1_1Parameter_a042b94ab31b2a1a76956765cdf560a87}} 
+\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}!Texture\+Index@{Texture\+Index}}
+\index{Texture\+Index@{Texture\+Index}!tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsubsection{\texorpdfstring{Texture\+Index()}{TextureIndex()}}
+{\footnotesize\ttfamily int tinygltf\+::\+Parameter\+::\+Texture\+Index (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the index of a texture if this \hyperlink{structtinygltf_1_1Parameter}{Parameter} is a texture map. Returned value is only valid if the parameter represent a texture from a material \mbox{\Hypertarget{structtinygltf_1_1Parameter_a4e50edb053c78f7c947578ad5c562cd5}\label{structtinygltf_1_1Parameter_a4e50edb053c78f7c947578ad5c562cd5}} 
+\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}!Texture\+Scale@{Texture\+Scale}}
+\index{Texture\+Scale@{Texture\+Scale}!tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsubsection{\texorpdfstring{Texture\+Scale()}{TextureScale()}}
+{\footnotesize\ttfamily double tinygltf\+::\+Parameter\+::\+Texture\+Scale (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the scale of a texture if this \hyperlink{structtinygltf_1_1Parameter}{Parameter} is a normal texture map. Returned value is only valid if the parameter represent a normal texture from a material \mbox{\Hypertarget{structtinygltf_1_1Parameter_a8c3d0b034b3a7912363f8fd13f0f2a5c}\label{structtinygltf_1_1Parameter_a8c3d0b034b3a7912363f8fd13f0f2a5c}} 
+\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}!Texture\+Strength@{Texture\+Strength}}
+\index{Texture\+Strength@{Texture\+Strength}!tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsubsection{\texorpdfstring{Texture\+Strength()}{TextureStrength()}}
+{\footnotesize\ttfamily double tinygltf\+::\+Parameter\+::\+Texture\+Strength (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the strength of a texture if this \hyperlink{structtinygltf_1_1Parameter}{Parameter} is a an occlusion map. Returned value is only valid if the parameter represent an occlusion map from a material \mbox{\Hypertarget{structtinygltf_1_1Parameter_abc90421a12bb284886450d206d1a8a59}\label{structtinygltf_1_1Parameter_abc90421a12bb284886450d206d1a8a59}} 
+\index{tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}!Texture\+Tex\+Coord@{Texture\+Tex\+Coord}}
+\index{Texture\+Tex\+Coord@{Texture\+Tex\+Coord}!tinygltf\+::\+Parameter@{tinygltf\+::\+Parameter}}
+\subsubsection{\texorpdfstring{Texture\+Tex\+Coord()}{TextureTexCoord()}}
+{\footnotesize\ttfamily int tinygltf\+::\+Parameter\+::\+Texture\+Tex\+Coord (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the index of a texture coordinate set if this \hyperlink{structtinygltf_1_1Parameter}{Parameter} is a texture map. Returned value is only valid if the parameter represent a texture from a material 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/thirdparty/gltf/tiny\+\_\+gltf.\+h\end{DoxyCompactItemize}

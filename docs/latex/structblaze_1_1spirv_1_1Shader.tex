@@ -1,0 +1,68 @@
+\hypertarget{structblaze_1_1spirv_1_1Shader}{}\section{blaze\+:\+:spirv\+:\+:Shader Struct Reference}
+\label{structblaze_1_1spirv_1_1Shader}\index{blaze\+::spirv\+::\+Shader@{blaze\+::spirv\+::\+Shader}}
+
+
+Collaboration diagram for blaze\+:\+:spirv\+:\+:Shader\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=330pt]{structblaze_1_1spirv_1_1Shader__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \hyperlink{structblaze_1_1spirv_1_1Shader_1_1PushConstant}{Push\+Constant}
+\item 
+struct \hyperlink{structblaze_1_1spirv_1_1Shader_1_1Set}{Set}
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a2d981cbb6738aefad91e9badb730cd1e}\label{structblaze_1_1spirv_1_1Shader_a2d981cbb6738aefad91e9badb730cd1e}} 
+bool {\bfseries valid} () const
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_ab64ee55b8c711d11fed9e527d1c785eb}\label{structblaze_1_1spirv_1_1Shader_ab64ee55b8c711d11fed9e527d1c785eb}} 
+\hyperlink{structblaze_1_1VertexInputFormat}{Vertex\+Input\+Format} {\bfseries vertex\+Input\+Format}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a8722e394db106c5ed51ca05e056d880b}\label{structblaze_1_1spirv_1_1Shader_a8722e394db106c5ed51ca05e056d880b}} 
+int {\bfseries fragment\+Outputs}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a82b2ed73c8589a54620e479162b8f41a}\label{structblaze_1_1spirv_1_1Shader_a82b2ed73c8589a54620e479162b8f41a}} 
+\hyperlink{structblaze_1_1spirv_1_1Shader_1_1PushConstant}{Push\+Constant} {\bfseries push\+Constant}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a6588c3eabc1b7e90e6e2b6533b7180d6}\label{structblaze_1_1spirv_1_1Shader_a6588c3eabc1b7e90e6e2b6533b7180d6}} 
+bool {\bfseries is\+Compute} = false
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_ae46b7d5db6c1f5243dc309337c113994}\label{structblaze_1_1spirv_1_1Shader_ae46b7d5db6c1f5243dc309337c113994}} 
+std\+::vector$<$ \hyperlink{structblaze_1_1spirv_1_1Shader_1_1Set}{Set} $>$ {\bfseries sets}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a103de1b45c2f19d4fb7d6698d36c4a96}\label{structblaze_1_1spirv_1_1Shader_a103de1b45c2f19d4fb7d6698d36c4a96}} 
+std\+::vector$<$ Set\+::\+Format\+ID $>$ {\bfseries set\+Formats}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a8f8466e238f04e9932ae956db352e39d}\label{structblaze_1_1spirv_1_1Shader_a8f8466e238f04e9932ae956db352e39d}} 
+std\+::vector$<$ Vk\+Pipeline\+Shader\+Stage\+Create\+Info $>$ {\bfseries pipeline\+Stages}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_af193b80af1de1276aeab7a30122f0c84}\label{structblaze_1_1spirv_1_1Shader_af193b80af1de1276aeab7a30122f0c84}} 
+std\+::vector$<$ vkw\+::\+Shader\+Module $>$ {\bfseries shader\+Modules}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_acc55ff4291f82c265e42db7ffbd2549c}\label{structblaze_1_1spirv_1_1Shader_acc55ff4291f82c265e42db7ffbd2549c}} 
+vkw\+::\+Pipeline\+Layout {\bfseries pipeline\+Layout}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a6bc8e60d9b3ae63f80e92f563508df00}\label{structblaze_1_1spirv_1_1Shader_a6bc8e60d9b3ae63f80e92f563508df00}} 
+std\+::map$<$ std\+::string, std\+::pair$<$ uint32\+\_\+t, uint32\+\_\+t $>$ $>$ {\bfseries uniform\+Locations}
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1spirv_1_1Shader_a7cd5e76e0aadd59a743317d722b404db}\label{structblaze_1_1spirv_1_1Shader_a7cd5e76e0aadd59a743317d722b404db}} 
+std\+::ostream \& {\bfseries operator$<$$<$} (std\+::ostream \&out, const \hyperlink{structblaze_1_1spirv_1_1Shader}{Shader} \&shader)
+\end{DoxyCompactItemize}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/spirv/Pipeline.\+hpp\end{DoxyCompactItemize}

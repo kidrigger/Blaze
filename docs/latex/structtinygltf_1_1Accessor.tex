@@ -1,0 +1,84 @@
+\hypertarget{structtinygltf_1_1Accessor}{}\section{tinygltf\+:\+:Accessor Struct Reference}
+\label{structtinygltf_1_1Accessor}\index{tinygltf\+::\+Accessor@{tinygltf\+::\+Accessor}}
+
+
+Collaboration diagram for tinygltf\+:\+:Accessor\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=173pt]{structtinygltf_1_1Accessor__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{structtinygltf_1_1Accessor_a31262158214af822389c28f026bcb8a2}{Byte\+Stride} (const \hyperlink{structtinygltf_1_1BufferView}{Buffer\+View} \&buffer\+View\+Object) const
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a6c06c2afd4e8f8c45f09b4444d474fa5}\label{structtinygltf_1_1Accessor_a6c06c2afd4e8f8c45f09b4444d474fa5}} 
+bool {\bfseries operator==} (const \hyperlink{structtinygltf_1_1Accessor}{tinygltf\+::\+Accessor} \&) const
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_afce5920dda7d6f84fcd0ba9069ae3dae}\label{structtinygltf_1_1Accessor_afce5920dda7d6f84fcd0ba9069ae3dae}} 
+int {\bfseries buffer\+View}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a1156fdba5758bd928f704a1f70b8c1c6}\label{structtinygltf_1_1Accessor_a1156fdba5758bd928f704a1f70b8c1c6}} 
+std\+::string {\bfseries name}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_ac46f5732b6142459c44c5fdcb49e5f78}\label{structtinygltf_1_1Accessor_ac46f5732b6142459c44c5fdcb49e5f78}} 
+size\+\_\+t {\bfseries byte\+Offset}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a7f47dbf9df5bd5cad949ab73cec0fd73}\label{structtinygltf_1_1Accessor_a7f47dbf9df5bd5cad949ab73cec0fd73}} 
+bool {\bfseries normalized}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a7ad1c52a8fe8f81759cf92e8a451965a}\label{structtinygltf_1_1Accessor_a7ad1c52a8fe8f81759cf92e8a451965a}} 
+int {\bfseries component\+Type}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_aeb077a151bb962bce762a8946834b835}\label{structtinygltf_1_1Accessor_aeb077a151bb962bce762a8946834b835}} 
+size\+\_\+t {\bfseries count}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_ad33d20b6f783b5fc5e8c6ff39c6ce34f}\label{structtinygltf_1_1Accessor_ad33d20b6f783b5fc5e8c6ff39c6ce34f}} 
+int {\bfseries type}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a7f5ef779e6e747d8fa1b2f86210915b2}\label{structtinygltf_1_1Accessor_a7f5ef779e6e747d8fa1b2f86210915b2}} 
+\hyperlink{classtinygltf_1_1Value}{Value} {\bfseries extras}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a05e287fec5cd3b69e6e19ccf9da7f467}\label{structtinygltf_1_1Accessor_a05e287fec5cd3b69e6e19ccf9da7f467}} 
+std\+::vector$<$ double $>$ {\bfseries min\+Values}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_ab17829246676304c6df50443f16a0a35}\label{structtinygltf_1_1Accessor_ab17829246676304c6df50443f16a0a35}} 
+std\+::vector$<$ double $>$ {\bfseries max\+Values}
+\item 
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a5da9c34429fa6e75e60e28e245835eaa}\label{structtinygltf_1_1Accessor_a5da9c34429fa6e75e60e28e245835eaa}} 
+\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+struct \{\\
+\>int {\bfseries count}\\
+\>bool {\bfseries isSparse}\\
+\>struct \{\\
+\>\>int {\bfseries byteOffset}\\
+\>\>int {\bfseries bufferView}\\
+\>\>int {\bfseries componentType}\\
+\>\} {\bfseries indices}\\
+\>struct \{\\
+\>\>int {\bfseries bufferView}\\
+\>\>int {\bfseries byteOffset}\\
+\>\} {\bfseries values}\\
+\} {\bfseries sparse}\\
+
+\end{tabbing}\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{structtinygltf_1_1Accessor_a31262158214af822389c28f026bcb8a2}\label{structtinygltf_1_1Accessor_a31262158214af822389c28f026bcb8a2}} 
+\index{tinygltf\+::\+Accessor@{tinygltf\+::\+Accessor}!Byte\+Stride@{Byte\+Stride}}
+\index{Byte\+Stride@{Byte\+Stride}!tinygltf\+::\+Accessor@{tinygltf\+::\+Accessor}}
+\subsubsection{\texorpdfstring{Byte\+Stride()}{ByteStride()}}
+{\footnotesize\ttfamily int tinygltf\+::\+Accessor\+::\+Byte\+Stride (\begin{DoxyParamCaption}\item[{const \hyperlink{structtinygltf_1_1BufferView}{Buffer\+View} \&}]{buffer\+View\+Object }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Utility function to compute byte\+Stride for a given buffer\+View object. Returns -\/1 upon invalid gl\+TF value or parameter configuration. 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/thirdparty/gltf/tiny\+\_\+gltf.\+h\end{DoxyCompactItemize}

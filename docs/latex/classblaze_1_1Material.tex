@@ -1,0 +1,116 @@
+\hypertarget{classblaze_1_1Material}{}\section{blaze\+:\+:Material Class Reference}
+\label{classblaze_1_1Material}\index{blaze\+::\+Material@{blaze\+::\+Material}}
+
+
+Collection of the material textures and constants and descriptor.  
+
+
+
+
+{\ttfamily \#include $<$Material.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classblaze_1_1Material_a8454802956b05e99d5811c6288a50510}{Material} (\hyperlink{structblaze_1_1MaterialPushConstantBlock}{Material\+Push\+Constant\+Block} push\+Block, \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&diff, \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&norm, \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&metal, \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&ao, \hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&em)
+\begin{DoxyCompactList}\small\item\em Constructor for \hyperlink{classblaze_1_1Material}{Material} class. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1Material_adfd5e759f847aef4e7cc3ee94f987e59}{generate\+Descriptor\+Set} (Vk\+Device device, Vk\+Descriptor\+Set\+Layout layout, Vk\+Descriptor\+Pool pool)
+\begin{DoxyCompactList}\small\item\em Generates the Descriptor Set for the material textures. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructors.}\par
+{\em Set of move constructors for the class.
+
+\hyperlink{classblaze_1_1Material}{Material} is a move only class and hence the copy constructors are deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1Material_a6849b6d64614437f7adba89cc0c79111}\label{classblaze_1_1Material_a6849b6d64614437f7adba89cc0c79111}} 
+{\bfseries Material} (\hyperlink{classblaze_1_1Material}{Material} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1Material_a795b2398d73289e301de64e50adef75f}\label{classblaze_1_1Material_a795b2398d73289e301de64e50adef75f}} 
+\hyperlink{classblaze_1_1Material}{Material} \& {\bfseries operator=} (\hyperlink{classblaze_1_1Material}{Material} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1Material_a13350238237fda6867111073a08b593e}\label{classblaze_1_1Material_a13350238237fda6867111073a08b593e}} 
+{\bfseries Material} (const \hyperlink{classblaze_1_1Material}{Material} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1Material_a205bb3d59f0858e9091a081a0b15ee7a}\label{classblaze_1_1Material_a205bb3d59f0858e9091a081a0b15ee7a}} 
+\hyperlink{classblaze_1_1Material}{Material} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1Material}{Material} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters}\par
+{\em Getters for the private members. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1Material_a7c213db75df559401986d68fa7b964f2}\label{classblaze_1_1Material_a7c213db75df559401986d68fa7b964f2}} 
+const Vk\+Descriptor\+Set \& {\bfseries get\+\_\+descriptor\+Set} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1Material_a4097564b736b3fa1fb6c18c5e60dfe59}\label{classblaze_1_1Material_a4097564b736b3fa1fb6c18c5e60dfe59}} 
+const \hyperlink{structblaze_1_1MaterialPushConstantBlock}{Material\+Push\+Constant\+Block} \& {\bfseries get\+\_\+push\+Constant\+Block} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+
+
+\subsection{Detailed Description}
+Collection of the material textures and constants and descriptor. 
+
+Holds the data for material representing the material from gl\+TF 2.\+0 and holds a descriptor used to bind the entire material at once.
+
+A push constant block in the material is used to push indices and constant values such as multipliers and factors. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1Material_a8454802956b05e99d5811c6288a50510}\label{classblaze_1_1Material_a8454802956b05e99d5811c6288a50510}} 
+\index{blaze\+::\+Material@{blaze\+::\+Material}!Material@{Material}}
+\index{Material@{Material}!blaze\+::\+Material@{blaze\+::\+Material}}
+\subsubsection{\texorpdfstring{Material()}{Material()}}
+{\footnotesize\ttfamily blaze\+::\+Material\+::\+Material (\begin{DoxyParamCaption}\item[{\hyperlink{structblaze_1_1MaterialPushConstantBlock}{Material\+Push\+Constant\+Block}}]{push\+Block,  }\item[{\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&}]{diff,  }\item[{\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&}]{norm,  }\item[{\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&}]{metal,  }\item[{\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&}]{ao,  }\item[{\hyperlink{classblaze_1_1Texture2D}{Texture2D} \&\&}]{em }\end{DoxyParamCaption})}
+
+
+
+Constructor for \hyperlink{classblaze_1_1Material}{Material} class. 
+
+All the input textures are {\bfseries Moved} into the class.
+
+
+\begin{DoxyParams}{Parameters}
+{\em push\+Block} & The \hyperlink{structblaze_1_1MaterialPushConstantBlock}{Material\+Push\+Constant\+Block} required. \\
+\hline
+{\em diff} & The Albedo Map. \\
+\hline
+{\em norm} & The Normal Map. \\
+\hline
+{\em metal} & The Physical\+Description Map (Metallic/\+Roughness). \\
+\hline
+{\em ao} & The Ambient Occlusion Map. \\
+\hline
+{\em em} & The Emissive Map. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1Material_adfd5e759f847aef4e7cc3ee94f987e59}\label{classblaze_1_1Material_adfd5e759f847aef4e7cc3ee94f987e59}} 
+\index{blaze\+::\+Material@{blaze\+::\+Material}!generate\+Descriptor\+Set@{generate\+Descriptor\+Set}}
+\index{generate\+Descriptor\+Set@{generate\+Descriptor\+Set}!blaze\+::\+Material@{blaze\+::\+Material}}
+\subsubsection{\texorpdfstring{generate\+Descriptor\+Set()}{generateDescriptorSet()}}
+{\footnotesize\ttfamily blaze\+::\+Material\+::generate\+Descriptor\+Set (\begin{DoxyParamCaption}\item[{Vk\+Device}]{device,  }\item[{Vk\+Descriptor\+Set\+Layout}]{layout,  }\item[{Vk\+Descriptor\+Pool}]{pool }\end{DoxyParamCaption})}
+
+
+
+Generates the Descriptor Set for the material textures. 
+
+As the pool is not ready during material loading time, the \hyperlink{classblaze_1_1Model}{Model} loader lazily generates the sets after the construction of the pool.
+
+
+\begin{DoxyParams}{Parameters}
+{\em device} & The logical device in use. \\
+\hline
+{\em layout} & The descriptor set layout of the material descriptor set. \\
+\hline
+{\em pool} & The descriptor pool to create the set from.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyNote}{Note}
+This step is necessary before use. 
+\end{DoxyNote}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/drawables/Material.\+hpp\item 
+Blaze/drawables/Material.\+cpp\end{DoxyCompactItemize}

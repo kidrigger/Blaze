@@ -1,0 +1,64 @@
+\hypertarget{structblaze_1_1RendererUBlock}{}\section{blaze\+:\+:Renderer\+U\+Block Struct Reference}
+\label{structblaze_1_1RendererUBlock}\index{blaze\+::\+Renderer\+U\+Block@{blaze\+::\+Renderer\+U\+Block}}
+
+
+The actual data sent to the G\+PU.  
+
+
+
+
+{\ttfamily \#include $<$Datatypes.\+hpp$>$}
+
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_ac65ac83021eeffecb713e06e55962c4f}\label{structblaze_1_1RendererUBlock_ac65ac83021eeffecb713e06e55962c4f}} 
+glm\+::mat4 {\bfseries view}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_aa7b90e03ccef455ca6a170a86bd80a27}\label{structblaze_1_1RendererUBlock_aa7b90e03ccef455ca6a170a86bd80a27}} 
+glm\+::mat4 {\bfseries projection}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_a2e241d07462482fd2f5b0234b45713f6}\label{structblaze_1_1RendererUBlock_a2e241d07462482fd2f5b0234b45713f6}} 
+glm\+::vec3 {\bfseries view\+Pos}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_a36afd164735550caa113bdca3dda1e62}\label{structblaze_1_1RendererUBlock_a36afd164735550caa113bdca3dda1e62}} 
+float {\bfseries far\+Plane}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_a80d7fc6724c063497fc0b6fa1d69db5b}\label{structblaze_1_1RendererUBlock_a80d7fc6724c063497fc0b6fa1d69db5b}} 
+glm\+::mat4 {\bfseries dir\+Light\+Transform} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}\mbox{[}M\+A\+X\+\_\+\+C\+S\+M\+\_\+\+S\+P\+L\+I\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_ada0b30a8e4dcc3adcfcdba842f2d0592}\label{structblaze_1_1RendererUBlock_ada0b30a8e4dcc3adcfcdba842f2d0592}} 
+glm\+::vec4 {\bfseries light\+Dir} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_a8a7e1970d8aa9c9176cf100bf8620ba0}\label{structblaze_1_1RendererUBlock_a8a7e1970d8aa9c9176cf100bf8620ba0}} 
+glm\+::vec4 {\bfseries csm\+Splits} \mbox{[}M\+A\+X\+\_\+\+C\+S\+M\+\_\+\+S\+P\+L\+I\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_a63b4ebd129dc7dc4d0e64a5618de79e1}\label{structblaze_1_1RendererUBlock_a63b4ebd129dc7dc4d0e64a5618de79e1}} 
+glm\+::vec4 {\bfseries light\+Pos} \mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_aff5efd6364d49d0f2b58bc67128e3f04}\label{structblaze_1_1RendererUBlock_aff5efd6364d49d0f2b58bc67128e3f04}} 
+int {\bfseries shadow\+Idx} \mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_ab2879d6607b7cddb5119e3b294d6d5bb}\label{structblaze_1_1RendererUBlock_ab2879d6607b7cddb5119e3b294d6d5bb}} 
+int {\bfseries num\+Lights}
+\item 
+\mbox{\Hypertarget{structblaze_1_1RendererUBlock_a8daf3bed1ca11581c8c27bff0169e822}\label{structblaze_1_1RendererUBlock_a8daf3bed1ca11581c8c27bff0169e822}} 
+int {\bfseries num\+Dir\+Lights}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+The actual data sent to the G\+PU. 
+
+This struct is a aggregation of \hyperlink{structblaze_1_1CameraUBlock}{Camera\+U\+Block} and \hyperlink{structblaze_1_1LightsUBlock}{Lights\+U\+Block}. They can be directly copied before sending to G\+PU view \hyperlink{classblaze_1_1UBO}{U\+BO} update.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{structblaze_1_1CameraUBlock}{Camera\+U\+Block} 
+
+\hyperlink{structblaze_1_1LightsUBlock}{Lights\+U\+Block} 
+\end{DoxySeeAlso}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/Datatypes.\+hpp\end{DoxyCompactItemize}

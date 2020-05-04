@@ -1,0 +1,68 @@
+\hypertarget{structblaze_1_1ImageDataCube}{}\section{blaze\+:\+:Image\+Data\+Cube Struct Reference}
+\label{structblaze_1_1ImageDataCube}\index{blaze\+::\+Image\+Data\+Cube@{blaze\+::\+Image\+Data\+Cube}}
+
+
+Data for constructing a \hyperlink{classblaze_1_1TextureCube}{Texture\+Cube}.  
+
+
+
+
+{\ttfamily \#include $<$Texture\+Cube.\+hpp$>$}
+
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_ab02af7f04ba492d8d7363499dd054240}\label{structblaze_1_1ImageDataCube_ab02af7f04ba492d8d7363499dd054240}} 
+uint8\+\_\+t $\ast$ {\bfseries data} \mbox{[}6\mbox{]} \{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_ab58f68db8402ad7adadd8bdf640e4ff3}\label{structblaze_1_1ImageDataCube_ab58f68db8402ad7adadd8bdf640e4ff3}} 
+uint32\+\_\+t {\bfseries width} \{0\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_a137cb13ea489a864a0632ce81b4d631a}\label{structblaze_1_1ImageDataCube_a137cb13ea489a864a0632ce81b4d631a}} 
+uint32\+\_\+t {\bfseries height} \{0\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_a6c1b1a664b279bf6951f2542fef28447}\label{structblaze_1_1ImageDataCube_a6c1b1a664b279bf6951f2542fef28447}} 
+uint32\+\_\+t {\bfseries num\+Channels} \{0\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_a153bd793a912aaf1991975e66acc5955}\label{structblaze_1_1ImageDataCube_a153bd793a912aaf1991975e66acc5955}} 
+uint32\+\_\+t {\bfseries layer\+Size} \{0\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_ae155eab89edab9a55f1cbd7d1db40861}\label{structblaze_1_1ImageDataCube_ae155eab89edab9a55f1cbd7d1db40861}} 
+uint32\+\_\+t {\bfseries size} \{0\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_aad72a9b0449cb8d2829688a6510dbf03}\label{structblaze_1_1ImageDataCube_aad72a9b0449cb8d2829688a6510dbf03}} 
+Vk\+Format {\bfseries format} \{V\+K\+\_\+\+F\+O\+R\+M\+A\+T\+\_\+\+R8\+G8\+B8\+A8\+\_\+\+U\+N\+O\+RM\}
+\item 
+Vk\+Image\+Usage\+Flags {\bfseries usage}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_a21266c35c3a86dd118ee7042272ff12c}\label{structblaze_1_1ImageDataCube_a21266c35c3a86dd118ee7042272ff12c}} 
+Vk\+Image\+Layout {\bfseries layout} \{V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+S\+H\+A\+D\+E\+R\+\_\+\+R\+E\+A\+D\+\_\+\+O\+N\+L\+Y\+\_\+\+O\+P\+T\+I\+M\+AL\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_a8eeb8f061de7ddec298a4d21106f2603}\label{structblaze_1_1ImageDataCube_a8eeb8f061de7ddec298a4d21106f2603}} 
+Vk\+Access\+Flags {\bfseries access} \{V\+K\+\_\+\+A\+C\+C\+E\+S\+S\+\_\+\+S\+H\+A\+D\+E\+R\+\_\+\+R\+E\+A\+D\+\_\+\+B\+IT\}
+\item 
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_af6296fa56876bdb6ec95382ab5b91b4d}\label{structblaze_1_1ImageDataCube_af6296fa56876bdb6ec95382ab5b91b4d}} 
+Vk\+Image\+Aspect\+Flags {\bfseries aspect} \{V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+A\+S\+P\+E\+C\+T\+\_\+\+C\+O\+L\+O\+R\+\_\+\+B\+IT\}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Data for constructing a \hyperlink{classblaze_1_1TextureCube}{Texture\+Cube}. 
+
+\subsection{Member Data Documentation}
+\mbox{\Hypertarget{structblaze_1_1ImageDataCube_ac09d849a4290992ce07df52e8beb3820}\label{structblaze_1_1ImageDataCube_ac09d849a4290992ce07df52e8beb3820}} 
+\index{blaze\+::\+Image\+Data\+Cube@{blaze\+::\+Image\+Data\+Cube}!usage@{usage}}
+\index{usage@{usage}!blaze\+::\+Image\+Data\+Cube@{blaze\+::\+Image\+Data\+Cube}}
+\subsubsection{\texorpdfstring{usage}{usage}}
+{\footnotesize\ttfamily Vk\+Image\+Usage\+Flags blaze\+::\+Image\+Data\+Cube\+::usage}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}
+\{VK\_IMAGE\_USAGE\_SAMPLED\_BIT | VK\_BUFFER\_USAGE\_TRANSFER\_DST\_BIT |
+                            VK\_BUFFER\_USAGE\_TRANSFER\_SRC\_BIT\}
+\end{DoxyCode}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/core/Texture\+Cube.\+hpp\end{DoxyCompactItemize}

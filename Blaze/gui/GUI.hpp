@@ -57,8 +57,6 @@ private:
 
 public:
 	/**
-	 * @fn GUI()
-	 *
 	 * @brief Default constructor.
 	 */
 	GUI() noexcept : valid(false)
@@ -66,16 +64,14 @@ public:
 	}
 
 	/**
-	 * @fn GUI(const Context& context, const VkExtent2D& size, const VkFormat& format, const std::vector<VkImageView>&
-	 * swapchainImageViews)
-	 *
 	 * @brief Constructor of the object. Initializes ImGUI and required resources.
+     *
+     * @param context Pointer to current Vulkan Context.
+     * @param swapchain Pointer to the Swapchain in use.
 	 */
 	GUI(const Context* context, const Swapchain* swapchain) noexcept;
 
 	/**
-	 * @name Move Constructors
-	 *
 	 * @brief Moves all members to the new construction.
 	 *
 	 * GUI is a move only class and must be kept unique.
@@ -92,33 +88,24 @@ public:
 	 */
 
 	/**
-	 * @fn recreate
-	 *
 	 * @brief Recreates the GUI framebuffers.
 	 *
-	 * @param context The current Vulkan context.
-	 * @param size The size of the framebuffer.
-	 * @param swapchainImageViews The imageviews of the current swapchain.
+	 * @param context Pointer to the current Vulkan context.
+	 * @param swapchain Pointer to the Swapchain in use.
 	 */
 	void recreate(const Context* context, const Swapchain* swapchain);
 
 	/**
-	 * @fn startFrame
-	 *
 	 * @brief Starts a new ImGUI frame.
 	 */
 	static void startFrame();
 
 	/**
-	 * @fn endFrame
-	 *
 	 * @brief Ends the ImGUI frame.
 	 */
 	static void endFrame();
 
 	/**
-	 * @fn draw
-	 *
 	 * @brief Renders the ImGUI GUI on top of the existing image.
 	 *
 	 * This must be the last step of the render drawcalls, and hence the last renderpass.

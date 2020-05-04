@@ -1,0 +1,101 @@
+\hypertarget{structVmaAllocationCreateInfo}{}\section{Vma\+Allocation\+Create\+Info Struct Reference}
+\label{structVmaAllocationCreateInfo}\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+
+
+Collaboration diagram for Vma\+Allocation\+Create\+Info\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=205pt]{structVmaAllocationCreateInfo__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structVmaAllocationCreateInfo_add09658ac14fe290ace25470ddd6d41b}\label{structVmaAllocationCreateInfo_add09658ac14fe290ace25470ddd6d41b}} 
+Vma\+Allocation\+Create\+Flags \hyperlink{structVmaAllocationCreateInfo_add09658ac14fe290ace25470ddd6d41b}{flags}
+\begin{DoxyCompactList}\small\item\em Use \#\+Vma\+Allocation\+Create\+Flag\+Bits enum. \end{DoxyCompactList}\item 
+Vma\+Memory\+Usage \hyperlink{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}{usage}
+\begin{DoxyCompactList}\small\item\em Intended usage of memory. \end{DoxyCompactList}\item 
+Vk\+Memory\+Property\+Flags \hyperlink{structVmaAllocationCreateInfo_a9166390303ff42d783305bc31c2b6b90}{required\+Flags}
+\begin{DoxyCompactList}\small\item\em Flags that must be set in a Memory Type chosen for an allocation. \end{DoxyCompactList}\item 
+Vk\+Memory\+Property\+Flags \hyperlink{structVmaAllocationCreateInfo_a7fe8d81a1ad10b2a2faacacee5b15d6d}{preferred\+Flags}
+\begin{DoxyCompactList}\small\item\em Flags that preferably should be set in a memory type chosen for an allocation. \end{DoxyCompactList}\item 
+uint32\+\_\+t \hyperlink{structVmaAllocationCreateInfo_a3bf940c0271d85d6ba32a4d820075055}{memory\+Type\+Bits}
+\begin{DoxyCompactList}\small\item\em Bitmask containing one bit set for every memory type acceptable for this allocation. \end{DoxyCompactList}\item 
+\hyperlink{structVmaPool}{Vma\+Pool} \hyperlink{structVmaAllocationCreateInfo_a6272c0555cfd1fe28bff1afeb6190150}{pool}
+\begin{DoxyCompactList}\small\item\em Pool that this allocation should be created in. \end{DoxyCompactList}\item 
+void $\ast$ \hyperlink{structVmaAllocationCreateInfo_a8259e85c272683434f4abb4ddddffe19}{p\+User\+Data}
+\begin{DoxyCompactList}\small\item\em Custom general-\/purpose pointer that will be stored in \hyperlink{structVmaAllocation}{Vma\+Allocation}, can be read as \hyperlink{structVmaAllocationInfo_adc507656149c04de7ed95d0042ba2a13}{Vma\+Allocation\+Info\+::p\+User\+Data} and changed using vma\+Set\+Allocation\+User\+Data(). \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Member Data Documentation}
+\mbox{\Hypertarget{structVmaAllocationCreateInfo_a3bf940c0271d85d6ba32a4d820075055}\label{structVmaAllocationCreateInfo_a3bf940c0271d85d6ba32a4d820075055}} 
+\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}!memory\+Type\+Bits@{memory\+Type\+Bits}}
+\index{memory\+Type\+Bits@{memory\+Type\+Bits}!Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+\subsubsection{\texorpdfstring{memory\+Type\+Bits}{memoryTypeBits}}
+{\footnotesize\ttfamily uint32\+\_\+t Vma\+Allocation\+Create\+Info\+::memory\+Type\+Bits}
+
+
+
+Bitmask containing one bit set for every memory type acceptable for this allocation. 
+
+Value 0 is equivalent to {\ttfamily U\+I\+N\+T32\+\_\+\+M\+AX} -\/ it means any memory type is accepted if it meets other requirements specified by this structure, with no further restrictions on memory type index. ~\newline
+If {\ttfamily pool} is not null, this member is ignored. \mbox{\Hypertarget{structVmaAllocationCreateInfo_a6272c0555cfd1fe28bff1afeb6190150}\label{structVmaAllocationCreateInfo_a6272c0555cfd1fe28bff1afeb6190150}} 
+\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}!pool@{pool}}
+\index{pool@{pool}!Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+\subsubsection{\texorpdfstring{pool}{pool}}
+{\footnotesize\ttfamily \hyperlink{structVmaPool}{Vma\+Pool} Vma\+Allocation\+Create\+Info\+::pool}
+
+
+
+Pool that this allocation should be created in. 
+
+Leave {\ttfamily V\+K\+\_\+\+N\+U\+L\+L\+\_\+\+H\+A\+N\+D\+LE} to allocate from default pool. If not null, members\+: {\ttfamily usage}, {\ttfamily required\+Flags}, {\ttfamily preferred\+Flags}, {\ttfamily memory\+Type\+Bits} are ignored. \mbox{\Hypertarget{structVmaAllocationCreateInfo_a7fe8d81a1ad10b2a2faacacee5b15d6d}\label{structVmaAllocationCreateInfo_a7fe8d81a1ad10b2a2faacacee5b15d6d}} 
+\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}!preferred\+Flags@{preferred\+Flags}}
+\index{preferred\+Flags@{preferred\+Flags}!Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+\subsubsection{\texorpdfstring{preferred\+Flags}{preferredFlags}}
+{\footnotesize\ttfamily Vk\+Memory\+Property\+Flags Vma\+Allocation\+Create\+Info\+::preferred\+Flags}
+
+
+
+Flags that preferably should be set in a memory type chosen for an allocation. 
+
+Set to 0 if no additional flags are prefered. ~\newline
+If {\ttfamily pool} is not null, this member is ignored. \mbox{\Hypertarget{structVmaAllocationCreateInfo_a8259e85c272683434f4abb4ddddffe19}\label{structVmaAllocationCreateInfo_a8259e85c272683434f4abb4ddddffe19}} 
+\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}!p\+User\+Data@{p\+User\+Data}}
+\index{p\+User\+Data@{p\+User\+Data}!Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+\subsubsection{\texorpdfstring{p\+User\+Data}{pUserData}}
+{\footnotesize\ttfamily void$\ast$ Vma\+Allocation\+Create\+Info\+::p\+User\+Data}
+
+
+
+Custom general-\/purpose pointer that will be stored in \hyperlink{structVmaAllocation}{Vma\+Allocation}, can be read as \hyperlink{structVmaAllocationInfo_adc507656149c04de7ed95d0042ba2a13}{Vma\+Allocation\+Info\+::p\+User\+Data} and changed using vma\+Set\+Allocation\+User\+Data(). 
+
+If \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+U\+S\+E\+R\+\_\+\+D\+A\+T\+A\+\_\+\+C\+O\+P\+Y\+\_\+\+S\+T\+R\+I\+N\+G\+\_\+\+B\+IT is used, it must be either null or pointer to a null-\/terminated string. The string will be then copied to internal buffer, so it doesn\textquotesingle{}t need to be valid after allocation call. \mbox{\Hypertarget{structVmaAllocationCreateInfo_a9166390303ff42d783305bc31c2b6b90}\label{structVmaAllocationCreateInfo_a9166390303ff42d783305bc31c2b6b90}} 
+\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}!required\+Flags@{required\+Flags}}
+\index{required\+Flags@{required\+Flags}!Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+\subsubsection{\texorpdfstring{required\+Flags}{requiredFlags}}
+{\footnotesize\ttfamily Vk\+Memory\+Property\+Flags Vma\+Allocation\+Create\+Info\+::required\+Flags}
+
+
+
+Flags that must be set in a Memory Type chosen for an allocation. 
+
+Leave 0 if you specify memory requirements in other way. ~\newline
+If {\ttfamily pool} is not null, this member is ignored. \mbox{\Hypertarget{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}\label{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}} 
+\index{Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}!usage@{usage}}
+\index{usage@{usage}!Vma\+Allocation\+Create\+Info@{Vma\+Allocation\+Create\+Info}}
+\subsubsection{\texorpdfstring{usage}{usage}}
+{\footnotesize\ttfamily Vma\+Memory\+Usage Vma\+Allocation\+Create\+Info\+::usage}
+
+
+
+Intended usage of memory. 
+
+You can leave \#\+V\+M\+A\+\_\+\+M\+E\+M\+O\+R\+Y\+\_\+\+U\+S\+A\+G\+E\+\_\+\+U\+N\+K\+N\+O\+WN if you specify memory requirements in other way. ~\newline
+If {\ttfamily pool} is not null, this member is ignored. 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/thirdparty/vma/vk\+\_\+mem\+\_\+alloc.\+h\end{DoxyCompactItemize}

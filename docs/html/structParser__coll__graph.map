@@ -1,0 +1,11 @@
+<map id="Parser" name="Parser">
+<area shape="rect" id="node2" href="$structNode.html" title="Node" alt="" coords="135,287,188,313"/>
+<area shape="rect" id="node3" href="$structImageTraits.html" title="ImageTraits" alt="" coords="5,183,96,209"/>
+<area shape="rect" id="node4" href="$structDecorations.html" title="Decorations" alt="" coords="121,183,213,209"/>
+<area shape="rect" id="node5" href="$structNumberDecoration.html" title="NumberDecoration" alt="" coords="15,5,145,32"/>
+<area shape="rect" id="node6" href="$structStringDecoration.html" title="StringDecoration" alt="" coords="194,5,313,32"/>
+<area shape="rect" id="node7" href="$structArrayTraits.html" title="ArrayTraits" alt="" coords="270,183,357,209"/>
+<area shape="rect" id="node8" href="$structString.html" title="String" alt="" coords="212,287,268,313"/>
+<area shape="rect" id="node9" href="$structAccessChain.html" title="AccessChain" alt="" coords="331,287,431,313"/>
+<area shape="rect" id="node10" href="$structFunction.html" title="Function" alt="" coords="468,287,540,313"/>
+</map>

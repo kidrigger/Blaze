@@ -12,6 +12,12 @@
 
 #include "VkWrapSpecialized.hpp"
 
+/**
+ * @brief The namespace for all the vulkan managed wrapper classes.
+ *
+ * Most of the classes inside are aliases of template specializations of wrappers in \ref blaze::vkw::base.
+ * The macros used to generate the aliases should ideally not be used outside the namespace.
+ */
 namespace blaze::vkw {
 
 #define GEN_UNMANAGED_HOLDER(Type) using Type = base::BaseWrapper<Vk##Type>

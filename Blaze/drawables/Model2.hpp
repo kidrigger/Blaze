@@ -52,10 +52,7 @@ private:
 
 public:
 	/**
-	 * @fn Model()
-	 *
 	 * @brief Default constructor.
-	 *
 	 */
 	Model2() noexcept
 	{
@@ -64,12 +61,11 @@ public:
 	/**
 	 * @brief Full constructor.
 	 *
-	 * @param renderer The renderer used for the material.
 	 * @param top_level_nodes The indices of nodes that are at the top level and have no parents.
 	 * @param nodes The list of nodes in the model.
 	 * @param prims The list of primitives in the model.
-	 * @param mats The list of materials in the model.
 	 * @param ivb The IndexedVertexBuffer that contains \b all the vertices and indices.
+	 * @param mat The material used in the model.
 	 */
 	Model2(const std::vector<int>& top_level_nodes, std::vector<Node>&& nodes, std::vector<Primitive>&& prims,
 		   IndexedVertexBuffer<Vertex>&& ivb, Material&& mat) noexcept;

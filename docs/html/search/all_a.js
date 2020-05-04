@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['managed',['Managed',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util::Managed&lt; T &gt;'],['../classblaze_1_1util_1_1Managed.html#a81d8a04a7d69c14f2e1b4cc53c22a9fb',1,'blaze::util::Managed::Managed() noexcept'],['../classblaze_1_1util_1_1Managed.html#a1fbcd3a25982f170ba9ca3cd9feaee0b',1,'blaze::util::Managed::Managed(T handle, Callable destroyer) noexcept']]],
+  ['managed_3c_20blaze_3a_3aimageobject_20_3e',['Managed&lt; blaze::ImageObject &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vkdescriptorpool_20_3e',['Managed&lt; VkDescriptorPool &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vkdescriptorsetlayout_20_3e',['Managed&lt; VkDescriptorSetLayout &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vkimageview_20_3e',['Managed&lt; VkImageView &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vkpipeline_20_3e',['Managed&lt; VkPipeline &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vkpipelinelayout_20_3e',['Managed&lt; VkPipelineLayout &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vkrenderpass_20_3e',['Managed&lt; VkRenderPass &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managed_3c_20vksampler_20_3e',['Managed&lt; VkSampler &gt;',['../classblaze_1_1util_1_1Managed.html',1,'blaze::util']]],
+  ['managedvector',['ManagedVector',['../classblaze_1_1util_1_1ManagedVector.html',1,'blaze::util::ManagedVector&lt; T, singular &gt;'],['../classblaze_1_1util_1_1ManagedVector.html#a786dfc0cf1d0d0b85576ed888be64590',1,'blaze::util::ManagedVector::ManagedVector() noexcept'],['../classblaze_1_1util_1_1ManagedVector.html#af065b9675c2de2a2bb162321dc4eb71e',1,'blaze::util::ManagedVector::ManagedVector(const std::vector&lt; T &gt; &amp;handles, U destroyer) noexcept'],['../classblaze_1_1util_1_1ManagedVector_3_01T_00_01false_01_4.html#a9295e02fcc9d0c5afc6a2d5c8bfecfe0',1,'blaze::util::ManagedVector&lt; T, false &gt;::ManagedVector() noexcept'],['../classblaze_1_1util_1_1ManagedVector_3_01T_00_01false_01_4.html#abaf98d296e4f9f2c1cc2a4fb819def5b',1,'blaze::util::ManagedVector&lt; T, false &gt;::ManagedVector(const std::vector&lt; T &gt; &amp;handles, U destroyer) noexcept']]],
+  ['managedvector_3c_20t_2c_20false_20_3e',['ManagedVector&lt; T, false &gt;',['../classblaze_1_1util_1_1ManagedVector_3_01T_00_01false_01_4.html',1,'blaze::util']]],
+  ['managedvector_3c_20vkcommandbuffer_2c_20false_20_3e',['ManagedVector&lt; VkCommandBuffer, false &gt;',['../classblaze_1_1util_1_1ManagedVector.html',1,'blaze::util']]],
+  ['managedvector_3c_20vkframebuffer_20_3e',['ManagedVector&lt; VkFramebuffer &gt;',['../classblaze_1_1util_1_1ManagedVector.html',1,'blaze::util']]],
+  ['managedvector_3c_20vkimageview_20_3e',['ManagedVector&lt; VkImageView &gt;',['../classblaze_1_1util_1_1ManagedVector.html',1,'blaze::util']]],
+  ['material',['Material',['../classblaze_1_1Material.html',1,'blaze::Material'],['../structblaze_1_1Model2_1_1Material.html',1,'blaze::Model2::Material'],['../classblaze_1_1Material.html#a8454802956b05e99d5811c6288a50510',1,'blaze::Material::Material()']]],
+  ['materialpushconstantblock',['MaterialPushConstantBlock',['../structblaze_1_1MaterialPushConstantBlock.html',1,'blaze']]],
+  ['memallocator',['MemAllocator',['../structblaze_1_1vkw_1_1MemAllocator.html',1,'blaze::vkw']]],
+  ['model',['Model',['../classblaze_1_1Model.html',1,'blaze::Model'],['../classblaze_1_1Model.html#a0c8bd561406e0e56ef33c0072a7a48f6',1,'blaze::Model::Model() noexcept'],['../classblaze_1_1Model.html#a99429577ddc36a20a801f412f12d8b97',1,'blaze::Model::Model(const Renderer &amp;renderer, const std::vector&lt; int &gt; &amp;top_level_nodes, std::vector&lt; Node &gt; &amp;nodes, std::vector&lt; Primitive &gt; &amp;prims, std::vector&lt; Material &gt; &amp;mats, IndexedVertexBuffer&lt; Vertex &gt; &amp;&amp;ivb) noexcept']]],
+  ['model2',['Model2',['../classblaze_1_1Model2.html',1,'blaze::Model2'],['../classblaze_1_1Model2.html#a3122286acb99b24250c3ef919b0e3d9b',1,'blaze::Model2::Model2() noexcept'],['../classblaze_1_1Model2.html#a1417c8c21b0003a068e20405f3b8e22c',1,'blaze::Model2::Model2(const std::vector&lt; int &gt; &amp;top_level_nodes, std::vector&lt; Node &gt; &amp;&amp;nodes, std::vector&lt; Primitive &gt; &amp;&amp;prims, IndexedVertexBuffer&lt; Vertex &gt; &amp;&amp;ivb, Material &amp;&amp;mat) noexcept']]],
+  ['modelloader',['ModelLoader',['../classblaze_1_1ModelLoader.html',1,'blaze']]],
+  ['modelpushconstantblock',['ModelPushConstantBlock',['../structblaze_1_1ModelPushConstantBlock.html',1,'blaze']]],
+  ['moveby',['moveBy',['../classblaze_1_1Camera.html#ae3c12fec0a57dbd4e885877c7d08288d',1,'blaze::Camera']]],
+  ['moveto',['moveTo',['../classblaze_1_1Camera.html#ab00e3155208d945896c0b5a415921ec1',1,'blaze::Camera']]]
+];

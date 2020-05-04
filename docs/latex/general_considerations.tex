@@ -1,0 +1,49 @@
+\hypertarget{general_considerations_general_considerations_thread_safety}{}\section{Thread safety}\label{general_considerations_general_considerations_thread_safety}
+
+\begin{DoxyItemize}
+\item The library has no global state, so separate \hyperlink{structVmaAllocator}{Vma\+Allocator} objects can be used independently. There should be no need to create multiple such objects though -\/ one per {\ttfamily Vk\+Device} is enough.
+\item By default, all calls to functions that take \hyperlink{structVmaAllocator}{Vma\+Allocator} as first parameter are safe to call from multiple threads simultaneously because they are synchronized internally when needed.
+\item When the allocator is created with \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+O\+R\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+E\+X\+T\+E\+R\+N\+A\+L\+L\+Y\+\_\+\+S\+Y\+N\+C\+H\+R\+O\+N\+I\+Z\+E\+D\+\_\+\+B\+IT flag, calls to functions that take such \hyperlink{structVmaAllocator}{Vma\+Allocator} object must be synchronized externally.
+\item Access to a \hyperlink{structVmaAllocation}{Vma\+Allocation} object must be externally synchronized. For example, you must not call vma\+Get\+Allocation\+Info() and vma\+Map\+Memory() from different threads at the same time if you pass the same \hyperlink{structVmaAllocation}{Vma\+Allocation} object to these functions.
+\end{DoxyItemize}\hypertarget{general_considerations_general_considerations_validation_layer_warnings}{}\section{Validation layer warnings}\label{general_considerations_general_considerations_validation_layer_warnings}
+When using this library, you can meet following types of warnings issued by Vulkan validation layer. They don\textquotesingle{}t necessarily indicate a bug, so you may need to just ignore them.
+
+
+\begin{DoxyItemize}
+\item {\itshape vk\+Bind\+Buffer\+Memory()\+: Binding memory to buffer 0xeb8e4 but vk\+Get\+Buffer\+Memory\+Requirements() has not been called on that buffer.}
+\begin{DoxyItemize}
+\item It happens when V\+K\+\_\+\+K\+H\+R\+\_\+dedicated\+\_\+allocation extension is enabled. {\ttfamily vk\+Get\+Buffer\+Memory\+Requirements2\+K\+HR} function is used instead, while validation layer seems to be unaware of it.
+\end{DoxyItemize}
+\item {\itshape Mapping an image with layout V\+K\+\_\+\+I\+M\+A\+G\+E\+\_\+\+L\+A\+Y\+O\+U\+T\+\_\+\+D\+E\+P\+T\+H\+\_\+\+S\+T\+E\+N\+C\+I\+L\+\_\+\+A\+T\+T\+A\+C\+H\+M\+E\+N\+T\+\_\+\+O\+P\+T\+I\+M\+AL can result in undefined behavior if this memory is used by the device. Only G\+E\+N\+E\+R\+AL or P\+R\+E\+I\+N\+I\+T\+I\+A\+L\+I\+Z\+ED should be used.}
+\begin{DoxyItemize}
+\item It happens when you map a buffer or image, because the library maps entire {\ttfamily Vk\+Device\+Memory} block, where different types of images and buffers may end up together, especially on G\+P\+Us with unified memory like Intel.
+\end{DoxyItemize}
+\item {\itshape Non-\/linear image 0xebc91 is aliased with linear buffer 0xeb8e4 which may indicate a bug.}
+\begin{DoxyItemize}
+\item It happens when you use lost allocations, and a new image or buffer is created in place of an existing object that bacame lost.
+\item It may happen also when you use \hyperlink{defragmentation}{defragmentation}.
+\end{DoxyItemize}
+\end{DoxyItemize}\hypertarget{general_considerations_general_considerations_allocation_algorithm}{}\section{Allocation algorithm}\label{general_considerations_general_considerations_allocation_algorithm}
+The library uses following algorithm for allocation, in order\+:
+
+
+\begin{DoxyEnumerate}
+\item Try to find free range of memory in existing blocks.
+\item If failed, try to create a new block of {\ttfamily Vk\+Device\+Memory}, with preferred block size.
+\item If failed, try to create such block with size/2, size/4, size/8.
+\item If failed and \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+C\+A\+N\+\_\+\+M\+A\+K\+E\+\_\+\+O\+T\+H\+E\+R\+\_\+\+L\+O\+S\+T\+\_\+\+B\+IT flag was specified, try to find space in existing blocks, possilby making some other allocations lost.
+\item If failed, try to allocate separate {\ttfamily Vk\+Device\+Memory} for this allocation, just like when you use \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+D\+E\+D\+I\+C\+A\+T\+E\+D\+\_\+\+M\+E\+M\+O\+R\+Y\+\_\+\+B\+IT.
+\item If failed, choose other memory type that meets the requirements specified in \hyperlink{structVmaAllocationCreateInfo}{Vma\+Allocation\+Create\+Info} and go to point 1.
+\item If failed, return {\ttfamily V\+K\+\_\+\+E\+R\+R\+O\+R\+\_\+\+O\+U\+T\+\_\+\+O\+F\+\_\+\+D\+E\+V\+I\+C\+E\+\_\+\+M\+E\+M\+O\+RY}.
+\end{DoxyEnumerate}\hypertarget{general_considerations_general_considerations_features_not_supported}{}\section{Features not supported}\label{general_considerations_general_considerations_features_not_supported}
+Features deliberately excluded from the scope of this library\+:
+
+
+\begin{DoxyItemize}
+\item Data transfer. Uploading (straming) and downloading data of buffers and images between C\+PU and G\+PU memory and related synchronization is responsibility of the user. Defining some \char`\"{}texture\char`\"{} object that would automatically stream its data from a staging copy in C\+PU memory to G\+PU memory would rather be a feature of another, higher-\/level library implemented on top of V\+MA.
+\item Allocations for imported/exported external memory. They tend to require explicit memory type index and dedicated allocation anyway, so they don\textquotesingle{}t interact with main features of this library. Such special purpose allocations should be made manually, using {\ttfamily vk\+Create\+Buffer()} and {\ttfamily vk\+Allocate\+Memory()}.
+\item Recreation of buffers and images. Although the library has functions for buffer and image creation (vma\+Create\+Buffer(), vma\+Create\+Image()), you need to recreate these objects yourself after defragmentation. That\textquotesingle{}s because the big structures {\ttfamily Vk\+Buffer\+Create\+Info}, {\ttfamily Vk\+Image\+Create\+Info} are not stored in \hyperlink{structVmaAllocation}{Vma\+Allocation} object.
+\item Handling C\+PU memory allocation failures. When dynamically creating small C++ objects in C\+PU memory (not Vulkan memory), allocation failures are not checked and handled gracefully, because that would complicate code significantly and is usually not needed in desktop PC applications anyway.
+\item Code free of any compiler warnings. Maintaining the library to compile and work correctly on so many different platforms is hard enough. Being free of any warnings, on any version of any compiler, is simply not feasible.
+\item This is a C++ library with C interface. Bindings or ports to any other programming languages are welcomed as external projects and are not going to be included into this repository. 
+\end{DoxyItemize}

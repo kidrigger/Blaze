@@ -74,19 +74,17 @@ public:
 	}
 
 	/**
-	 * @fn Swapchain(const Context& context)
-	 *
 	 * @brief Main constructor
 	 *
-	 * @param context Context reference.
-	 */
+	 * @param context Pointer to the Vulkan Context in use.
+     */
 	Swapchain(const Context* context) noexcept;
 
 	/**
-	 * @fn recreate(const Context& context)
-	 *
 	 * @brief Recreates the swapchain due to changes in screen size etc.
-	 */
+	 *
+	 * @param context Pointer to the Vulkan Context in use.
+     */
 	void recreate(const Context* context) noexcept;
 
 	/**

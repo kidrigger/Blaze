@@ -19,13 +19,29 @@ const int32_t MAX_CSM_SPLITS = 4;
 namespace blaze
 {
 
+/**
+ * @struct VertexInputFormat
+ *
+ * @brief Descriptes the input arrangement for the VertexInput stage.
+ *
+ * The format is used to properly assign the inputs to match in inputs in the Vertex Shader.
+ */
 struct VertexInputFormat
 {
+    /// The location of the position attribute of a vertex.
 	uint32_t A_POSITION;
+    /// The location of the normal attribute of a vertex.
 	uint32_t A_NORMAL;
+    /// The location of the UV coordinate set 0 attribute of a vertex.
 	uint32_t A_UV0;
+    /// The location of the UV coordinate set 1 attribute of a vertex.
 	uint32_t A_UV1;
 
+    /**
+     * @brief Default Constructor.
+     * 
+     * The default constructor initializes the attributes to their default ascending order.
+     */
 	VertexInputFormat() : A_POSITION(0), A_NORMAL(1), A_UV0(2), A_UV1(3)
 	{
 	}
@@ -74,6 +90,7 @@ struct Vertex
 	 *
 	 * @brief Creates attribute descriptions for the vertex.
 	 *
+     * @param [in] format The binding locations for each of the vertex inputs.
 	 * @param [in] binding Binding location of the vertex attribute.
 	 *
 	 * @returns vector of attribute descriptions

@@ -40,7 +40,7 @@ void ModelLoader::scan()
 	{
 		if (item.path().has_extension())
 		{
-			auto& ext = item.path().extension();
+			auto ext = item.path().extension();
 			if (ext == ".gltf" || ext == ".glb")
 			{
 				modelFileNames.emplace_back(item.path().stem().string());

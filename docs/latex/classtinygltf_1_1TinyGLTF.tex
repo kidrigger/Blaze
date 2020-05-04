@@ -1,0 +1,85 @@
+\hypertarget{classtinygltf_1_1TinyGLTF}{}\section{tinygltf\+:\+:Tiny\+G\+L\+TF Class Reference}
+\label{classtinygltf_1_1TinyGLTF}\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+bool \hyperlink{classtinygltf_1_1TinyGLTF_afb694767274be3674f6e98ad2e32ffa8}{Load\+A\+S\+C\+I\+I\+From\+File} (\hyperlink{classtinygltf_1_1Model}{Model} $\ast$model, std\+::string $\ast$err, std\+::string $\ast$warn, const std\+::string \&filename, unsigned int check\+\_\+sections=R\+E\+Q\+U\+I\+R\+E\+\_\+\+V\+E\+R\+S\+I\+ON)
+\item 
+bool \hyperlink{classtinygltf_1_1TinyGLTF_a868ceaa7231473720375cfe47ba26840}{Load\+A\+S\+C\+I\+I\+From\+String} (\hyperlink{classtinygltf_1_1Model}{Model} $\ast$model, std\+::string $\ast$err, std\+::string $\ast$warn, const char $\ast$str, const unsigned int length, const std\+::string \&base\+\_\+dir, unsigned int check\+\_\+sections=R\+E\+Q\+U\+I\+R\+E\+\_\+\+V\+E\+R\+S\+I\+ON)
+\item 
+bool \hyperlink{classtinygltf_1_1TinyGLTF_a6fcc0f27b3973a1a0c1afe39f7c52c51}{Load\+Binary\+From\+File} (\hyperlink{classtinygltf_1_1Model}{Model} $\ast$model, std\+::string $\ast$err, std\+::string $\ast$warn, const std\+::string \&filename, unsigned int check\+\_\+sections=R\+E\+Q\+U\+I\+R\+E\+\_\+\+V\+E\+R\+S\+I\+ON)
+\item 
+bool \hyperlink{classtinygltf_1_1TinyGLTF_a363def44f18e944fa49e0cebe8f1b5b6}{Load\+Binary\+From\+Memory} (\hyperlink{classtinygltf_1_1Model}{Model} $\ast$model, std\+::string $\ast$err, std\+::string $\ast$warn, const unsigned char $\ast$bytes, const unsigned int length, const std\+::string \&base\+\_\+dir=\char`\"{}\char`\"{}, unsigned int check\+\_\+sections=R\+E\+Q\+U\+I\+R\+E\+\_\+\+V\+E\+R\+S\+I\+ON)
+\item 
+bool \hyperlink{classtinygltf_1_1TinyGLTF_aa219527a19b8c2d72821f6a6a91651dc}{Write\+Gltf\+Scene\+To\+Stream} (\hyperlink{classtinygltf_1_1Model}{Model} $\ast$model, std\+::ostream \&stream, bool pretty\+Print, bool write\+Binary)
+\item 
+bool \hyperlink{classtinygltf_1_1TinyGLTF_a3b0f37da7e370ba71b8b3269e491f325}{Write\+Gltf\+Scene\+To\+File} (\hyperlink{classtinygltf_1_1Model}{Model} $\ast$model, const std\+::string \&filename, bool embed\+Images, bool embed\+Buffers, bool pretty\+Print, bool write\+Binary)
+\item 
+void \hyperlink{classtinygltf_1_1TinyGLTF_a2db832bfff9de2c8612a35c823ba91b8}{Set\+Image\+Loader} (Load\+Image\+Data\+Function Load\+Image\+Data, void $\ast$user\+\_\+data)
+\item 
+void \hyperlink{classtinygltf_1_1TinyGLTF_a5c98eaf13689129e47d9f31c6487fcdd}{Set\+Image\+Writer} (Write\+Image\+Data\+Function Write\+Image\+Data, void $\ast$user\+\_\+data)
+\item 
+void \hyperlink{classtinygltf_1_1TinyGLTF_a92551e51e5c2ef62545accbdf3055e3d}{Set\+Fs\+Callbacks} (\hyperlink{structtinygltf_1_1FsCallbacks}{Fs\+Callbacks} callbacks)
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_afb694767274be3674f6e98ad2e32ffa8}\label{classtinygltf_1_1TinyGLTF_afb694767274be3674f6e98ad2e32ffa8}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Load\+A\+S\+C\+I\+I\+From\+File@{Load\+A\+S\+C\+I\+I\+From\+File}}
+\index{Load\+A\+S\+C\+I\+I\+From\+File@{Load\+A\+S\+C\+I\+I\+From\+File}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Load\+A\+S\+C\+I\+I\+From\+File()}{LoadASCIIFromFile()}}
+{\footnotesize\ttfamily bool tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Load\+A\+S\+C\+I\+I\+From\+File (\begin{DoxyParamCaption}\item[{\hyperlink{classtinygltf_1_1Model}{Model} $\ast$}]{model,  }\item[{std\+::string $\ast$}]{err,  }\item[{std\+::string $\ast$}]{warn,  }\item[{const std\+::string \&}]{filename,  }\item[{unsigned int}]{check\+\_\+sections = {\ttfamily REQUIRE\+\_\+VERSION} }\end{DoxyParamCaption})}
+
+Loads gl\+TF A\+S\+C\+II asset from a file. Set warning message to {\ttfamily warn} for example it fails to load asserts. Returns false and set error string to {\ttfamily err} if there\textquotesingle{}s an error. \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a868ceaa7231473720375cfe47ba26840}\label{classtinygltf_1_1TinyGLTF_a868ceaa7231473720375cfe47ba26840}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Load\+A\+S\+C\+I\+I\+From\+String@{Load\+A\+S\+C\+I\+I\+From\+String}}
+\index{Load\+A\+S\+C\+I\+I\+From\+String@{Load\+A\+S\+C\+I\+I\+From\+String}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Load\+A\+S\+C\+I\+I\+From\+String()}{LoadASCIIFromString()}}
+{\footnotesize\ttfamily bool tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Load\+A\+S\+C\+I\+I\+From\+String (\begin{DoxyParamCaption}\item[{\hyperlink{classtinygltf_1_1Model}{Model} $\ast$}]{model,  }\item[{std\+::string $\ast$}]{err,  }\item[{std\+::string $\ast$}]{warn,  }\item[{const char $\ast$}]{str,  }\item[{const unsigned int}]{length,  }\item[{const std\+::string \&}]{base\+\_\+dir,  }\item[{unsigned int}]{check\+\_\+sections = {\ttfamily REQUIRE\+\_\+VERSION} }\end{DoxyParamCaption})}
+
+Loads gl\+TF A\+S\+C\+II asset from string(memory). {\ttfamily length} = strlen(str); Set warning message to {\ttfamily warn} for example it fails to load asserts. Returns false and set error string to {\ttfamily err} if there\textquotesingle{}s an error. \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a6fcc0f27b3973a1a0c1afe39f7c52c51}\label{classtinygltf_1_1TinyGLTF_a6fcc0f27b3973a1a0c1afe39f7c52c51}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Load\+Binary\+From\+File@{Load\+Binary\+From\+File}}
+\index{Load\+Binary\+From\+File@{Load\+Binary\+From\+File}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Load\+Binary\+From\+File()}{LoadBinaryFromFile()}}
+{\footnotesize\ttfamily bool tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Load\+Binary\+From\+File (\begin{DoxyParamCaption}\item[{\hyperlink{classtinygltf_1_1Model}{Model} $\ast$}]{model,  }\item[{std\+::string $\ast$}]{err,  }\item[{std\+::string $\ast$}]{warn,  }\item[{const std\+::string \&}]{filename,  }\item[{unsigned int}]{check\+\_\+sections = {\ttfamily REQUIRE\+\_\+VERSION} }\end{DoxyParamCaption})}
+
+Loads gl\+TF binary asset from a file. Set warning message to {\ttfamily warn} for example it fails to load asserts. Returns false and set error string to {\ttfamily err} if there\textquotesingle{}s an error. \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a363def44f18e944fa49e0cebe8f1b5b6}\label{classtinygltf_1_1TinyGLTF_a363def44f18e944fa49e0cebe8f1b5b6}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Load\+Binary\+From\+Memory@{Load\+Binary\+From\+Memory}}
+\index{Load\+Binary\+From\+Memory@{Load\+Binary\+From\+Memory}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Load\+Binary\+From\+Memory()}{LoadBinaryFromMemory()}}
+{\footnotesize\ttfamily bool tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Load\+Binary\+From\+Memory (\begin{DoxyParamCaption}\item[{\hyperlink{classtinygltf_1_1Model}{Model} $\ast$}]{model,  }\item[{std\+::string $\ast$}]{err,  }\item[{std\+::string $\ast$}]{warn,  }\item[{const unsigned char $\ast$}]{bytes,  }\item[{const unsigned int}]{length,  }\item[{const std\+::string \&}]{base\+\_\+dir = {\ttfamily \char`\"{}\char`\"{}},  }\item[{unsigned int}]{check\+\_\+sections = {\ttfamily REQUIRE\+\_\+VERSION} }\end{DoxyParamCaption})}
+
+Loads gl\+TF binary asset from memory. {\ttfamily length} = strlen(str); Set warning message to {\ttfamily warn} for example it fails to load asserts. Returns false and set error string to {\ttfamily err} if there\textquotesingle{}s an error. \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a92551e51e5c2ef62545accbdf3055e3d}\label{classtinygltf_1_1TinyGLTF_a92551e51e5c2ef62545accbdf3055e3d}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Set\+Fs\+Callbacks@{Set\+Fs\+Callbacks}}
+\index{Set\+Fs\+Callbacks@{Set\+Fs\+Callbacks}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Set\+Fs\+Callbacks()}{SetFsCallbacks()}}
+{\footnotesize\ttfamily void tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Set\+Fs\+Callbacks (\begin{DoxyParamCaption}\item[{\hyperlink{structtinygltf_1_1FsCallbacks}{Fs\+Callbacks}}]{callbacks }\end{DoxyParamCaption})}
+
+Set callbacks to use for filesystem (fs) access and their user data \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a2db832bfff9de2c8612a35c823ba91b8}\label{classtinygltf_1_1TinyGLTF_a2db832bfff9de2c8612a35c823ba91b8}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Set\+Image\+Loader@{Set\+Image\+Loader}}
+\index{Set\+Image\+Loader@{Set\+Image\+Loader}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Set\+Image\+Loader()}{SetImageLoader()}}
+{\footnotesize\ttfamily void tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Set\+Image\+Loader (\begin{DoxyParamCaption}\item[{Load\+Image\+Data\+Function}]{Load\+Image\+Data,  }\item[{void $\ast$}]{user\+\_\+data }\end{DoxyParamCaption})}
+
+Set callback to use for loading image data \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a5c98eaf13689129e47d9f31c6487fcdd}\label{classtinygltf_1_1TinyGLTF_a5c98eaf13689129e47d9f31c6487fcdd}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Set\+Image\+Writer@{Set\+Image\+Writer}}
+\index{Set\+Image\+Writer@{Set\+Image\+Writer}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Set\+Image\+Writer()}{SetImageWriter()}}
+{\footnotesize\ttfamily void tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Set\+Image\+Writer (\begin{DoxyParamCaption}\item[{Write\+Image\+Data\+Function}]{Write\+Image\+Data,  }\item[{void $\ast$}]{user\+\_\+data }\end{DoxyParamCaption})}
+
+Set callback to use for writing image data \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_a3b0f37da7e370ba71b8b3269e491f325}\label{classtinygltf_1_1TinyGLTF_a3b0f37da7e370ba71b8b3269e491f325}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Write\+Gltf\+Scene\+To\+File@{Write\+Gltf\+Scene\+To\+File}}
+\index{Write\+Gltf\+Scene\+To\+File@{Write\+Gltf\+Scene\+To\+File}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Write\+Gltf\+Scene\+To\+File()}{WriteGltfSceneToFile()}}
+{\footnotesize\ttfamily bool tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Write\+Gltf\+Scene\+To\+File (\begin{DoxyParamCaption}\item[{\hyperlink{classtinygltf_1_1Model}{Model} $\ast$}]{model,  }\item[{const std\+::string \&}]{filename,  }\item[{bool}]{embed\+Images,  }\item[{bool}]{embed\+Buffers,  }\item[{bool}]{pretty\+Print,  }\item[{bool}]{write\+Binary }\end{DoxyParamCaption})}
+
+Write gl\+TF to file. \mbox{\Hypertarget{classtinygltf_1_1TinyGLTF_aa219527a19b8c2d72821f6a6a91651dc}\label{classtinygltf_1_1TinyGLTF_aa219527a19b8c2d72821f6a6a91651dc}} 
+\index{tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}!Write\+Gltf\+Scene\+To\+Stream@{Write\+Gltf\+Scene\+To\+Stream}}
+\index{Write\+Gltf\+Scene\+To\+Stream@{Write\+Gltf\+Scene\+To\+Stream}!tinygltf\+::\+Tiny\+G\+L\+TF@{tinygltf\+::\+Tiny\+G\+L\+TF}}
+\subsubsection{\texorpdfstring{Write\+Gltf\+Scene\+To\+Stream()}{WriteGltfSceneToStream()}}
+{\footnotesize\ttfamily bool tinygltf\+::\+Tiny\+G\+L\+T\+F\+::\+Write\+Gltf\+Scene\+To\+Stream (\begin{DoxyParamCaption}\item[{\hyperlink{classtinygltf_1_1Model}{Model} $\ast$}]{model,  }\item[{std\+::ostream \&}]{stream,  }\item[{bool}]{pretty\+Print,  }\item[{bool}]{write\+Binary }\end{DoxyParamCaption})}
+
+Write gl\+TF to stream, buffers and images will be embeded 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/thirdparty/gltf/tiny\+\_\+gltf.\+h\end{DoxyCompactItemize}

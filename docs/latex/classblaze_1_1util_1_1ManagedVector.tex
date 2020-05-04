@@ -1,0 +1,137 @@
+\hypertarget{classblaze_1_1util_1_1ManagedVector}{}\section{blaze\+:\+:util\+:\+:Managed\+Vector$<$ T, singular $>$ Class Template Reference}
+\label{classblaze_1_1util_1_1ManagedVector}\index{blaze\+::util\+::\+Managed\+Vector$<$ T, singular $>$@{blaze\+::util\+::\+Managed\+Vector$<$ T, singular $>$}}
+
+
+Manages lifetime of the handles of entire vector.  
+
+
+
+
+{\ttfamily \#include $<$Managed.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a786dfc0cf1d0d0b85576ed888be64590}\label{classblaze_1_1util_1_1ManagedVector_a786dfc0cf1d0d0b85576ed888be64590}} 
+\hyperlink{classblaze_1_1util_1_1ManagedVector_a786dfc0cf1d0d0b85576ed888be64590}{Managed\+Vector} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename U $>$ }\\\hyperlink{classblaze_1_1util_1_1ManagedVector_af065b9675c2de2a2bb162321dc4eb71e}{Managed\+Vector} (const std\+::vector$<$ T $>$ \&handles, U destroyer) noexcept
+\begin{DoxyCompactList}\small\item\em Main Constructor. \end{DoxyCompactList}\item 
+bool \hyperlink{classblaze_1_1util_1_1ManagedVector_a583d0bfad0ed4c1e0dc32c800124a187}{valid} () const
+\begin{DoxyCompactList}\small\item\em Returns validity of the handles. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_ae399dc2470dfc7c978b8b11aa32aea2a}\label{classblaze_1_1util_1_1ManagedVector_ae399dc2470dfc7c978b8b11aa32aea2a}} 
+\hyperlink{classblaze_1_1util_1_1ManagedVector_ae399dc2470dfc7c978b8b11aa32aea2a}{$\sim$\+Managed\+Vector} ()
+\begin{DoxyCompactList}\small\item\em Destructor for the handles. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move constructors.}\par
+{\em Move only, copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a7adbb2075c32b994dc754c85ee26e6cf}\label{classblaze_1_1util_1_1ManagedVector_a7adbb2075c32b994dc754c85ee26e6cf}} 
+{\bfseries Managed\+Vector} (\hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a529111d90cb99830593a33040b80649f}\label{classblaze_1_1util_1_1ManagedVector_a529111d90cb99830593a33040b80649f}} 
+\hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \& {\bfseries operator=} (\hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a19024b89094d90c347541fcdb649fd73}\label{classblaze_1_1util_1_1ManagedVector_a19024b89094d90c347541fcdb649fd73}} 
+{\bfseries Managed\+Vector} (const \hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a20abfd602f5ba16e8e6695c130c11aae}\label{classblaze_1_1util_1_1ManagedVector_a20abfd602f5ba16e8e6695c130c11aae}} 
+\hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters}\par
+{\em Getters for private variables. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a022ccbf1fea9dcdb117c5204040f2309}\label{classblaze_1_1util_1_1ManagedVector_a022ccbf1fea9dcdb117c5204040f2309}} 
+const std\+::vector$<$ T $>$ \& {\bfseries get} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_ab1694bb9a81e5ada13f52a9a15471e86}\label{classblaze_1_1util_1_1ManagedVector_ab1694bb9a81e5ada13f52a9a15471e86}} 
+const T \& {\bfseries get} (size\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a8d965d5a267ec16597c125d5fd24cdf5}\label{classblaze_1_1util_1_1ManagedVector_a8d965d5a267ec16597c125d5fd24cdf5}} 
+void {\bfseries set} (size\+\_\+t index, const T \&val)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a543ca5dd79a1f857c74395667107b90f}\label{classblaze_1_1util_1_1ManagedVector_a543ca5dd79a1f857c74395667107b90f}} 
+T \& {\bfseries operator\mbox{[}$\,$\mbox{]}} (size\+\_\+t index)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a57f0339cded2619686f687ad91b02ddd}\label{classblaze_1_1util_1_1ManagedVector_a57f0339cded2619686f687ad91b02ddd}} 
+const T \& {\bfseries operator\mbox{[}$\,$\mbox{]}} (size\+\_\+t index) const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_aec70a1885f51489f14d3421e2a72bd97}\label{classblaze_1_1util_1_1ManagedVector_aec70a1885f51489f14d3421e2a72bd97}} 
+T $\ast$ {\bfseries data} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_ad9d86db576904d545d03b35bb4fa5a7f}\label{classblaze_1_1util_1_1ManagedVector_ad9d86db576904d545d03b35bb4fa5a7f}} 
+void {\bfseries resize} (size\+\_\+t size)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a1bd4ea82bc12edc4d84384259abeafc8}\label{classblaze_1_1util_1_1ManagedVector_a1bd4ea82bc12edc4d84384259abeafc8}} 
+size\+\_\+t {\bfseries size} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a2356c6e19e1abf8baa8245af129607b8}\label{classblaze_1_1util_1_1ManagedVector_a2356c6e19e1abf8baa8245af129607b8}} 
+void {\bfseries swap} (\hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \&a, \hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} \&b)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$typename T, bool singular = true$>$\newline
+class blaze\+::util\+::\+Managed\+Vector$<$ T, singular $>$}
+
+Manages lifetime of the handles of entire vector. 
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em T} & The type of the handles in the vector. \\
+\hline
+{\em singular} & (bool) Whether the destroyer destroys a single handle, or the vector of handles. \\
+\hline
+\end{DoxyTemplParams}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_af065b9675c2de2a2bb162321dc4eb71e}\label{classblaze_1_1util_1_1ManagedVector_af065b9675c2de2a2bb162321dc4eb71e}} 
+\index{blaze\+::util\+::\+Managed\+Vector@{blaze\+::util\+::\+Managed\+Vector}!Managed\+Vector@{Managed\+Vector}}
+\index{Managed\+Vector@{Managed\+Vector}!blaze\+::util\+::\+Managed\+Vector@{blaze\+::util\+::\+Managed\+Vector}}
+\subsubsection{\texorpdfstring{Managed\+Vector()}{ManagedVector()}}
+{\footnotesize\ttfamily template$<$typename T, bool singular = true$>$ \\
+template$<$typename U $>$ \\
+\hyperlink{classblaze_1_1util_1_1ManagedVector}{blaze\+::util\+::\+Managed\+Vector}$<$ T, singular $>$\+::\hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ T $>$ \&}]{handles,  }\item[{U}]{destroyer }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+
+
+Main Constructor. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em handles} & Vector of all handles. \\
+\hline
+{\em destroyer} & The destroyer function for a single handle. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1util_1_1ManagedVector_a583d0bfad0ed4c1e0dc32c800124a187}\label{classblaze_1_1util_1_1ManagedVector_a583d0bfad0ed4c1e0dc32c800124a187}} 
+\index{blaze\+::util\+::\+Managed\+Vector@{blaze\+::util\+::\+Managed\+Vector}!valid@{valid}}
+\index{valid@{valid}!blaze\+::util\+::\+Managed\+Vector@{blaze\+::util\+::\+Managed\+Vector}}
+\subsubsection{\texorpdfstring{valid()}{valid()}}
+{\footnotesize\ttfamily template$<$typename T, bool singular = true$>$ \\
+\hyperlink{classblaze_1_1util_1_1ManagedVector}{blaze\+::util\+::\+Managed\+Vector}$<$ T, singular $>$\+::valid (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Returns validity of the handles. 
+
+The \hyperlink{classblaze_1_1util_1_1ManagedVector}{Managed\+Vector} is considered valid if it is constructed successfully using the main constructor.
+
+\begin{DoxyReturn}{Returns}
+true if successfully constructed. 
+
+false otherwise. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/util/Managed.\+hpp\end{DoxyCompactItemize}

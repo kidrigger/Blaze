@@ -1,0 +1,82 @@
+\hypertarget{structblaze_1_1Vertex}{}\section{blaze\+:\+:Vertex Struct Reference}
+\label{structblaze_1_1Vertex}\index{blaze\+::\+Vertex@{blaze\+::\+Vertex}}
+
+
+\hyperlink{structblaze_1_1Vertex}{Vertex} type commonly used with interleaved data.  
+
+
+
+
+{\ttfamily \#include $<$Datatypes.\+hpp$>$}
+
+\subsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static Vk\+Vertex\+Input\+Binding\+Description \hyperlink{structblaze_1_1Vertex_a81e9b6e602df735ad45fcc5d2c3305c6}{get\+Binding\+Description} (uint32\+\_\+t binding=0)
+\begin{DoxyCompactList}\small\item\em Creates and returns the binding description for the \hyperlink{structblaze_1_1Vertex}{Vertex}. \end{DoxyCompactList}\item 
+static std\+::vector$<$ Vk\+Vertex\+Input\+Attribute\+Description $>$ \hyperlink{structblaze_1_1Vertex_aa9ee165c3cfdac311ca8ffc382524d4b}{get\+Attribute\+Descriptions} (\hyperlink{structblaze_1_1VertexInputFormat}{Vertex\+Input\+Format} format=\{\}, uint32\+\_\+t binding=0)
+\begin{DoxyCompactList}\small\item\em Creates attribute descriptions for the vertex. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1Vertex_a1e1592274327ef0a3c655b85826af54b}\label{structblaze_1_1Vertex_a1e1592274327ef0a3c655b85826af54b}} 
+glm\+::vec3 \hyperlink{structblaze_1_1Vertex_a1e1592274327ef0a3c655b85826af54b}{position}
+\begin{DoxyCompactList}\small\item\em Position of the vertex. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{structblaze_1_1Vertex_ab0bb46f8b4ffc80a6c622e629401a5fd}\label{structblaze_1_1Vertex_ab0bb46f8b4ffc80a6c622e629401a5fd}} 
+glm\+::vec3 \hyperlink{structblaze_1_1Vertex_ab0bb46f8b4ffc80a6c622e629401a5fd}{normal}
+\begin{DoxyCompactList}\small\item\em Normal vector outwards from the vertex. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{structblaze_1_1Vertex_acc8d9d8254c0515edad905e50126ce2b}\label{structblaze_1_1Vertex_acc8d9d8254c0515edad905e50126ce2b}} 
+glm\+::vec2 \hyperlink{structblaze_1_1Vertex_acc8d9d8254c0515edad905e50126ce2b}{uv0}
+\begin{DoxyCompactList}\small\item\em Texture Coordinate (0) \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{structblaze_1_1Vertex_afee0041ee5ef260ac1418119a2b132e5}\label{structblaze_1_1Vertex_afee0041ee5ef260ac1418119a2b132e5}} 
+glm\+::vec2 \hyperlink{structblaze_1_1Vertex_afee0041ee5ef260ac1418119a2b132e5}{uv1}
+\begin{DoxyCompactList}\small\item\em Texture Coordinate (1) \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{structblaze_1_1Vertex}{Vertex} type commonly used with interleaved data. 
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{structblaze_1_1Vertex_aa9ee165c3cfdac311ca8ffc382524d4b}\label{structblaze_1_1Vertex_aa9ee165c3cfdac311ca8ffc382524d4b}} 
+\index{blaze\+::\+Vertex@{blaze\+::\+Vertex}!get\+Attribute\+Descriptions@{get\+Attribute\+Descriptions}}
+\index{get\+Attribute\+Descriptions@{get\+Attribute\+Descriptions}!blaze\+::\+Vertex@{blaze\+::\+Vertex}}
+\subsubsection{\texorpdfstring{get\+Attribute\+Descriptions()}{getAttributeDescriptions()}}
+{\footnotesize\ttfamily blaze\+::\+Vertex\+::get\+Attribute\+Descriptions (\begin{DoxyParamCaption}\item[{\hyperlink{structblaze_1_1VertexInputFormat}{Vertex\+Input\+Format}}]{format = {\ttfamily \{\}},  }\item[{uint32\+\_\+t}]{binding = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Creates attribute descriptions for the vertex. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em format} & The binding locations for each of the vertex inputs. \\
+\hline
+\mbox{\tt in}  & {\em binding} & Binding location of the vertex attribute.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+vector of attribute descriptions 
+\end{DoxyReturn}
+\mbox{\Hypertarget{structblaze_1_1Vertex_a81e9b6e602df735ad45fcc5d2c3305c6}\label{structblaze_1_1Vertex_a81e9b6e602df735ad45fcc5d2c3305c6}} 
+\index{blaze\+::\+Vertex@{blaze\+::\+Vertex}!get\+Binding\+Description@{get\+Binding\+Description}}
+\index{get\+Binding\+Description@{get\+Binding\+Description}!blaze\+::\+Vertex@{blaze\+::\+Vertex}}
+\subsubsection{\texorpdfstring{get\+Binding\+Description()}{getBindingDescription()}}
+{\footnotesize\ttfamily blaze\+::\+Vertex\+::get\+Binding\+Description (\begin{DoxyParamCaption}\item[{uint32\+\_\+t}]{binding = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+Creates and returns the binding description for the \hyperlink{structblaze_1_1Vertex}{Vertex}. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em binding} & Binding location of the vertex attribute.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\hyperlink{structblaze_1_1Vertex}{Vertex} Input Binding Description 
+\end{DoxyReturn}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/Datatypes.\+hpp\end{DoxyCompactItemize}

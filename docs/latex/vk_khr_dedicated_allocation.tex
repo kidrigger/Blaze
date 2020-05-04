@@ -1,0 +1,39 @@
+V\+K\+\_\+\+K\+H\+R\+\_\+dedicated\+\_\+allocation is a Vulkan extension which can be used to improve performance on some G\+P\+Us. It augments Vulkan A\+PI with possibility to query driver whether it prefers particular buffer or image to have its own, dedicated allocation (separate {\ttfamily Vk\+Device\+Memory} block) for better efficiency -\/ to be able to do some internal optimizations.
+
+The extension is supported by this library. It will be used automatically when enabled. To enable it\+:
+
+1 . When creating Vulkan device, check if following 2 device extensions are supported (call {\ttfamily vk\+Enumerate\+Device\+Extension\+Properties()}). If yes, enable them (fill {\ttfamily Vk\+Device\+Create\+Info\+::pp\+Enabled\+Extension\+Names}).
+
+
+\begin{DoxyItemize}
+\item V\+K\+\_\+\+K\+H\+R\+\_\+get\+\_\+memory\+\_\+requirements2
+\item V\+K\+\_\+\+K\+H\+R\+\_\+dedicated\+\_\+allocation
+\end{DoxyItemize}
+
+If you enabled these extensions\+:
+
+2 . Use \#\+V\+M\+A\+\_\+\+A\+L\+L\+O\+C\+A\+T\+O\+R\+\_\+\+C\+R\+E\+A\+T\+E\+\_\+\+K\+H\+R\+\_\+\+D\+E\+D\+I\+C\+A\+T\+E\+D\+\_\+\+A\+L\+L\+O\+C\+A\+T\+I\+O\+N\+\_\+\+B\+IT flag when creating your \hyperlink{structVmaAllocator}{Vma\+Allocator}`to inform the library that you enabled required extensions and you want the library to use them.
+
+
+\begin{DoxyCode}
+allocatorInfo.\hyperlink{structVmaAllocatorCreateInfo_a392ea2ecbaff93f91a7c49f735ad4346}{flags} |= VMA\_ALLOCATOR\_CREATE\_KHR\_DEDICATED\_ALLOCATION\_BIT;
+
+vmaCreateAllocator(&allocatorInfo, &allocator);
+\end{DoxyCode}
+
+
+That\textquotesingle{}s all. The extension will be automatically used whenever you create a buffer using vma\+Create\+Buffer() or image using vma\+Create\+Image().
+
+When using the extension together with Vulkan Validation Layer, you will receive warnings like this\+: \begin{DoxyVerb}vkBindBufferMemory(): Binding memory to buffer 0x33 but vkGetBufferMemoryRequirements() has not been called on that buffer.
+\end{DoxyVerb}
+
+
+It is OK, you should just ignore it. It happens because you use function {\ttfamily vk\+Get\+Buffer\+Memory\+Requirements2\+K\+H\+R()} instead of standard {\ttfamily vk\+Get\+Buffer\+Memory\+Requirements()}, while the validation layer seems to be unaware of it.
+
+To learn more about this extension, see\+:
+
+
+\begin{DoxyItemize}
+\item \href{https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html#VK_KHR_dedicated_allocation}{\tt V\+K\+\_\+\+K\+H\+R\+\_\+dedicated\+\_\+allocation in Vulkan specification}
+\item \href{http://asawicki.info/articles/VK_KHR_dedicated_allocation.php5}{\tt V\+K\+\_\+\+K\+H\+R\+\_\+dedicated\+\_\+allocation unofficial manual} 
+\end{DoxyItemize}

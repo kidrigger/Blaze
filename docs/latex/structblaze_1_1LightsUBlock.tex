@@ -1,0 +1,93 @@
+\hypertarget{structblaze_1_1LightsUBlock}{}\section{blaze\+:\+:Lights\+U\+Block Struct Reference}
+\label{structblaze_1_1LightsUBlock}\index{blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}}
+
+
+Holds Light data to be sent to G\+PU.  
+
+
+
+
+{\ttfamily \#include $<$Datatypes.\+hpp$>$}
+
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_a34b050e592a1ae2adfe97a6ab299fc44}\label{structblaze_1_1LightsUBlock_a34b050e592a1ae2adfe97a6ab299fc44}} 
+glm\+::mat4 \hyperlink{structblaze_1_1LightsUBlock_a34b050e592a1ae2adfe97a6ab299fc44}{dir\+Light\+Transform} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}\mbox{[}M\+A\+X\+\_\+\+C\+S\+M\+\_\+\+S\+P\+L\+I\+TS\mbox{]}
+\begin{DoxyCompactList}\small\item\em The transformation matrix to directional light space coordinates. \end{DoxyCompactList}\item 
+glm\+::vec4 \hyperlink{structblaze_1_1LightsUBlock_a37c75420ca15714012d45d66e6519514}{light\+Dir} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\begin{DoxyCompactList}\small\item\em The direction of the directional light. \end{DoxyCompactList}\item 
+glm\+::vec4 \hyperlink{structblaze_1_1LightsUBlock_a5cf761c28dd781d9b239af72acdb5589}{csm\+Splits} \mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\begin{DoxyCompactList}\small\item\em The Cascade split distances of the directional light. \end{DoxyCompactList}\item 
+glm\+::vec4 \hyperlink{structblaze_1_1LightsUBlock_af38bd2379a184e9153cf7261a96012fd}{light\+Pos} \mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\begin{DoxyCompactList}\small\item\em The position of the point light. \end{DoxyCompactList}\item 
+int \hyperlink{structblaze_1_1LightsUBlock_a2678f626f12d1fc23e8ec2aaa23cbbdc}{shadow\+Idx} \mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}
+\begin{DoxyCompactList}\small\item\em Indices of shadow\+Maps associated with the point lights. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_a0f6aff7864b13668a095734fd1041534}\label{structblaze_1_1LightsUBlock_a0f6aff7864b13668a095734fd1041534}} 
+int \hyperlink{structblaze_1_1LightsUBlock_a0f6aff7864b13668a095734fd1041534}{num\+Point\+Lights}
+\begin{DoxyCompactList}\small\item\em Number of point lights. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_a51ea7670e9599fa81a04ae1284af8d01}\label{structblaze_1_1LightsUBlock_a51ea7670e9599fa81a04ae1284af8d01}} 
+int \hyperlink{structblaze_1_1LightsUBlock_a51ea7670e9599fa81a04ae1284af8d01}{num\+Dir\+Lights}
+\begin{DoxyCompactList}\small\item\em Number of direcional lights. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Holds Light data to be sent to G\+PU. 
+
+\begin{DoxyNote}{Note}
+Needs Restructuring. 
+\end{DoxyNote}
+
+
+\subsection{Member Data Documentation}
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_a5cf761c28dd781d9b239af72acdb5589}\label{structblaze_1_1LightsUBlock_a5cf761c28dd781d9b239af72acdb5589}} 
+\index{blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}!csm\+Splits@{csm\+Splits}}
+\index{csm\+Splits@{csm\+Splits}!blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}}
+\subsubsection{\texorpdfstring{csm\+Splits}{csmSplits}}
+{\footnotesize\ttfamily glm\+::vec4 blaze\+::\+Lights\+U\+Block\+::csm\+Splits\mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}}
+
+
+
+The Cascade split distances of the directional light. 
+
+\begin{DoxyItemize}
+\item idx = 0 refers to first split \item idx = 1 refers to second split \item idx = 2 refers to third split \item idx = 3 is the number of splits \end{DoxyItemize}
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_a37c75420ca15714012d45d66e6519514}\label{structblaze_1_1LightsUBlock_a37c75420ca15714012d45d66e6519514}} 
+\index{blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}!light\+Dir@{light\+Dir}}
+\index{light\+Dir@{light\+Dir}!blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}}
+\subsubsection{\texorpdfstring{light\+Dir}{lightDir}}
+{\footnotesize\ttfamily glm\+::vec4 blaze\+::\+Lights\+U\+Block\+::light\+Dir\mbox{[}M\+A\+X\+\_\+\+D\+I\+R\+\_\+\+L\+I\+G\+H\+TS\mbox{]}}
+
+
+
+The direction of the directional light. 
+
+\begin{DoxyItemize}
+\item xyz coordinates refer to the direction. \item w coordinate is the brightness. \item xyz should be normalized. \end{DoxyItemize}
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_af38bd2379a184e9153cf7261a96012fd}\label{structblaze_1_1LightsUBlock_af38bd2379a184e9153cf7261a96012fd}} 
+\index{blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}!light\+Pos@{light\+Pos}}
+\index{light\+Pos@{light\+Pos}!blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}}
+\subsubsection{\texorpdfstring{light\+Pos}{lightPos}}
+{\footnotesize\ttfamily glm\+::vec4 blaze\+::\+Lights\+U\+Block\+::light\+Pos\mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}}
+
+
+
+The position of the point light. 
+
+\begin{DoxyItemize}
+\item xyz coordinates refer to the location. \item w coordinate is the brightness. \end{DoxyItemize}
+\mbox{\Hypertarget{structblaze_1_1LightsUBlock_a2678f626f12d1fc23e8ec2aaa23cbbdc}\label{structblaze_1_1LightsUBlock_a2678f626f12d1fc23e8ec2aaa23cbbdc}} 
+\index{blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}!shadow\+Idx@{shadow\+Idx}}
+\index{shadow\+Idx@{shadow\+Idx}!blaze\+::\+Lights\+U\+Block@{blaze\+::\+Lights\+U\+Block}}
+\subsubsection{\texorpdfstring{shadow\+Idx}{shadowIdx}}
+{\footnotesize\ttfamily int blaze\+::\+Lights\+U\+Block\+::shadow\+Idx\mbox{[}M\+A\+X\+\_\+\+P\+O\+I\+N\+T\+\_\+\+L\+I\+G\+H\+TS\mbox{]}}
+
+
+
+Indices of shadow\+Maps associated with the point lights. 
+
+Valid shadow indices must be in range \mbox{[}0,M\+A\+X\+\_\+\+S\+H\+A\+D\+O\+WS) Shadow index -\/1 denotes that there is no shadow. 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/Datatypes.\+hpp\end{DoxyCompactItemize}

@@ -1,0 +1,75 @@
+\hypertarget{quick_start_quick_start_project_setup}{}\section{Project setup}\label{quick_start_quick_start_project_setup}
+Vulkan Memory Allocator comes in form of a \char`\"{}stb-\/style\char`\"{} single header file. You don\textquotesingle{}t need to build it as a separate library project. You can add this file directly to your project and submit it to code repository next to your other source files.
+
+\char`\"{}\+Single header\char`\"{} doesn\textquotesingle{}t mean that everything is contained in C/\+C++ declarations, like it tends to be in case of inline functions or C++ templates. It means that implementation is bundled with interface in a single file and needs to be extracted using preprocessor macro. If you don\textquotesingle{}t do it properly, you will get linker errors.
+
+To do it properly\+:
+
+
+\begin{DoxyEnumerate}
+\item Include \char`\"{}vk\+\_\+mem\+\_\+alloc.\+h\char`\"{} file in each C\+PP file where you want to use the library. This includes declarations of all members of the library.
+\item In exacly one C\+PP file define following macro before this include. It enables also internal definitions.
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}
+\textcolor{preprocessor}{#define VMA\_IMPLEMENTATION}
+\textcolor{preprocessor}{#include "vk\_mem\_alloc.h"}
+\end{DoxyCode}
+
+
+It may be a good idea to create dedicated C\+PP file just for this purpose.
+
+Note on language\+: This library is written in C++, but has C-\/compatible interface. Thus you can include and use \hyperlink{vk__mem__alloc_8h_source}{vk\+\_\+mem\+\_\+alloc.\+h} in C or C++ code, but full implementation with {\ttfamily V\+M\+A\+\_\+\+I\+M\+P\+L\+E\+M\+E\+N\+T\+A\+T\+I\+ON} macro must be compiled as C++, N\+OT as C.
+
+Please note that this library includes header {\ttfamily $<$vulkan/vulkan.\+h$>$}, which in turn includes {\ttfamily $<$windows.\+h$>$} on Windows. If you need some specific macros defined before including these headers (like {\ttfamily W\+I\+N32\+\_\+\+L\+E\+A\+N\+\_\+\+A\+N\+D\+\_\+\+M\+E\+AN} or {\ttfamily W\+I\+N\+V\+ER} for Windows, {\ttfamily V\+K\+\_\+\+U\+S\+E\+\_\+\+P\+L\+A\+T\+F\+O\+R\+M\+\_\+\+W\+I\+N32\+\_\+\+K\+HR} for Vulkan), you must define them before every {\ttfamily \#include} of this library.\hypertarget{quick_start_quick_start_initialization}{}\section{Initialization}\label{quick_start_quick_start_initialization}
+At program startup\+:
+
+
+\begin{DoxyEnumerate}
+\item Initialize Vulkan to have {\ttfamily Vk\+Physical\+Device} and {\ttfamily Vk\+Device} object.
+\item Fill \hyperlink{structVmaAllocatorCreateInfo}{Vma\+Allocator\+Create\+Info} structure and create \hyperlink{structVmaAllocator}{Vma\+Allocator} object by calling vma\+Create\+Allocator().
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}
+\hyperlink{structVmaAllocatorCreateInfo}{VmaAllocatorCreateInfo} allocatorInfo = \{\};
+allocatorInfo.\hyperlink{structVmaAllocatorCreateInfo_a08230f04ae6ccf8a78150a9e829a7156}{physicalDevice} = physicalDevice;
+allocatorInfo.\hyperlink{structVmaAllocatorCreateInfo_ad924ddd77b04039c88d0c09b0ffcd500}{device} = device;
+
+\hyperlink{structVmaAllocator}{VmaAllocator} allocator;
+vmaCreateAllocator(&allocatorInfo, &allocator);
+\end{DoxyCode}
+\hypertarget{quick_start_quick_start_resource_allocation}{}\section{Resource allocation}\label{quick_start_quick_start_resource_allocation}
+When you want to create a buffer or image\+:
+
+
+\begin{DoxyEnumerate}
+\item Fill {\ttfamily Vk\+Buffer\+Create\+Info} / {\ttfamily Vk\+Image\+Create\+Info} structure.
+\item Fill \hyperlink{structVmaAllocationCreateInfo}{Vma\+Allocation\+Create\+Info} structure.
+\item Call vma\+Create\+Buffer() / vma\+Create\+Image() to get {\ttfamily Vk\+Buffer}/{\ttfamily Vk\+Image} with memory already allocated and bound to it.
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}
+VkBufferCreateInfo bufferInfo = \{ VK\_STRUCTURE\_TYPE\_BUFFER\_CREATE\_INFO \};
+bufferInfo.size = 65536;
+bufferInfo.usage = VK\_BUFFER\_USAGE\_VERTEX\_BUFFER\_BIT | VK\_BUFFER\_USAGE\_TRANSFER\_DST\_BIT;
+
+\hyperlink{structVmaAllocationCreateInfo}{VmaAllocationCreateInfo} allocInfo = \{\};
+allocInfo.\hyperlink{structVmaAllocationCreateInfo_accb8b06b1f677d858cb9af20705fa910}{usage} = VMA\_MEMORY\_USAGE\_GPU\_ONLY;
+
+VkBuffer buffer;
+\hyperlink{structVmaAllocation}{VmaAllocation} allocation;
+vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, \textcolor{keyword}{nullptr});
+\end{DoxyCode}
+
+
+Don\textquotesingle{}t forget to destroy your objects when no longer needed\+:
+
+
+\begin{DoxyCode}
+vmaDestroyBuffer(allocator, buffer, allocation);
+vmaDestroyAllocator(allocator);
+\end{DoxyCode}
+ 

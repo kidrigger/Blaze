@@ -1,0 +1,4 @@
+<map id="blaze::DebugRenderSettings" name="blaze::DebugRenderSettings">
+<area shape="rect" id="node2" href="$structblaze_1_1SettingsUBlock.html" title="Main display settings exposed to both Player and GPU Shader. " alt="" coords="5,13,157,39"/>
+<area shape="rect" id="node3" href="$structblaze_1_1DebugRenderSettings_1_1TextureViewMenuControl.html" title="blaze::DebugRenderSettings\l::TextureViewMenuControl" alt="" coords="181,5,371,47"/>
+</map>

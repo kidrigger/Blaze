@@ -1,0 +1,8 @@
+<map id="ImGuiInputTextState" name="ImGuiInputTextState">
+<area shape="rect" id="node2" href="$structImStb_1_1STB__TexteditState.html" title="ImStb::STB_TexteditState" alt="" coords="533,7,709,33"/>
+<area shape="rect" id="node3" href="$structImStb_1_1StbUndoState.html" title="ImStb::StbUndoState" alt="" coords="269,7,416,33"/>
+<area shape="rect" id="node4" href="$structImStb_1_1StbUndoRecord.html" title="ImStb::StbUndoRecord" alt="" coords="5,7,164,33"/>
+<area shape="rect" id="node5" href="$structImGuiInputTextCallbackData.html" title="ImGuiInputTextCallbackData" alt="" coords="525,57,716,84"/>
+<area shape="rect" id="node6" href="$structImVector.html" title="ImVector\&lt; char \&gt;" alt="" coords="559,117,683,144"/>
+<area shape="rect" id="node7" href="$structImVector.html" title="ImVector\&lt; ImWchar \&gt;" alt="" coords="545,168,697,195"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="tinygltf::Camera" name="tinygltf::Camera">
+<area shape="rect" id="node2" href="$structtinygltf_1_1OrthographicCamera.html" title="tinygltf::OrthographicCamera" alt="" coords="65,95,254,121"/>
+<area shape="rect" id="node3" href="$classtinygltf_1_1Value.html" title="tinygltf::Value" alt="" coords="108,5,211,32"/>
+<area shape="rect" id="node4" href="$structtinygltf_1_1PerspectiveCamera.html" title="tinygltf::PerspectiveCamera" alt="" coords="278,95,462,121"/>
+</map>

@@ -1,0 +1,32 @@
+\hypertarget{classblaze_1_1spirv_1_1PipelineFactory}{}\section{blaze\+:\+:spirv\+:\+:Pipeline\+Factory Class Reference}
+\label{classblaze_1_1spirv_1_1PipelineFactory}\index{blaze\+::spirv\+::\+Pipeline\+Factory@{blaze\+::spirv\+::\+Pipeline\+Factory}}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_acdb4e699d0cb4898a4fa51e0b7e14e70}\label{classblaze_1_1spirv_1_1PipelineFactory_acdb4e699d0cb4898a4fa51e0b7e14e70}} 
+{\bfseries Pipeline\+Factory} (Vk\+Device device) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_ac1b6b95ed9659c501ecb4ac626a2e1bb}\label{classblaze_1_1spirv_1_1PipelineFactory_ac1b6b95ed9659c501ecb4ac626a2e1bb}} 
+\hyperlink{structblaze_1_1spirv_1_1Shader}{Shader} {\bfseries create\+Shader} (const std\+::vector$<$ \hyperlink{structblaze_1_1spirv_1_1ShaderStageData}{Shader\+Stage\+Data} $>$ \&stages)
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_a46ebc6903dfacabb5c27146762979f14}\label{classblaze_1_1spirv_1_1PipelineFactory_a46ebc6903dfacabb5c27146762979f14}} 
+\hyperlink{structblaze_1_1spirv_1_1Pipeline}{Pipeline} {\bfseries create\+Graphics\+Pipeline} (const \hyperlink{structblaze_1_1spirv_1_1Shader}{Shader} \&shader, const \hyperlink{structblaze_1_1spirv_1_1RenderPass}{Render\+Pass} \&render\+Pass, const \hyperlink{structblaze_1_1spirv_1_1GraphicsPipelineCreateInfo}{Graphics\+Pipeline\+Create\+Info} \&create\+Info)
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_ab4db0891a3c6ae0419cdf2df2fc0fd60}\label{classblaze_1_1spirv_1_1PipelineFactory_ab4db0891a3c6ae0419cdf2df2fc0fd60}} 
+\hyperlink{structblaze_1_1spirv_1_1RenderPass}{Render\+Pass} {\bfseries create\+Render\+Pass} (const std\+::vector$<$ \hyperlink{structblaze_1_1spirv_1_1AttachmentFormat}{Attachment\+Format} $>$ \&formats, const std\+::vector$<$ Vk\+Subpass\+Description $>$ \&subpasses, \hyperlink{structblaze_1_1spirv_1_1LoadStoreConfig}{Load\+Store\+Config} config, const Vk\+Render\+Pass\+Multiview\+Create\+Info $\ast$multiview=nullptr)
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_ab7e18c33bc6970c3a766165a52b0d564}\label{classblaze_1_1spirv_1_1PipelineFactory_ab7e18c33bc6970c3a766165a52b0d564}} 
+\hyperlink{structblaze_1_1spirv_1_1SetVector}{Set\+Vector} {\bfseries create\+Sets} (const \hyperlink{structblaze_1_1spirv_1_1Shader_1_1Set}{Shader\+::\+Set} \&set, uint32\+\_\+t count)
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_ab2a6b51346548c45e1f6b967d7322f37}\label{classblaze_1_1spirv_1_1PipelineFactory_ab2a6b51346548c45e1f6b967d7322f37}} 
+\hyperlink{structblaze_1_1spirv_1_1SetSingleton}{Set\+Singleton} {\bfseries create\+Set} (const \hyperlink{structblaze_1_1spirv_1_1Shader_1_1Set}{Shader\+::\+Set} \&set)
+\item 
+\mbox{\Hypertarget{classblaze_1_1spirv_1_1PipelineFactory_a24dd894f334060f3703f81928c466e8b}\label{classblaze_1_1spirv_1_1PipelineFactory_a24dd894f334060f3703f81928c466e8b}} 
+bool {\bfseries valid} () const
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/spirv/Pipeline\+Factory.\+hpp\item 
+Blaze/spirv/Pipeline\+Factory.\+cpp\end{DoxyCompactItemize}

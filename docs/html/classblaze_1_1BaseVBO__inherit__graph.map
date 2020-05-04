@@ -1,0 +1,6 @@
+<map id="blaze::BaseVBO" name="blaze::BaseVBO">
+<area shape="rect" id="node2" href="$classblaze_1_1IndexBuffer.html" title="Object encapsulating the data in a vertex buffer. " alt="" coords="175,5,335,32"/>
+<area shape="rect" id="node3" href="$classblaze_1_1VertexBuffer.html" title="Object encapsulating the data in a vertex buffer. " alt="" coords="172,56,339,83"/>
+<area shape="rect" id="node4" href="$classblaze_1_1IndexBuffer.html" title="blaze::IndexBuffer\l\&lt; uint32_t \&gt;" alt="" coords="191,107,319,149"/>
+<area shape="rect" id="node5" href="$classblaze_1_1VertexBuffer.html" title="blaze::VertexBuffer\l\&lt; blaze::Vertex \&gt;" alt="" coords="188,173,323,214"/>
+</map>

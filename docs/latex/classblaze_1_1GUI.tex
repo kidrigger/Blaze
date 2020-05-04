@@ -1,0 +1,137 @@
+\hypertarget{classblaze_1_1GUI}{}\section{blaze\+:\+:G\+UI Class Reference}
+\label{classblaze_1_1GUI}\index{blaze\+::\+G\+UI@{blaze\+::\+G\+UI}}
+
+
+Initializes and simplified Im\+G\+UI usage.  
+
+
+
+
+{\ttfamily \#include $<$G\+U\+I.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_a8c105baf7ed38911094c496346128a54}\label{classblaze_1_1GUI_a8c105baf7ed38911094c496346128a54}} 
+\hyperlink{classblaze_1_1GUI_a8c105baf7ed38911094c496346128a54}{G\+UI} () noexcept
+\begin{DoxyCompactList}\small\item\em Default constructor. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1GUI_aa23a611841b303e39ff7eddd5295dc52}{G\+UI} (const \hyperlink{classblaze_1_1Context}{Context} $\ast$context, const \hyperlink{classblaze_1_1Swapchain}{Swapchain} $\ast$swapchain) noexcept
+\begin{DoxyCompactList}\small\item\em Constructor of the object. Initializes Im\+G\+UI and required resources. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1GUI_a510ebaca6e980af7e3355ae3365d7c68}{recreate} (const \hyperlink{classblaze_1_1Context}{Context} $\ast$context, const \hyperlink{classblaze_1_1Swapchain}{Swapchain} $\ast$swapchain)
+\begin{DoxyCompactList}\small\item\em Recreates the \hyperlink{classblaze_1_1GUI}{G\+UI} framebuffers. \end{DoxyCompactList}\item 
+void \hyperlink{classblaze_1_1GUI_aa73bd1251e8c44e3bc98fe1f4f8b25a5}{draw} (Vk\+Command\+Buffer cmd\+Buffer, int frame\+Count)
+\begin{DoxyCompactList}\small\item\em Renders the Im\+G\+UI \hyperlink{classblaze_1_1GUI}{G\+UI} on top of the existing image. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_adc54ba170be92e95bd884fb6202937f7}\label{classblaze_1_1GUI_adc54ba170be92e95bd884fb6202937f7}} 
+\hyperlink{classblaze_1_1GUI_adc54ba170be92e95bd884fb6202937f7}{$\sim$\+G\+UI} ()
+\begin{DoxyCompactList}\small\item\em Deinitializes the \hyperlink{classblaze_1_1GUI}{G\+UI} components. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\textbf{ }\par
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classblaze_1_1GUI_ae5c00772ef74fcee43be1aa3b9dc21b1}{G\+UI} (\hyperlink{classblaze_1_1GUI}{G\+UI} \&\&other) noexcept
+\begin{DoxyCompactList}\small\item\em Moves all members to the new construction. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_a53565ce8d39b4d0c3d5980dfb826adfe}\label{classblaze_1_1GUI_a53565ce8d39b4d0c3d5980dfb826adfe}} 
+\hyperlink{classblaze_1_1GUI}{G\+UI} \& {\bfseries operator=} (\hyperlink{classblaze_1_1GUI}{G\+UI} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_a7ad273a13e32546c610eeb13c23f4c1a}\label{classblaze_1_1GUI_a7ad273a13e32546c610eeb13c23f4c1a}} 
+{\bfseries G\+UI} (const \hyperlink{classblaze_1_1GUI}{G\+UI} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_adbfd2f7704fdfe149e5d177e95d42992}\label{classblaze_1_1GUI_adbfd2f7704fdfe149e5d177e95d42992}} 
+\hyperlink{classblaze_1_1GUI}{G\+UI} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1GUI}{G\+UI} \&other)=delete
+\end{DoxyCompactItemize}
+
+\subsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_a8fd65db3d20f30f7a20f90da7b80fa6b}\label{classblaze_1_1GUI_a8fd65db3d20f30f7a20f90da7b80fa6b}} 
+static void \hyperlink{classblaze_1_1GUI_a8fd65db3d20f30f7a20f90da7b80fa6b}{start\+Frame} ()
+\begin{DoxyCompactList}\small\item\em Starts a new Im\+G\+UI frame. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classblaze_1_1GUI_ac125797f77d684e9e7254588ae14e659}\label{classblaze_1_1GUI_ac125797f77d684e9e7254588ae14e659}} 
+static void \hyperlink{classblaze_1_1GUI_ac125797f77d684e9e7254588ae14e659}{end\+Frame} ()
+\begin{DoxyCompactList}\small\item\em Ends the Im\+G\+UI frame. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Initializes and simplified Im\+G\+UI usage. 
+
+A \hyperlink{classblaze_1_1GUI}{G\+UI} object must be instantiated (preferably by the renderer) to use Im\+G\+UI. It initializes, and contains all the required buffers, renderpasses and pipelines for Im\+G\+UI rendering.
+
+Certain aspects of the \hyperlink{classblaze_1_1GUI}{G\+UI} rendering are exposed as static functions to allow use from anywhere.
+
+\begin{DoxyNote}{Note}
+Due to certain constraints, swapchain image views need to be passed to the \hyperlink{classblaze_1_1GUI}{G\+UI}. 
+\end{DoxyNote}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1GUI_aa23a611841b303e39ff7eddd5295dc52}\label{classblaze_1_1GUI_aa23a611841b303e39ff7eddd5295dc52}} 
+\index{blaze\+::\+G\+UI@{blaze\+::\+G\+UI}!G\+UI@{G\+UI}}
+\index{G\+UI@{G\+UI}!blaze\+::\+G\+UI@{blaze\+::\+G\+UI}}
+\subsubsection{\texorpdfstring{G\+U\+I()}{GUI()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily blaze\+::\+G\+U\+I\+::\+G\+UI (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} $\ast$}]{context,  }\item[{const \hyperlink{classblaze_1_1Swapchain}{Swapchain} $\ast$}]{swapchain }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Constructor of the object. Initializes Im\+G\+UI and required resources. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & Pointer to current Vulkan \hyperlink{classblaze_1_1Context}{Context}. \\
+\hline
+{\em swapchain} & Pointer to the \hyperlink{classblaze_1_1Swapchain}{Swapchain} in use. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1GUI_ae5c00772ef74fcee43be1aa3b9dc21b1}\label{classblaze_1_1GUI_ae5c00772ef74fcee43be1aa3b9dc21b1}} 
+\index{blaze\+::\+G\+UI@{blaze\+::\+G\+UI}!G\+UI@{G\+UI}}
+\index{G\+UI@{G\+UI}!blaze\+::\+G\+UI@{blaze\+::\+G\+UI}}
+\subsubsection{\texorpdfstring{G\+U\+I()}{GUI()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily blaze\+::\+G\+U\+I\+::\+G\+UI (\begin{DoxyParamCaption}\item[{\hyperlink{classblaze_1_1GUI}{G\+UI} \&\&}]{other }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [noexcept]}}
+
+
+
+Moves all members to the new construction. 
+
+\hyperlink{classblaze_1_1GUI}{G\+UI} is a move only class and must be kept unique. The copy constructors are deleted 
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1GUI_aa73bd1251e8c44e3bc98fe1f4f8b25a5}\label{classblaze_1_1GUI_aa73bd1251e8c44e3bc98fe1f4f8b25a5}} 
+\index{blaze\+::\+G\+UI@{blaze\+::\+G\+UI}!draw@{draw}}
+\index{draw@{draw}!blaze\+::\+G\+UI@{blaze\+::\+G\+UI}}
+\subsubsection{\texorpdfstring{draw()}{draw()}}
+{\footnotesize\ttfamily void blaze\+::\+G\+U\+I\+::draw (\begin{DoxyParamCaption}\item[{Vk\+Command\+Buffer}]{cmd\+Buffer,  }\item[{int}]{frame\+Count }\end{DoxyParamCaption})}
+
+
+
+Renders the Im\+G\+UI \hyperlink{classblaze_1_1GUI}{G\+UI} on top of the existing image. 
+
+This must be the last step of the render drawcalls, and hence the last renderpass. The Im\+G\+UI UI will overlay.
+
+
+\begin{DoxyParams}{Parameters}
+{\em cmd\+Buffer} & The command buffer to record commands into. \\
+\hline
+{\em frame\+Count} & The index of the swapchain image to render on. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1GUI_a510ebaca6e980af7e3355ae3365d7c68}\label{classblaze_1_1GUI_a510ebaca6e980af7e3355ae3365d7c68}} 
+\index{blaze\+::\+G\+UI@{blaze\+::\+G\+UI}!recreate@{recreate}}
+\index{recreate@{recreate}!blaze\+::\+G\+UI@{blaze\+::\+G\+UI}}
+\subsubsection{\texorpdfstring{recreate()}{recreate()}}
+{\footnotesize\ttfamily void blaze\+::\+G\+U\+I\+::recreate (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} $\ast$}]{context,  }\item[{const \hyperlink{classblaze_1_1Swapchain}{Swapchain} $\ast$}]{swapchain }\end{DoxyParamCaption})}
+
+
+
+Recreates the \hyperlink{classblaze_1_1GUI}{G\+UI} framebuffers. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em context} & Pointer to the current Vulkan context. \\
+\hline
+{\em swapchain} & Pointer to the \hyperlink{classblaze_1_1Swapchain}{Swapchain} in use. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/gui/G\+U\+I.\+hpp\item 
+Blaze/gui/G\+U\+I.\+cpp\end{DoxyCompactItemize}

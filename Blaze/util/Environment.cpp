@@ -376,7 +376,7 @@ Texture2D createBrdfLut(const Context& context)
 
 Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
 {
-	auto& found = renderer->get_shader().uniformLocations.find("skybox");
+	auto found = renderer->get_shader().uniformLocations.find("skybox");
 	assert(found != renderer->get_shader().uniformLocations.end());
 
 	auto [setIdx, skyboxIdx] = found->second;

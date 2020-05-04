@@ -1,0 +1,134 @@
+\hypertarget{classblaze_1_1util_1_1Managed}{}\section{blaze\+:\+:util\+:\+:Managed$<$ T $>$ Class Template Reference}
+\label{classblaze_1_1util_1_1Managed}\index{blaze\+::util\+::\+Managed$<$ T $>$@{blaze\+::util\+::\+Managed$<$ T $>$}}
+
+
+Scope managed R\+A\+II class.  
+
+
+
+
+{\ttfamily \#include $<$Managed.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a81d8a04a7d69c14f2e1b4cc53c22a9fb}\label{classblaze_1_1util_1_1Managed_a81d8a04a7d69c14f2e1b4cc53c22a9fb}} 
+\hyperlink{classblaze_1_1util_1_1Managed_a81d8a04a7d69c14f2e1b4cc53c22a9fb}{Managed} () noexcept
+\begin{DoxyCompactList}\small\item\em Default Constructor. \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename Callable $>$ }\\\hyperlink{classblaze_1_1util_1_1Managed_a1fbcd3a25982f170ba9ca3cd9feaee0b}{Managed} (T handle, Callable destroyer) noexcept
+\item 
+bool \hyperlink{classblaze_1_1util_1_1Managed_acaa4cd7a27ec898930f84162724d9f89}{valid} () const
+\begin{DoxyCompactList}\small\item\em Checks the validity of the handle. \end{DoxyCompactList}\item 
+\hyperlink{classblaze_1_1util_1_1Managed_a5e78234d198c17b18cb94936d68fe6ba}{$\sim$\+Managed} ()
+\begin{DoxyCompactList}\small\item\em Destructor of \hyperlink{classblaze_1_1util_1_1Managed}{Managed}. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Move Constructor.}\par
+{\em Move only, copy deleted. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a38a5ed8b4d90eeaacf1b97781ccb0391}\label{classblaze_1_1util_1_1Managed_a38a5ed8b4d90eeaacf1b97781ccb0391}} 
+{\bfseries Managed} (\hyperlink{classblaze_1_1util_1_1Managed}{Managed} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a3f2071a6c55e46a11fa5ccfec2a9460e}\label{classblaze_1_1util_1_1Managed_a3f2071a6c55e46a11fa5ccfec2a9460e}} 
+\hyperlink{classblaze_1_1util_1_1Managed}{Managed} \& {\bfseries operator=} (\hyperlink{classblaze_1_1util_1_1Managed}{Managed} \&\&other) noexcept
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_aae50bb22f679b879b22ad85ef0152d98}\label{classblaze_1_1util_1_1Managed_aae50bb22f679b879b22ad85ef0152d98}} 
+{\bfseries Managed} (const \hyperlink{classblaze_1_1util_1_1Managed}{Managed} \&other)=delete
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a08989e6618e83c986eff4128af718c56}\label{classblaze_1_1util_1_1Managed_a08989e6618e83c986eff4128af718c56}} 
+\hyperlink{classblaze_1_1util_1_1Managed}{Managed} \& {\bfseries operator=} (const \hyperlink{classblaze_1_1util_1_1Managed}{Managed} \&other)=delete
+\end{DoxyCompactItemize}
+\end{Indent}
+\begin{Indent}\textbf{ Getters.}\par
+{\em Getters for private members. }\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_ac1a612afc93df83d118fad37ee943007}\label{classblaze_1_1util_1_1Managed_ac1a612afc93df83d118fad37ee943007}} 
+const T \& {\bfseries get} () const
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a6c9d44536c57523c47a90c3e894b8635}\label{classblaze_1_1util_1_1Managed_a6c9d44536c57523c47a90c3e894b8635}} 
+void {\bfseries set} (const T \&val)
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a33e5ec8a96266a682738b1b52b08d140}\label{classblaze_1_1util_1_1Managed_a33e5ec8a96266a682738b1b52b08d140}} 
+T $\ast$ {\bfseries data} ()
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a1af9329ba6f5aa4c075da7bbdda46b16}\label{classblaze_1_1util_1_1Managed_a1af9329ba6f5aa4c075da7bbdda46b16}} 
+const T $\ast$ {\bfseries data} () const
+\end{DoxyCompactItemize}
+\end{Indent}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a3d12bd311077606be9f6ab39aa7ac91d}\label{classblaze_1_1util_1_1Managed_a3d12bd311077606be9f6ab39aa7ac91d}} 
+void {\bfseries swap} (\hyperlink{classblaze_1_1util_1_1Managed}{Managed} \&a, \hyperlink{classblaze_1_1util_1_1Managed}{Managed} \&b)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$typename T$>$\newline
+class blaze\+::util\+::\+Managed$<$ T $>$}
+
+Scope managed R\+A\+II class. 
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em T} & The type to be managed.\\
+\hline
+\end{DoxyTemplParams}
+\hyperlink{classblaze_1_1util_1_1Managed}{Managed} takes a handle or object and a custom destructor {\itshape std\+::function} to be called when the \hyperlink{classblaze_1_1util_1_1Managed}{Managed} object goes out of scope. 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a1fbcd3a25982f170ba9ca3cd9feaee0b}\label{classblaze_1_1util_1_1Managed_a1fbcd3a25982f170ba9ca3cd9feaee0b}} 
+\index{blaze\+::util\+::\+Managed@{blaze\+::util\+::\+Managed}!Managed@{Managed}}
+\index{Managed@{Managed}!blaze\+::util\+::\+Managed@{blaze\+::util\+::\+Managed}}
+\subsubsection{\texorpdfstring{Managed()}{Managed()}}
+{\footnotesize\ttfamily template$<$typename T$>$ \\
+template$<$typename Callable $>$ \\
+\hyperlink{classblaze_1_1util_1_1Managed}{blaze\+::util\+::\+Managed}$<$ T $>$\+::\hyperlink{classblaze_1_1util_1_1Managed}{Managed} (\begin{DoxyParamCaption}\item[{T}]{handle,  }\item[{Callable}]{destroyer }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em Callable} & Any callable type.\\
+\hline
+\end{DoxyTemplParams}
+
+\begin{DoxyParams}{Parameters}
+{\em handle} & The data handle to be managed. \\
+\hline
+{\em destroyer} & The function used to destroy the handle. \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_a5e78234d198c17b18cb94936d68fe6ba}\label{classblaze_1_1util_1_1Managed_a5e78234d198c17b18cb94936d68fe6ba}} 
+\index{blaze\+::util\+::\+Managed@{blaze\+::util\+::\+Managed}!````~Managed@{$\sim$\+Managed}}
+\index{````~Managed@{$\sim$\+Managed}!blaze\+::util\+::\+Managed@{blaze\+::util\+::\+Managed}}
+\subsubsection{\texorpdfstring{$\sim$\+Managed()}{~Managed()}}
+{\footnotesize\ttfamily template$<$typename T$>$ \\
+\hyperlink{classblaze_1_1util_1_1Managed}{blaze\+::util\+::\+Managed}$<$ T $>$\+::$\sim$\hyperlink{classblaze_1_1util_1_1Managed}{Managed} (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Destructor of \hyperlink{classblaze_1_1util_1_1Managed}{Managed}. 
+
+Calls the destroyer function on the handle. 
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classblaze_1_1util_1_1Managed_acaa4cd7a27ec898930f84162724d9f89}\label{classblaze_1_1util_1_1Managed_acaa4cd7a27ec898930f84162724d9f89}} 
+\index{blaze\+::util\+::\+Managed@{blaze\+::util\+::\+Managed}!valid@{valid}}
+\index{valid@{valid}!blaze\+::util\+::\+Managed@{blaze\+::util\+::\+Managed}}
+\subsubsection{\texorpdfstring{valid()}{valid()}}
+{\footnotesize\ttfamily template$<$typename T$>$ \\
+\hyperlink{classblaze_1_1util_1_1Managed}{blaze\+::util\+::\+Managed}$<$ T $>$\+::valid (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Checks the validity of the handle. 
+
+A \hyperlink{classblaze_1_1util_1_1Managed}{Managed} handle is considered valid if the object was constructed using the main constructor and the handle has not been destroyed.
+
+\begin{DoxyReturn}{Returns}
+true If valid. 
+
+false If invalid. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Blaze/util/Managed.\+hpp\end{DoxyCompactItemize}
