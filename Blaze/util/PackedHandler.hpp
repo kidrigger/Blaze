@@ -5,6 +5,12 @@
 
 namespace blaze::util
 {
+/**
+ * @brief A managing collection that is always packed contiguously.
+ *
+ * PackedHandler returns a handle that can be used to refer to the object from it as required.
+ * The Handle will automatically erase the object on deletion, and it denotes an ownership of the object.
+ */
 template <typename T>
 class PackedHandler
 {
@@ -82,6 +88,9 @@ class PackedHandler
 public:
 	using Handle = OuterHandle;
 
+    /**
+     * @brief Adds the new value to the packed handler and returns the handle.
+     */
 	[[nodiscard]] Handle add(T&& val)
 	{
 		auto handle = std::make_shared<InnerHandle>(this, static_cast<uint32_t>(data.size()));
@@ -90,6 +99,9 @@ public:
 		return {handle};
 	}
 
+    /**
+     * @brief Adds the new value to the packed handler and returns the handle.
+     */
 	[[nodiscard]] Handle add(const T& val)
 	{
 		auto handle = std::make_shared<InnerHandle>(this, static_cast<uint32_t>(data.size()));

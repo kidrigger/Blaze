@@ -1,8 +1,0 @@
-<map id="ExampleAppLog" name="ExampleAppLog">
-<area shape="rect" id="node2" href="$structImGuiTextBuffer.html" title="ImGuiTextBuffer" alt="" coords="25,213,144,240"/>
-<area shape="rect" id="node3" href="$structImVector.html" title="ImVector\&lt; char \&gt;" alt="" coords="5,117,129,143"/>
-<area shape="rect" id="node4" href="$structImGuiTextFilter.html" title="ImGuiTextFilter" alt="" coords="177,213,289,240"/>
-<area shape="rect" id="node5" href="$structImVector.html" title="ImVector\&lt; ImGuiTextFilter\l::ImGuiTextRange \&gt;" alt="" coords="153,109,331,151"/>
-<area shape="rect" id="node6" href="$structImGuiTextFilter_1_1ImGuiTextRange.html" title="ImGuiTextFilter::ImGuiText\lRange" alt="" coords="151,5,333,47"/>
-<area shape="rect" id="node7" href="$structImVector.html" title="ImVector\&lt; int \&gt;" alt="" coords="313,213,427,240"/>
-</map>

@@ -1,6 +1,0 @@
-<map id="blaze::util::Environment" name="blaze::util::Environment">
-<area shape="rect" id="node2" href="$classblaze_1_1Bindable.html" title="blaze::Bindable" alt="" coords="5,5,116,32"/>
-<area shape="rect" id="node3" href="$classblaze_1_1Texture2D.html" title="A wrapper over a vulkan texture that contains all the required data. " alt="" coords="141,5,263,32"/>
-<area shape="rect" id="node4" href="$classblaze_1_1TextureCube.html" title="A wrapper over a vulkan texture that contains all the required data. " alt="" coords="287,5,423,32"/>
-<area shape="rect" id="node5" href="$structblaze_1_1spirv_1_1SetSingleton.html" title="blaze::spirv::SetSingleton" alt="" coords="447,5,618,32"/>
-</map>

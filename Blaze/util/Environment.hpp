@@ -11,6 +11,11 @@ TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout e
 TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
 Texture2D createBrdfLut(const Context* context);
 
+/**
+ * @brief Holder for all the environment texture maps and descriptor set.
+ *
+ * The Environment textures for current renderers are the PBR/IBL maps.
+ */
 class Environment : public Bindable
 {
 public:

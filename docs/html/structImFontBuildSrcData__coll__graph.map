@@ -1,9 +1,0 @@
-<map id="ImFontBuildSrcData" name="ImFontBuildSrcData">
-<area shape="rect" id="node2" href="$structstbtt__fontinfo.html" title="stbtt_fontinfo" alt="" coords="304,80,403,107"/>
-<area shape="rect" id="node3" href="$structstbtt____buf.html" title="stbtt__buf" alt="" coords="27,80,107,107"/>
-<area shape="rect" id="node4" href="$structstbrp__rect.html" title="stbrp_rect" alt="" coords="313,131,393,157"/>
-<area shape="rect" id="node5" href="$structstbtt__packedchar.html" title="stbtt_packedchar" alt="" coords="5,207,128,233"/>
-<area shape="rect" id="node8" href="$structstbtt__pack__range.html" title="stbtt_pack_range" alt="" coords="292,244,415,271"/>
-<area shape="rect" id="node6" href="$structImBoolVector.html" title="ImBoolVector" alt="" coords="303,357,404,384"/>
-<area shape="rect" id="node7" href="$structImVector.html" title="ImVector\&lt; int \&gt;" alt="" coords="10,320,123,347"/>
-</map>

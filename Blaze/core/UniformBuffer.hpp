@@ -81,8 +81,6 @@ protected:
 };
 
 /**
- * @class UBO
- *
  * @tparam T The data object to be stored in the UBO.
  *
  * @brief The class to handle operations on a uniform buffer.
@@ -120,6 +118,12 @@ public:
 	}
 };
 
+/**
+ * @brief a Collection of \ref UBO connected to the same data.
+ *
+ * Most common usage of UBOs require one UBO per uniform per swapchain image.
+ * A collection such as this allows easy management of the buffers.
+ */
 template <typename T>
 class UBOVector
 {

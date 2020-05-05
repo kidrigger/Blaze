@@ -19,8 +19,14 @@
 
 namespace blaze
 {
-// Refactor into Buffer class
-
+/**
+ * @brief The base class for all vertex buffers.
+ *
+ * A pure data-size buffer utility that can be extended
+ * to make into typesafe classes.
+ *
+ * @note Avoid usage.
+ */
 class BaseVBO
 {
 protected:
@@ -61,8 +67,6 @@ public:
 };
 
 /**
- * @class VertexBuffer
- *
  * @tparam T The type of vertex data held by the buffer.
  *
  * @brief Object encapsulating the data in a vertex buffer.
@@ -101,8 +105,6 @@ public:
 };
 
 /**
- * @class IndexBuffer
- *
  * @tparam T The type of vertex data held by the buffer.
  *
  * @brief Object encapsulating the data in a vertex buffer.
@@ -150,8 +152,6 @@ public:
 };
 
 /**
- * @class IndexedVertexBuffer
- *
  * @tparam T The type of vertex data held by the buffer.
  *
  * @brief Object encapsulating the data in a vertex buffer and the related indices.

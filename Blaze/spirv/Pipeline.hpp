@@ -10,13 +10,20 @@
 
 namespace blaze::spirv
 {
+/**
+ * @brief Holds the reflection information of a uniform.
+ */
 struct UniformInfo
 {
 	VkDescriptorType type;
 	VkShaderStageFlags stages;
+    /// Binding location of the uniform.
 	uint32_t binding;
-	uint32_t arrayLength;
+    /// Number of array elements. Relevant for arrays of textures.
+    uint32_t arrayLength;
+    /// Used mostly to verify UBO sizes.
 	uint32_t size;
+    /// The variable name of the UBO.
 	std::string name;
 
 	bool operator!=(const UniformInfo& other) const
@@ -57,8 +64,19 @@ struct UniformInfo
 	}
 };
 
+/**
+ * @brief Holder for all relevant shader reflection info.
+ *
+ * The information regarding all uniforms, stages, pipeline layout, descriptor sets etc are held by this struct.
+ * It alone should provide all the shader-dependent info during the pipeline creation part.
+ */
 struct Shader
 {
+    /**
+     * @brief Holder for all relevent Descriptor Set reflection info.
+     *
+     * Holds all the information required to create a descriptor set.
+     */
 	struct Set
 	{
 		uint32_t set{0};
@@ -66,6 +84,9 @@ struct Shader
 		vkw::DescriptorSetLayout layout;
 
 		using FormatID = uint32_t;
+        /**
+         * Contains uniform information to keep a check on compatibility.
+         */
 		struct Format
 		{
 			std::vector<UniformInfo> uniforms;
@@ -93,6 +114,11 @@ struct Shader
 		};
 	};
 
+    /**
+     * @brief Push Constant wrapper
+     * 
+     * Blaze constrains the push constant to be restricted with a offset 0.
+     */
 	struct PushConstant
 	{
 		uint32_t size = 0;
@@ -112,11 +138,11 @@ struct Shader
 	vkw::PipelineLayout pipelineLayout;
 	std::map<std::string, std::pair<uint32_t, uint32_t>> uniformLocations;
 
-	bool valid() const
+	inline bool valid() const
 	{
 		return pipelineLayout.valid();
 	}
-
+    
 #ifndef NDEBUG
 	friend std::ostream& operator<<(std::ostream& out, const Shader& shader)
 	{
@@ -165,6 +191,12 @@ struct Shader
 #endif // NDEBUG
 };
 
+/**
+ * @brief Wrapper around the Pipeline
+ *
+ * Contains only the pipelien and the bindpoint, it's made to be bindable.
+ * (Without the Bindable interface due to non-requireent of layout)
+ */
 struct Pipeline
 {
 	vkw::Pipeline pipeline;

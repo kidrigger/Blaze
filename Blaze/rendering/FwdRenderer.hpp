@@ -14,6 +14,11 @@
 
 namespace blaze
 {
+/**
+ * @brief Forward rendering specialization of ARenderer
+ *
+ * This class is able to setup a PBR/IBL forward renderer.
+ */
 class FwdRenderer final : public ARenderer
 {
 private:

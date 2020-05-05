@@ -1,7 +1,0 @@
-<map id="tinygltf::Material" name="tinygltf::Material">
-<area shape="rect" id="node2" href="$structtinygltf_1_1OcclusionTextureInfo.html" title="tinygltf::OcclusionTextureInfo" alt="" coords="356,61,549,88"/>
-<area shape="rect" id="node3" href="$classtinygltf_1_1Value.html" title="tinygltf::Value" alt="" coords="5,104,108,131"/>
-<area shape="rect" id="node4" href="$structtinygltf_1_1PbrMetallicRoughness.html" title="tinygltf::PbrMetallicRoughness" alt="" coords="573,131,773,157"/>
-<area shape="rect" id="node5" href="$structtinygltf_1_1TextureInfo.html" title="tinygltf::TextureInfo" alt="" coords="197,165,332,192"/>
-<area shape="rect" id="node6" href="$structtinygltf_1_1NormalTextureInfo.html" title="tinygltf::NormalTextureInfo" alt="" coords="364,245,541,272"/>
-</map>

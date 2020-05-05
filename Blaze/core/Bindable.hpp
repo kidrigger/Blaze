@@ -7,6 +7,11 @@
 namespace blaze
 {
 
+/**
+ * @interface Bindable
+ *
+ * @brief Interface for objects that bind to pipelines.
+ */
 class Bindable
 {
 public:
