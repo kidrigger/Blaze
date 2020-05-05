@@ -259,11 +259,11 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 		pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
 
 		materialPack.pushConstantBlocks.push_back(pushConstantBlock);
-		materialPack.diffuse.emplace_back(*context, diffuseImageData, true);
-		materialPack.normal.emplace_back(*context, normalImageData, true);
-		materialPack.metalRough.emplace_back(*context, metallicRoughnessImageData, true);
-		materialPack.occlusion.emplace_back(*context, occlusionImageData, true);
-		materialPack.emission.emplace_back(*context, emissiveImageData, true);
+		materialPack.diffuse.emplace_back(context, diffuseImageData, true);
+		materialPack.normal.emplace_back(context, normalImageData, true);
+		materialPack.metalRough.emplace_back(context, metallicRoughnessImageData, true);
+		materialPack.occlusion.emplace_back(context, occlusionImageData, true);
+		materialPack.emission.emplace_back(context, emissiveImageData, true);
 
 		if (diffuseImageData.data != imgData.data)
 		{
@@ -302,11 +302,11 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 		pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
 
 		materialPack.pushConstantBlocks.push_back(pushConstantBlock);
-		materialPack.diffuse.emplace_back(*context, imgData, true);
-		materialPack.normal.emplace_back(*context, imgData, true);
-		materialPack.metalRough.emplace_back(*context, imgData, true);
-		materialPack.occlusion.emplace_back(*context, imgData, true);
-		materialPack.emission.emplace_back(*context, imgData, true);
+		materialPack.diffuse.emplace_back(context, imgData, true);
+		materialPack.normal.emplace_back(context, imgData, true);
+		materialPack.metalRough.emplace_back(context, imgData, true);
+		materialPack.occlusion.emplace_back(context, imgData, true);
+		materialPack.emission.emplace_back(context, imgData, true);
 		delete[] data;
 	}
 
@@ -475,7 +475,7 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 
-	auto ivb = IndexedVertexBuffer(*context, indexBuffer, vertexBuffer);
+	auto ivb = IndexedVertexBuffer(context, indexBuffer, vertexBuffer);
 
 	return std::make_shared<Model2>(scene.nodes, std::move(nodes), std::move(primitives), std::move(ivb),
 									std::move(materialPack));

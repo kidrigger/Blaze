@@ -250,8 +250,8 @@ void run()
 	strcpy(settings.filename, "assets/sponza/Sponza.gltf");
 #endif
 
-	auto skybox = loadImageCube(renderer->get_context(), settings.skybox, true);
-	vbo = getUVCube(renderer->get_context());
+	auto skybox = loadImageCube(&renderer->get_context(), settings.skybox, true);
+	vbo = getUVCube(&renderer->get_context());
 
 	auto createDescriptorSet = [device = renderer->get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool) {
 		VkDescriptorSetAllocateInfo allocInfo = {};
@@ -303,13 +303,13 @@ void run()
 										  });
 	writeToDescriptor(ds.get(), {{0, skybox.get_imageInfo()}});
 
-	auto irradMap = createIrradianceCube(renderer->get_context(), renderer->get_environmentLayout(), ds.get());
+	auto irradMap = createIrradianceCube(&renderer->get_context(), renderer->get_environmentLayout(), ds.get());
 	writeToDescriptor(ds.get(), {{1, irradMap.get_imageInfo()}});
 
-	auto prefilt = createPrefilteredCube(renderer->get_context(), renderer->get_environmentLayout(), ds.get());
+	auto prefilt = createPrefilteredCube(&renderer->get_context(), renderer->get_environmentLayout(), ds.get());
 	writeToDescriptor(ds.get(), {{2, prefilt.get_imageInfo()}});
 
-	auto brdfLut = createBrdfLut(renderer->get_context());
+	auto brdfLut = createBrdfLut(&renderer->get_context());
 	writeToDescriptor(ds.get(), {{3, brdfLut.get_imageInfo()}});
 
 

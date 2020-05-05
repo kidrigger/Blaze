@@ -81,15 +81,15 @@ public:
 	}
 
 	/**
-	 * @fn VertexBuffer(const Context& context, const std::vector<T>& data)
+	 * @fn VertexBuffer(const Context* context, const std::vector<T>& data)
 	 *
 	 * @brief Main constructor.
 	 *
 	 * @param context The Vulkan Context in use.
 	 * @param data A vector of vertices (\a T) to be held in the buffer.
 	 */
-	VertexBuffer(const Context& context, const std::vector<T>& data) noexcept
-		: BaseVBO(&context, Usage::VertexBuffer, data.data(), static_cast<uint32_t>(data.size()), data.size() * sizeof(T))
+	VertexBuffer(const Context* context, const std::vector<T>& data) noexcept
+		: BaseVBO(context, Usage::VertexBuffer, data.data(), static_cast<uint32_t>(data.size()), data.size() * sizeof(T))
 	{
 	}
 
@@ -124,15 +124,15 @@ public:
 	}
 
 	/**
-	 * @fn IndexBuffer(const Context& context, const std::vector<T>& data)
+	 * @fn IndexBuffer(const Context* context, const std::vector<T>& data)
 	 *
 	 * @brief Main constructor.
 	 *
 	 * @param context The Vulkan Context in use.
 	 * @param data A vector of vertices (\a T) to be held in the buffer.
 	 */
-	IndexBuffer(const Context& context, const std::vector<T>& data) noexcept
-		: BaseVBO(&context, Usage::IndexBuffer, data.data(), static_cast<uint32_t>(data.size()), data.size() * sizeof(T))
+	IndexBuffer(const Context* context, const std::vector<T>& data) noexcept
+		: BaseVBO(context, Usage::IndexBuffer, data.data(), static_cast<uint32_t>(data.size()), data.size() * sizeof(T))
 	{
 	}
 
@@ -181,7 +181,7 @@ public:
 	 * @param vertex_data A vector of vertices (\a T) to be in the buffer.
 	 * @param index_data A vector of indices (uint32_t) to be index the vertices.
 	 */
-	IndexedVertexBuffer(const Context& context, const std::vector<uint32_t>& index_data,
+	IndexedVertexBuffer(const Context* context, const std::vector<uint32_t>& index_data,
 						const std::vector<T>& vertex_data) noexcept
 		: vertexBuffer(context, vertex_data), indexBuffer(context, index_data)
 	{

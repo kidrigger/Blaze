@@ -68,7 +68,7 @@ public:
 	}
 
 	/**
-	 * @fn TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true)
+	 * @fn TextureCube(const Context* context, const ImageDataCube& image_data, bool mipmapped = true)
 	 *
 	 * @brief Main constructor for TextureCube.
 	 *
@@ -76,7 +76,7 @@ public:
 	 * @param image_data The ImageDataCube stuct containing the initialization information.
 	 * @param mipmapped Enabling mipmapping.
 	 */
-	TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped = true);
+	TextureCube(const Context* context, const ImageDataCube& image_data, bool mipmapped = true);
 
 	/**
 	 * @name Move Constructors.
@@ -187,7 +187,7 @@ private:
 	VkSampler createSampler(VkDevice device, uint32_t miplevels) const;
 };
 
-[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_fbudrl,
+[[nodiscard]] TextureCube loadImageCube(const Context* context, const std::vector<std::string>& names_fbudrl,
 										bool mipmapped = true);
-[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::string& name, bool mipmapped = true);
+[[nodiscard]] TextureCube loadImageCube(const Context* context, const std::string& name, bool mipmapped = true);
 } // namespace blaze

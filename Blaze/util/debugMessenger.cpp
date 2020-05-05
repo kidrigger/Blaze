@@ -53,7 +53,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBits
 		}
 	}
 
-	if (pCallbackData->pMessageIdName && strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
+	if (pCallbackData->pMessageIdName && 0 == strcmp(pCallbackData->pMessageIdName, "UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout"))
 	{
 		return VK_FALSE;
 	}

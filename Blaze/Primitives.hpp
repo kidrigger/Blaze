@@ -16,7 +16,7 @@ namespace blaze
  *
  * @returns IndexedVertexBuffer of Vertex for the Cube
  */
-IndexedVertexBuffer<Vertex> getUVCube(const Context& context);
+IndexedVertexBuffer<Vertex> getUVCube(const Context* context);
 
 /**
  * @fn getUVRect
@@ -27,7 +27,7 @@ IndexedVertexBuffer<Vertex> getUVCube(const Context& context);
  *
  * @returns IndexedVertexBuffer of Vertex for the Rect
  */
-IndexedVertexBuffer<Vertex> getUVRect(const Context& context);
+IndexedVertexBuffer<Vertex> getUVRect(const Context* context);
 
 /**
  * @fn getIcoSphere
@@ -38,5 +38,5 @@ IndexedVertexBuffer<Vertex> getUVRect(const Context& context);
  *
  * @returns IndexedVertexBuffer of Vertex for the IcoSphere
  */
-IndexedVertexBuffer<Vertex> getIcoSphere(const Context& context);
+IndexedVertexBuffer<Vertex> getIcoSphere(const Context* context);
 } // namespace blaze

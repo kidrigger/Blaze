@@ -4,7 +4,7 @@
 namespace blaze
 {
 
-[[nodiscard]] Texture2D loadImage(const Context& context, const std::string& name)
+[[nodiscard]] Texture2D loadImage(const Context* context, const std::string& name)
 {
 	ImageData2D image;
 	int width, height, numChannels;
@@ -25,7 +25,7 @@ namespace blaze
 	return std::move(ti);
 }
 
-Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool mipmapped)
+Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool mipmapped)
 	: width(image_data.width), height(image_data.height), format(image_data.format), layout(image_data.layout),
 	  usage(image_data.usage), access(image_data.access), aspect(image_data.aspect), tiling(image_data.tiling),
 	  layerCount(image_data.layerCount), anisotropy(image_data.anisotropy), is_valid(false)
@@ -33,7 +33,7 @@ Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool
 	using namespace util;
 	using std::max;
 
-	VmaAllocator allocator = context.get_allocator();
+	VmaAllocator allocator = context->get_allocator();
 
 	if (mipmapped)
 	{
@@ -43,10 +43,10 @@ Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool
 	if (!image_data.data)
 	{
 		image = Managed(
-			context.createImage(width, height, miplevels, layerCount, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY),
+			context->createImage(width, height, miplevels, layerCount, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY),
 			[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
-		VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
+		VkCommandBuffer commandBuffer = context->startCommandBufferRecord();
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -68,25 +68,25 @@ Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool
 		barrier.dstAccessMask = 0;
 
 		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-		context.flushCommandBuffer(commandBuffer);
+		context->flushCommandBuffer(commandBuffer);
 
-		allViews = Managed(createImageView(context.get_device(), get_image(),
+		allViews = Managed(createImageView(context->get_device(), get_image(),
 										   (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D),
 										   format, aspect, miplevels, layerCount),
-						   [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+						   [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 		std::vector<VkImageView> views(layerCount);
 		uint32_t index = 0;
 		for (auto& view : views)
 		{
-			view = createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels,
+			view = createImageView(context->get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels,
 								   1, index);
 			index++;
 		}
 		imageViews = ManagedVector(
-			views, [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			views, [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 		imageSampler =
-			Managed(createSampler(context.get_device(), miplevels, image_data.samplerAddressMode),
-					[dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			Managed(createSampler(context->get_device(), miplevels, image_data.samplerAddressMode),
+					[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 		imageInfo.imageView = allViews.get();
 		imageInfo.sampler = imageSampler.get();
@@ -97,7 +97,7 @@ Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool
 	}
 
 	auto [stagingBuffer, stagingAlloc] =
-		context.createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+		context->createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	auto stagingBufferRAII = Managed<BufferObject>({stagingBuffer, stagingAlloc}, [allocator](BufferObject& bo) {
 		vmaDestroyBuffer(allocator, bo.buffer, bo.allocation);
@@ -108,13 +108,13 @@ Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool
 	memcpy(bufferdata, image_data.data, image_data.size);
 	vmaUnmapMemory(allocator, stagingAlloc);
 
-	image = Managed(context.createImage(width, height, miplevels, layerCount, format, VK_IMAGE_TILING_OPTIMAL, usage,
+	image = Managed(context->createImage(width, height, miplevels, layerCount, format, VK_IMAGE_TILING_OPTIMAL, usage,
 										VMA_MEMORY_USAGE_GPU_ONLY),
 					[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 	try
 	{
-		VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
+		VkCommandBuffer commandBuffer = context->startCommandBufferRecord();
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -213,30 +213,30 @@ Texture2D::Texture2D(const Context& context, const ImageData2D& image_data, bool
 		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
 							 nullptr, 0, nullptr, 1, &barrier);
 
-		context.flushCommandBuffer(commandBuffer);
+		context->flushCommandBuffer(commandBuffer);
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
 	}
 
-	allViews = Managed(createImageView(context.get_device(), get_image(),
+	allViews = Managed(createImageView(context->get_device(), get_image(),
 									   (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D), format,
 									   aspect, miplevels, layerCount),
-					   [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+					   [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 	std::vector<VkImageView> views(layerCount);
 	uint32_t index = 0;
 	for (auto& view : views)
 	{
-		view = createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels, 1,
+		view = createImageView(context->get_device(), get_image(), VK_IMAGE_VIEW_TYPE_2D, format, aspect, miplevels, 1,
 							   index);
 		index++;
 	}
 	imageViews =
-		ManagedVector(views, [dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+		ManagedVector(views, [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 	imageSampler =
-		Managed(createSampler(context.get_device(), miplevels, image_data.samplerAddressMode),
-				[dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+		Managed(createSampler(context->get_device(), miplevels, image_data.samplerAddressMode),
+				[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 	imageInfo.imageView = allViews.get();
 	imageInfo.sampler = imageSampler.get();

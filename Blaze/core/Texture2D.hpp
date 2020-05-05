@@ -102,7 +102,7 @@ public:
 	}
 
 	/**
-	 * @fn Texture2D(const Context& context, const ImageData2D& image_data, bool mipmapped = false)
+	 * @fn Texture2D(const Context* context, const ImageData2D& image_data, bool mipmapped = false)
 	 *
 	 * @brief Constructor for the texture.
 	 *
@@ -110,7 +110,7 @@ public:
 	 * @param image_data The ImageData2D struct containing the initialization information.
 	 * @param mipmapped Enabling mipmapping.
 	 */
-	Texture2D(const Context& context, const ImageData2D& image_data, bool mipmapped = false);
+	Texture2D(const Context* context, const ImageData2D& image_data, bool mipmapped = false);
 
 	/**
 	 * @name Move Constuctors.
@@ -229,5 +229,5 @@ private:
 	VkSampler createSampler(VkDevice device, uint32_t miplevels, VkSamplerAddressMode addressMode) const;
 };
 
-[[nodiscard]] Texture2D loadImage(const Context& context, const std::string& name);
+[[nodiscard]] Texture2D loadImage(const Context* context, const std::string& name);
 } // namespace blaze

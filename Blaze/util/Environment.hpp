@@ -7,9 +7,9 @@
 
 namespace blaze::util
 {
-TextureCube createIrradianceCube(const Context& context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
-TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
-Texture2D createBrdfLut(const Context& context);
+TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
+TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
+Texture2D createBrdfLut(const Context* context);
 
 class Environment : public Bindable
 {

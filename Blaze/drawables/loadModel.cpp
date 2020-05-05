@@ -221,11 +221,11 @@ namespace blaze
 			}
 		}
 
-		materials.emplace_back(pushConstantBlock, Texture2D{renderer.get_context(), diffuseImageData, true},
-							   Texture2D{renderer.get_context(), normalImageData, true},
-							   Texture2D{renderer.get_context(), metallicRoughnessImageData, true},
-							   Texture2D{renderer.get_context(), occlusionImageData, true},
-							   Texture2D{renderer.get_context(), emissiveImageData, true});
+		materials.emplace_back(pushConstantBlock, Texture2D{&renderer.get_context(), diffuseImageData, true},
+							   Texture2D{&renderer.get_context(), normalImageData, true},
+							   Texture2D{&renderer.get_context(), metallicRoughnessImageData, true},
+							   Texture2D{&renderer.get_context(), occlusionImageData, true},
+							   Texture2D{&renderer.get_context(), emissiveImageData, true});
 
 		if (diffuseImageData.data != imgData.data)
 		{
@@ -262,9 +262,9 @@ namespace blaze
 
 		MaterialPushConstantBlock pushConstantBlock = {};
 
-		materials.emplace_back(pushConstantBlock, Texture2D{renderer.get_context(), imgData},
-							   Texture2D{renderer.get_context(), imgData}, Texture2D{renderer.get_context(), imgData},
-							   Texture2D{renderer.get_context(), imgData}, Texture2D{renderer.get_context(), imgData});
+		materials.emplace_back(pushConstantBlock, Texture2D{&renderer.get_context(), imgData},
+							   Texture2D{&renderer.get_context(), imgData}, Texture2D{&renderer.get_context(), imgData},
+							   Texture2D{&renderer.get_context(), imgData}, Texture2D{&renderer.get_context(), imgData});
 		delete[] data;
 	}
 
@@ -429,7 +429,7 @@ namespace blaze
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 
-	auto ivb = IndexedVertexBuffer(renderer.get_context(), indexBuffer, vertexBuffer);
+	auto ivb = IndexedVertexBuffer(&renderer.get_context(), indexBuffer, vertexBuffer);
 	blazeModel = Model(renderer, scene.nodes, nodes, primitives, materials, std::move(ivb));
 
 	return blazeModel;
@@ -651,11 +651,11 @@ namespace blaze
 			}
 		}
 
-		materials.emplace_back(pushConstantBlock, Texture2D{renderer.get_context(), diffuseImageData, true},
-							   Texture2D{renderer.get_context(), normalImageData, true},
-							   Texture2D{renderer.get_context(), metallicRoughnessImageData, true},
-							   Texture2D{renderer.get_context(), occlusionImageData, true},
-							   Texture2D{renderer.get_context(), emissiveImageData, true});
+		materials.emplace_back(pushConstantBlock, Texture2D{&renderer.get_context(), diffuseImageData, true},
+							   Texture2D{&renderer.get_context(), normalImageData, true},
+							   Texture2D{&renderer.get_context(), metallicRoughnessImageData, true},
+							   Texture2D{&renderer.get_context(), occlusionImageData, true},
+							   Texture2D{&renderer.get_context(), emissiveImageData, true});
 
 		if (diffuseImageData.data != imgData.data)
 		{
@@ -692,9 +692,9 @@ namespace blaze
 
 		MaterialPushConstantBlock pushConstantBlock = {};
 
-		materials.emplace_back(pushConstantBlock, Texture2D{renderer.get_context(), imgData},
-							   Texture2D{renderer.get_context(), imgData}, Texture2D{renderer.get_context(), imgData},
-							   Texture2D{renderer.get_context(), imgData}, Texture2D{renderer.get_context(), imgData});
+		materials.emplace_back(pushConstantBlock, Texture2D{&renderer.get_context(), imgData},
+							   Texture2D{&renderer.get_context(), imgData}, Texture2D{&renderer.get_context(), imgData},
+							   Texture2D{&renderer.get_context(), imgData}, Texture2D{&renderer.get_context(), imgData});
 		delete[] data;
 	}
 
@@ -859,7 +859,7 @@ namespace blaze
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 
-	auto ivb = IndexedVertexBuffer(renderer.get_context(), indexBuffer, vertexBuffer);
+	auto ivb = IndexedVertexBuffer(&renderer.get_context(), indexBuffer, vertexBuffer);
 	blazeModel = Model(renderer, scene.nodes, nodes, primitives, materials, std::move(ivb));
 
 	return blazeModel;

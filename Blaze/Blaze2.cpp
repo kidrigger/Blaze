@@ -110,7 +110,7 @@ void runRefactored()
 	assert(renderer->complete());
 
 	auto environment = make_unique<util::Environment>(
-		renderer.get(), loadImageCube(*renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
+		renderer.get(), loadImageCube(renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
 	renderer->setEnvironment(environment.get());
 
 	modelLoader = make_unique<ModelLoader>();

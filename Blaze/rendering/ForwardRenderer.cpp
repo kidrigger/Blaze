@@ -405,7 +405,7 @@ Texture2D ForwardRenderer::createDepthBuffer() const
 	imageData.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	imageData.numChannels = 1;
 	imageData.size = swapchain.get_extent().width * swapchain.get_extent().height;
-	return Texture2D(context, imageData);
+	return Texture2D(&context, imageData);
 }
 
 ForwardRenderer::ForwardRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept : context(window, enableValidationLayers)

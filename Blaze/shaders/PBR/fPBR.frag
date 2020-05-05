@@ -6,8 +6,8 @@
 
 const float shadow_bias = 0.05f;
 
-layout(location = 0) in vec3 V_POSITION;
-layout(location = 1) in vec3 V_NORMAL;
+layout(location = 0) in vec4 V_POSITION;
+layout(location = 1) in vec4 V_NORMAL;
 layout(location = 2, component = 0) in vec2 V_UV0;
 layout(location = 2, component = 2) in vec2 V_UV1;
 
@@ -20,16 +20,16 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	float farPlane;
 } camera;
 
-layout(set = 1, binding = 0) uniform sampler2D diffuseMap[MAX_TEX_IN_MAT];
-layout(set = 1, binding = 1) uniform sampler2D normalMap[MAX_TEX_IN_MAT];
-layout(set = 1, binding = 2) uniform sampler2D metalRoughMap[MAX_TEX_IN_MAT];
-layout(set = 1, binding = 3) uniform sampler2D occlusionMap[MAX_TEX_IN_MAT];
-layout(set = 1, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
+layout(set = 1, binding = 0) uniform samplerCube skybox;
+layout(set = 1, binding = 1) uniform samplerCube irradianceMap;
+layout(set = 1, binding = 2) uniform samplerCube prefilteredMap;
+layout(set = 1, binding = 3) uniform sampler2D brdfLUT;
 
-layout(set = 2, binding = 0) uniform samplerCube skybox;
-layout(set = 2, binding = 1) uniform samplerCube irradianceMap;
-layout(set = 2, binding = 2) uniform samplerCube prefilteredMap;
-layout(set = 2, binding = 3) uniform sampler2D brdfLUT;
+layout(set = 2, binding = 0) uniform sampler2D diffuseMap[MAX_TEX_IN_MAT];
+layout(set = 2, binding = 1) uniform sampler2D normalMap[MAX_TEX_IN_MAT];
+layout(set = 2, binding = 2) uniform sampler2D metalRoughMap[MAX_TEX_IN_MAT];
+layout(set = 2, binding = 3) uniform sampler2D occlusionMap[MAX_TEX_IN_MAT];
+layout(set = 2, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
 
 layout(push_constant) uniform ModelBlock {
 	float opaque_[16];
@@ -85,13 +85,13 @@ vec3 getNormal()
 {
 	vec3 tangentNormal = texture(normalMap[pcb.textureArrIdx], pcb.normalTextureSet == 0 ? V_UV0 : V_UV1).xyz * 2.0 - 1.0;
 
-	vec3 q1  = dFdx(V_POSITION);
-	vec3 q2  = dFdy(V_POSITION);
+	vec4 q1  = dFdx(V_POSITION);
+	vec4 q2  = dFdy(V_POSITION);
 	vec2 st1 = dFdx(V_UV0);
 	vec2 st2 = dFdy(V_UV0);
 
-	vec3 N	 = normalize(V_NORMAL);
-	vec3 T	 = normalize(q1 * st2.t - q2 * st1.t);
+	vec3 N	 = normalize(V_NORMAL.xyz);
+	vec3 T	 = normalize(q1 * st2.t - q2 * st1.t).xyz;
 	vec3 B	 = -normalize(cross(N, T));
 	mat3 TBN = mat3(T, B, N);
 
@@ -140,8 +140,8 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 void main()
 {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
-	vec3 N = (pcb.normalTextureSet > -1 ? getNormal() : normalize(V_NORMAL));
-	vec3 V = normalize(camera.viewPos - V_POSITION);
+	vec3 N = (pcb.normalTextureSet > -1 ? getNormal() : normalize(V_NORMAL.xyz));
+	vec3 V = normalize(camera.viewPos - V_POSITION.xyz);
 
 	vec3 albedo;
 	float metallic;

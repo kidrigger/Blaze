@@ -17,10 +17,15 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// Pipeline
 	shader = createShader();
 	pipeline = createPipeline();
+    skyboxShader = createSkyboxShader();
+    skyboxPipeline = createSkyboxPipeline();
 
 	// All uniform buffer stuff
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
+
+    // Skybox mesh
+    skyboxCube = getUVCube(context.get());
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -96,6 +101,10 @@ void FwdRenderer::recordCommands(uint32_t frame)
 	{
 		drawable->draw(commandBuffers[frame], shader.pipelineLayout.get());
 	}
+
+    skyboxPipeline.bind(commandBuffers[frame]);
+    skyboxCube.bind(commandBuffers[frame]);
+    vkCmdDrawIndexed(commandBuffers[frame], skyboxCube.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
 }
@@ -173,8 +182,8 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_NONE; // TODO VK_CULL_MODEL_BACK
-	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
 	info.rasterizerCreateInfo.pNext = nullptr;
@@ -221,6 +230,88 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
 	return pipelineFactory->createGraphicsPipeline(shader, renderPass, info);
+}
+
+spirv::Shader FwdRenderer::createSkyboxShader()
+{
+	std::vector<spirv::ShaderStageData> stages;
+
+	spirv::ShaderStageData* stage;
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile("shaders/PBR/vSkybox.vert.spv");
+	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile("shaders/PBR/fSkybox.frag.spv");
+	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	return pipelineFactory->createShader(stages);
+}
+
+spirv::Pipeline FwdRenderer::createSkyboxPipeline()
+{
+	assert(skyboxShader.valid());
+
+	spirv::GraphicsPipelineCreateInfo info = {};
+
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+    info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.blendEnable = VK_TRUE;
+	colorblendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.front = {}; // Don't Care
+	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	return pipelineFactory->createGraphicsPipeline(skyboxShader, renderPass, info);
 }
 
 vkw::FramebufferVector FwdRenderer::createFramebuffers() const
@@ -274,7 +365,7 @@ Texture2D FwdRenderer::createDepthBuffer() const
 	imageData.numChannels = 1;
 	imageData.size = swapchain->get_extent().width * swapchain->get_extent().height;
 
-	return Texture2D(*context, imageData);
+	return Texture2D(context.get(), imageData);
 }
 
 spirv::SetVector FwdRenderer::createCameraSets()

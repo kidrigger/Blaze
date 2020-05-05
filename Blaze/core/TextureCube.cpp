@@ -8,7 +8,7 @@
 namespace blaze
 {
 
-[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::vector<std::string>& names_lrudfb,
+[[nodiscard]] TextureCube loadImageCube(const Context* context, const std::vector<std::string>& names_lrudfb,
 										bool mipmapped)
 {
 	ImageDataCube image;
@@ -42,7 +42,7 @@ namespace blaze
 	return std::move(ti);
 }
 
-[[nodiscard]] TextureCube loadImageCube(const Context& context, const std::string& name, bool mipmapped)
+[[nodiscard]] TextureCube loadImageCube(const Context* context, const std::string& name, bool mipmapped)
 {
 	auto ext = name.substr(name.find_last_of('.'));
 	if (ext != ".hdr")
@@ -88,19 +88,19 @@ namespace blaze
 	poolSize.descriptorCount = 1;
 	std::vector<VkDescriptorPoolSize> poolSizes = {poolSize};
 	util::Managed<VkDescriptorPool> dsPool = util::Managed(
-		util::createDescriptorPool(context.get_device(), poolSizes, 2),
-		[dev = context.get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
+		util::createDescriptorPool(context->get_device(), poolSizes, 2),
+		[dev = context->get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
 	util::Managed<VkDescriptorSetLayout> dsLayout;
 	{
 		std::vector<VkDescriptorSetLayoutBinding> cubemapLayoutBindings = {
 			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}};
-		dsLayout = util::Managed(util::createDescriptorSetLayout(context.get_device(), cubemapLayoutBindings),
-								 [dev = context.get_device()](VkDescriptorSetLayout& dsl) {
+		dsLayout = util::Managed(util::createDescriptorSetLayout(context->get_device(), cubemapLayoutBindings),
+								 [dev = context->get_device()](VkDescriptorSetLayout& dsl) {
 									 vkDestroyDescriptorSetLayout(dev, dsl, nullptr);
 								 });
 	}
 
-	auto createDescriptorSet = [device = context.get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool,
+	auto createDescriptorSet = [device = context->get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool,
 															   const Texture2D& texture, uint32_t binding) {
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -136,7 +136,7 @@ namespace blaze
 
 	util::Managed<VkDescriptorSet> ds =
 		util::Managed(createDescriptorSet(dsLayout.get(), dsPool.get(), equirect, 1),
-					  [dev = context.get_device(), pool = dsPool.get()](VkDescriptorSet& dset) {
+					  [dev = context->get_device(), pool = dsPool.get()](VkDescriptorSet& dset) {
 						  vkFreeDescriptorSets(dev, pool, 1, &dset);
 					  });
 
@@ -147,7 +147,7 @@ namespace blaze
 	return util::Process<decltype(convertInfo.pcb)>::convertDescriptorToCubemap(context, convertInfo);
 }
 
-TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data, bool mipmapped)
+TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data, bool mipmapped)
 	: width(image_data.width), height(image_data.height), format(image_data.format), layout(image_data.layout),
 	  usage(image_data.usage), access(image_data.access), aspect(image_data.aspect), is_valid(false)
 {
@@ -155,7 +155,7 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 	using namespace util;
 	using std::max;
 
-	VmaAllocator allocator = context.get_allocator();
+	VmaAllocator allocator = context->get_allocator();
 
 	if (mipmapped)
 	{
@@ -165,11 +165,11 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 	if (!image_data.data[0] || !image_data.data[1] || !image_data.data[2] || !image_data.data[3] ||
 		!image_data.data[4] || !image_data.data[5])
 	{
-		image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
+		image = Managed(context->createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
 												VMA_MEMORY_USAGE_GPU_ONLY),
 						[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
-		VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
+		VkCommandBuffer commandBuffer = context->startCommandBufferRecord();
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -191,14 +191,14 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 		barrier.dstAccessMask = 0;
 
 		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-		context.flushCommandBuffer(commandBuffer);
+		context->flushCommandBuffer(commandBuffer);
 
 		imageView = Managed(
-			createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6),
-			[dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+			createImageView(context->get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6),
+			[dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 		imageSampler =
-			Managed(createSampler(context.get_device(), miplevels),
-					[dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			Managed(createSampler(context->get_device(), miplevels),
+					[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 		imageInfo.imageView = imageView.get();
 		imageInfo.sampler = imageSampler.get();
@@ -207,7 +207,7 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 	}
 
 	auto [stagingBuffer, stagingAlloc] =
-		context.createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+		context->createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	auto stagingBufferRAII = Managed<BufferObject>({stagingBuffer, stagingAlloc}, [allocator](BufferObject& bo) {
 		vmaDestroyBuffer(allocator, bo.buffer, bo.allocation);
@@ -224,13 +224,13 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 	}
 	vmaUnmapMemory(allocator, stagingAlloc);
 
-	image = Managed(context.createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
+	image = Managed(context->createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
 											VMA_MEMORY_USAGE_GPU_ONLY),
 					[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
 
 	try
 	{
-		VkCommandBuffer commandBuffer = context.startCommandBufferRecord();
+		VkCommandBuffer commandBuffer = context->startCommandBufferRecord();
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -337,7 +337,7 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 								 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		}
 
-		context.flushCommandBuffer(commandBuffer);
+		context->flushCommandBuffer(commandBuffer);
 	}
 	catch (std::exception& e)
 	{
@@ -345,11 +345,11 @@ TextureCube::TextureCube(const Context& context, const ImageDataCube& image_data
 	}
 
 	imageView = Managed(
-		createImageView(context.get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6),
-		[dev = context.get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+		createImageView(context->get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6),
+		[dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
 	imageSampler =
-		Managed(createSampler(context.get_device(), miplevels),
-				[dev = context.get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+		Managed(createSampler(context->get_device(), miplevels),
+				[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
 
 	imageInfo.imageView = imageView.get();
 	imageInfo.sampler = imageSampler.get();

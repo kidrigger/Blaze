@@ -68,7 +68,7 @@ public:
 		idc.format = VK_FORMAT_R32_SFLOAT;
 		idc.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 		idc.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		shadowMap = TextureCube(context, idc, false);
+		shadowMap = TextureCube(&context, idc, false);
 
 		idc.usage ^= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		idc.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -76,7 +76,7 @@ public:
 		idc.format = VK_FORMAT_D32_SFLOAT;
 		idc.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 		idc.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		depthMap = TextureCube(context, idc, false);
+		depthMap = TextureCube(&context, idc, false);
 
 		viewport = VkViewport{0.0f, POINT_SHADOW_MAP_SIZE, POINT_SHADOW_MAP_SIZE, -POINT_SHADOW_MAP_SIZE, 0.0f, 1.0f};
 
@@ -168,7 +168,7 @@ public:
 		id2d.layerCount = MAX_CSM_SPLITS;
 		id2d.anisotropy = VK_FALSE;
 		id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		shadowMap = Texture2D(context, id2d, false);
+		shadowMap = Texture2D(&context, id2d, false);
 
 		viewport = VkViewport{0.0f, DIR_SHADOW_MAP_SIZE, DIR_SHADOW_MAP_SIZE, -DIR_SHADOW_MAP_SIZE, 0.0f, 1.0f};
 

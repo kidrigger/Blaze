@@ -6,7 +6,7 @@
 
 namespace blaze::util
 {
-TextureCube createIrradianceCube(const Context& context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
+TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
 {
 	struct PCB
 	{
@@ -21,7 +21,7 @@ TextureCube createIrradianceCube(const Context& context, VkDescriptorSetLayout e
 	return util::Process<PCB>::convertDescriptorToCubemap(context, info);
 }
 
-TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
+TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
 {
 	struct PCB
 	{
@@ -88,22 +88,22 @@ TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout 
 		}
 
 		irPipelineLayout = util::Managed(
-			util::createPipelineLayout(context.get_device(), descriptorSetLayouts, pushConstantRanges),
-			[dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+			util::createPipelineLayout(context->get_device(), descriptorSetLayouts, pushConstantRanges),
+			[dev = context->get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
 	}
 
 	irRenderPass =
-		util::Managed(util::createRenderPass(context.get_device(), format),
-					  [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+		util::Managed(util::createRenderPass(context->get_device(), format),
+					  [dev = context->get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
 
 	{
 		std::vector<VkDynamicState> dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT};
 
 		VkPipeline tPipeline = util::createGraphicsPipeline(
-			context.get_device(), irPipelineLayout.get(), irRenderPass.get(), {dim, dim}, info.vert_shader,
+			context->get_device(), irPipelineLayout.get(), irRenderPass.get(), {dim, dim}, info.vert_shader,
 			info.frag_shader, dynamicStateEnables, VK_CULL_MODE_FRONT_BIT);
 		irPipeline = util::Managed(
-			tPipeline, [dev = context.get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
+			tPipeline, [dev = context->get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
 	}
 
 	{
@@ -116,9 +116,9 @@ TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout 
 		fbCreateInfo.renderPass = irRenderPass.get();
 		fbCreateInfo.attachmentCount = 1;
 		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
-		vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
+		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
 		irFramebuffer = util::Managed(
-			fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+			fbo, [dev = context->get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
 	}
 
 	auto cube = getUVCube(context);
@@ -144,7 +144,7 @@ TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout 
 
 	uint32_t totalMips = irradianceMap.get_miplevels();
 	uint32_t mipsize = dim;
-	auto cmdBuffer = context.startCommandBufferRecord();
+	auto cmdBuffer = context->startCommandBufferRecord();
 	for (uint32_t miplevel = 0; miplevel < totalMips; miplevel++)
 	{
 		for (int face = 0; face < 6; face++)
@@ -229,12 +229,12 @@ TextureCube createPrefilteredCube(const Context& context, VkDescriptorSetLayout 
 	irradianceMap.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
 								 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-	context.flushCommandBuffer(cmdBuffer);
+	context->flushCommandBuffer(cmdBuffer);
 
 	return irradianceMap;
 }
 
-Texture2D createBrdfLut(const Context& context)
+Texture2D createBrdfLut(const Context* context)
 {
 	const uint32_t dim = 512;
 
@@ -275,21 +275,21 @@ Texture2D createBrdfLut(const Context& context)
 		pcr.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		irPipelineLayout = util::Managed(
-			util::createPipelineLayout(context.get_device(), std::vector<VkDescriptorSetLayout>(),
+			util::createPipelineLayout(context->get_device(), std::vector<VkDescriptorSetLayout>(),
 									   std::vector<VkPushConstantRange>{pcr}),
-			[dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+			[dev = context->get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
 	}
 
 	irRenderPass =
-		util::Managed(util::createRenderPass(context.get_device(), format),
-					  [dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+		util::Managed(util::createRenderPass(context->get_device(), format),
+					  [dev = context->get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
 
 	{
-		auto tPipeline = util::createGraphicsPipeline(context.get_device(), irPipelineLayout.get(), irRenderPass.get(),
+		auto tPipeline = util::createGraphicsPipeline(context->get_device(), irPipelineLayout.get(), irRenderPass.get(),
 													  {dim, dim}, "shaders/vBrdfLut.vert.spv",
 													  "shaders/fBrdfLut.frag.spv", {}, VK_CULL_MODE_FRONT_BIT);
 		irPipeline = util::Managed(
-			tPipeline, [dev = context.get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
+			tPipeline, [dev = context->get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
 	}
 
 	{
@@ -302,9 +302,9 @@ Texture2D createBrdfLut(const Context& context)
 		fbCreateInfo.renderPass = irRenderPass.get();
 		fbCreateInfo.attachmentCount = 1;
 		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
-		vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
+		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
 		irFramebuffer = util::Managed(
-			fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+			fbo, [dev = context->get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
 	}
 
 	auto rect = getUVRect(context);
@@ -313,7 +313,7 @@ Texture2D createBrdfLut(const Context& context)
 
 	CubePushConstantBlock pcb{glm::mat4(1.0f)};
 
-	auto cmdBuffer = context.startCommandBufferRecord();
+	auto cmdBuffer = context->startCommandBufferRecord();
 
 	// RENDERPASSES
 
@@ -369,7 +369,7 @@ Texture2D createBrdfLut(const Context& context)
 
 	lut.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
-	context.flushCommandBuffer(cmdBuffer);
+	context->flushCommandBuffer(cmdBuffer);
 
 	return lut;
 }
@@ -428,21 +428,21 @@ Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
 	write.pImageInfo = &this->skybox.get_imageInfo();
 	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
 
-	this->irradianceMap = createIrradianceCube(*renderer->get_context(), lay, set.get());
+	this->irradianceMap = createIrradianceCube(renderer->get_context(), lay, set.get());
 
 	write.dstBinding = irradianceInfo->binding;
 	write.descriptorType = irradianceInfo->type;
 	write.pImageInfo = &this->irradianceMap.get_imageInfo();
 	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
 
-	this->prefilteredMap = createPrefilteredCube(*renderer->get_context(), lay, set.get());
+	this->prefilteredMap = createPrefilteredCube(renderer->get_context(), lay, set.get());
 
 	write.dstBinding = prefilteredInfo->binding;
 	write.descriptorType = prefilteredInfo->type;
 	write.pImageInfo = &this->prefilteredMap.get_imageInfo();
 	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
 
-	this->brdfLut = createBrdfLut(*renderer->get_context());
+	this->brdfLut = createBrdfLut(renderer->get_context());
 
 	write.dstBinding = brdfLutInfo->binding;
 	write.descriptorType = brdfLutInfo->type;

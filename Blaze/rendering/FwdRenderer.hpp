@@ -21,12 +21,17 @@ private:
 	Texture2D depthBuffer;
 	spirv::RenderPass renderPass;
 	vkw::FramebufferVector renderFramebuffers;
-	spirv::Shader shader;
+	
+    spirv::Shader shader;
 	spirv::Pipeline pipeline;
+    spirv::Shader skyboxShader;
+    spirv::Pipeline skyboxPipeline;
+
 	CameraUBOV cameraUBOs;
 	spirv::SetVector cameraSets;
 
 	const Bindable* environment;
+    IndexedVertexBuffer<Vertex> skyboxCube;
 
 public:
 	/**
@@ -82,6 +87,8 @@ private:
 	vkw::FramebufferVector createFramebuffers() const;
 	spirv::Shader createShader();
 	spirv::Pipeline createPipeline();
+    spirv::Shader createSkyboxShader();
+    spirv::Pipeline createSkyboxPipeline();
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
 

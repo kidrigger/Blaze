@@ -15,7 +15,7 @@ Object encapsulating the data in a vertex buffer and the related indices.
 \mbox{\Hypertarget{classblaze_1_1IndexedVertexBuffer_a3caf7bf67c51082014bc299fc483cfe8}\label{classblaze_1_1IndexedVertexBuffer_a3caf7bf67c51082014bc299fc483cfe8}} 
 \hyperlink{classblaze_1_1IndexedVertexBuffer_a3caf7bf67c51082014bc299fc483cfe8}{Indexed\+Vertex\+Buffer} () noexcept
 \begin{DoxyCompactList}\small\item\em Default Constructor/. \end{DoxyCompactList}\item 
-\hyperlink{classblaze_1_1IndexedVertexBuffer_a569c5890b3b517a4d08b6bc46e1ec71c}{Indexed\+Vertex\+Buffer} (const \hyperlink{classblaze_1_1Context}{Context} \&context, const std\+::vector$<$ uint32\+\_\+t $>$ \&index\+\_\+data, const std\+::vector$<$ T $>$ \&vertex\+\_\+data) noexcept
+\hyperlink{classblaze_1_1IndexedVertexBuffer_a3ba3cbc38b01607efe051c19e1d654d8}{Indexed\+Vertex\+Buffer} (const \hyperlink{classblaze_1_1Context}{Context} $\ast$context, const std\+::vector$<$ uint32\+\_\+t $>$ \&index\+\_\+data, const std\+::vector$<$ T $>$ \&vertex\+\_\+data) noexcept
 \begin{DoxyCompactList}\small\item\em Main constructor for the object. \end{DoxyCompactList}\item 
 void \hyperlink{classblaze_1_1IndexedVertexBuffer_a9b418a8f1c685c8326b4531afbcf2dbd}{bind} (Vk\+Command\+Buffer buf)
 \begin{DoxyCompactList}\small\item\em Binds the buffers to the command buffer. \end{DoxyCompactList}\end{DoxyCompactItemize}
@@ -67,12 +67,12 @@ Object encapsulating the data in a vertex buffer and the related indices.
 
 
 \subsection{Constructor \& Destructor Documentation}
-\mbox{\Hypertarget{classblaze_1_1IndexedVertexBuffer_a569c5890b3b517a4d08b6bc46e1ec71c}\label{classblaze_1_1IndexedVertexBuffer_a569c5890b3b517a4d08b6bc46e1ec71c}} 
+\mbox{\Hypertarget{classblaze_1_1IndexedVertexBuffer_a3ba3cbc38b01607efe051c19e1d654d8}\label{classblaze_1_1IndexedVertexBuffer_a3ba3cbc38b01607efe051c19e1d654d8}} 
 \index{blaze\+::\+Indexed\+Vertex\+Buffer@{blaze\+::\+Indexed\+Vertex\+Buffer}!Indexed\+Vertex\+Buffer@{Indexed\+Vertex\+Buffer}}
 \index{Indexed\+Vertex\+Buffer@{Indexed\+Vertex\+Buffer}!blaze\+::\+Indexed\+Vertex\+Buffer@{blaze\+::\+Indexed\+Vertex\+Buffer}}
 \subsubsection{\texorpdfstring{Indexed\+Vertex\+Buffer()}{IndexedVertexBuffer()}}
 {\footnotesize\ttfamily template$<$typename T$>$ \\
-\hyperlink{classblaze_1_1IndexedVertexBuffer}{blaze\+::\+Indexed\+Vertex\+Buffer}$<$ T $>$\+::\hyperlink{classblaze_1_1IndexedVertexBuffer}{Indexed\+Vertex\+Buffer} (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} \&}]{context,  }\item[{const std\+::vector$<$ uint32\+\_\+t $>$ \&}]{index\+\_\+data,  }\item[{const std\+::vector$<$ T $>$ \&}]{vertex\+\_\+data }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+\hyperlink{classblaze_1_1IndexedVertexBuffer}{blaze\+::\+Indexed\+Vertex\+Buffer}$<$ T $>$\+::\hyperlink{classblaze_1_1IndexedVertexBuffer}{Indexed\+Vertex\+Buffer} (\begin{DoxyParamCaption}\item[{const \hyperlink{classblaze_1_1Context}{Context} $\ast$}]{context,  }\item[{const std\+::vector$<$ uint32\+\_\+t $>$ \&}]{index\+\_\+data,  }\item[{const std\+::vector$<$ T $>$ \&}]{vertex\+\_\+data }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
 
 
 

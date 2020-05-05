@@ -84,7 +84,7 @@ public:
 	 * @param context The current Vulkan Context.
 	 * @param info The Texture2CubemapInfo to configure the type.
 	 */
-	static TextureCube convertDescriptorToCubemap(const Context& context, const Texture2CubemapInfo<PCB>& info)
+	static TextureCube convertDescriptorToCubemap(const Context* context, const Texture2CubemapInfo<PCB>& info)
 	{
 		auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
 		const uint32_t dim = info.cube_side;
@@ -119,15 +119,15 @@ public:
 
 		{
 			std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}};
-			descriptorPool = util::Managed(util::createDescriptorPool(context.get_device(), poolSizes, 1),
-										   [dev = context.get_device()](VkDescriptorPool& descPool) {
+			descriptorPool = util::Managed(util::createDescriptorPool(context->get_device(), poolSizes, 1),
+										   [dev = context->get_device()](VkDescriptorPool& descPool) {
 											   vkDestroyDescriptorPool(dev, descPool, nullptr);
 										   });
 			std::vector<VkDescriptorSetLayoutBinding> bindings = {
 				{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr}};
 
-			views = util::Managed(util::createDescriptorSetLayout(context.get_device(), bindings),
-								  [dev = context.get_device()](VkDescriptorSetLayout& lay) {
+			views = util::Managed(util::createDescriptorSetLayout(context->get_device(), bindings),
+								  [dev = context->get_device()](VkDescriptorSetLayout& lay) {
 									  vkDestroyDescriptorSetLayout(dev, lay, nullptr);
 								  });
 		}
@@ -152,20 +152,20 @@ public:
 				}
 			}
 			irPipelineLayout = util::Managed(
-				util::createPipelineLayout(context.get_device(), descriptorSetLayouts, pushConstantRanges),
-				[dev = context.get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+				util::createPipelineLayout(context->get_device(), descriptorSetLayouts, pushConstantRanges),
+				[dev = context->get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
 		}
 
 		irRenderPass = util::Managed(
-			util::createRenderPassMultiView(context.get_device(), 0b00111111, format),
-			[dev = context.get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+			util::createRenderPassMultiView(context->get_device(), 0b00111111, format),
+			[dev = context->get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
 
 		{
-			auto tPipeline = util::createGraphicsPipeline(context.get_device(), irPipelineLayout.get(),
+			auto tPipeline = util::createGraphicsPipeline(context->get_device(), irPipelineLayout.get(),
 														  irRenderPass.get(), {dim, dim}, info.vert_shader,
 														  info.frag_shader, {}, VK_CULL_MODE_FRONT_BIT);
 			irPipeline = util::Managed(
-				tPipeline, [dev = context.get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
+				tPipeline, [dev = context->get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
 		}
 
 		{
@@ -178,9 +178,9 @@ public:
 			fbCreateInfo.renderPass = irRenderPass.get();
 			fbCreateInfo.attachmentCount = 1;
 			fbCreateInfo.pAttachments = &irradianceMap.get_imageView();
-			vkCreateFramebuffer(context.get_device(), &fbCreateInfo, nullptr, &fbo);
+			vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
 			irFramebuffer = util::Managed(
-				fbo, [dev = context.get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+				fbo, [dev = context->get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
 		}
 
 		auto cube = getUVCube(context);
@@ -202,7 +202,7 @@ public:
 				glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 			}};
 
-		UBO<CubemapUBlock> ubo(&context, uboData);
+		UBO<CubemapUBlock> ubo(context, uboData);
 
 		{
 			VkDescriptorSetAllocateInfo allocInfo = {};
@@ -212,12 +212,12 @@ public:
 			allocInfo.pSetLayouts = views.data();
 
 			VkDescriptorSet dSet;
-			auto result = vkAllocateDescriptorSets(context.get_device(), &allocInfo, &dSet);
+			auto result = vkAllocateDescriptorSets(context->get_device(), &allocInfo, &dSet);
 			if (result != VK_SUCCESS)
 			{
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 			}
-			descriptorSet = util::Managed(dSet, [dev = context.get_device(), pool = descriptorPool.get()](
+			descriptorSet = util::Managed(dSet, [dev = context->get_device(), pool = descriptorPool.get()](
 													VkDescriptorSet& ds) { vkFreeDescriptorSets(dev, pool, 1, &ds); });
 
 			VkDescriptorBufferInfo info = ubo.get_descriptorInfo();
@@ -231,13 +231,13 @@ public:
 			write.dstArrayElement = 0;
 			write.pBufferInfo = &info;
 
-			vkUpdateDescriptorSets(context.get_device(), 1, &write, 0, nullptr);
+			vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 		}
 
 		CubePushConstantBlock pcb{};
 
 		{
-			auto cmdBuffer = context.startCommandBufferRecord();
+			auto cmdBuffer = context->startCommandBufferRecord();
 
 			// RENDERPASSES
 
@@ -277,16 +277,16 @@ public:
 			vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(cmdBuffer);
-			context.flushCommandBuffer(cmdBuffer);
+			context->flushCommandBuffer(cmdBuffer);
 		}
 
-		auto cmdBuffer = context.startCommandBufferRecord();
+		auto cmdBuffer = context->startCommandBufferRecord();
 
 		irradianceMap.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
 									 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 									 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-		context.flushCommandBuffer(cmdBuffer);
+		context->flushCommandBuffer(cmdBuffer);
 
 		return irradianceMap;
 	}

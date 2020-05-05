@@ -3,7 +3,7 @@
 
 namespace blaze
 {
-IndexedVertexBuffer<Vertex> getUVCube(const Context& context)
+IndexedVertexBuffer<Vertex> getUVCube(const Context* context)
 {
 	// Hello vertex, my old code
 	std::vector<Vertex> vertices = {
@@ -22,7 +22,7 @@ IndexedVertexBuffer<Vertex> getUVCube(const Context& context)
 	return IndexedVertexBuffer(context, indices, vertices);
 }
 
-IndexedVertexBuffer<Vertex> getUVRect(const Context& context)
+IndexedVertexBuffer<Vertex> getUVRect(const Context* context)
 {
 	// Hello vertex, my old code
 	std::vector<Vertex> vertices = {
@@ -37,7 +37,7 @@ IndexedVertexBuffer<Vertex> getUVRect(const Context& context)
 	return IndexedVertexBuffer(context, indices, vertices);
 }
 
-IndexedVertexBuffer<Vertex> getIcoSphere(const Context& context)
+IndexedVertexBuffer<Vertex> getIcoSphere(const Context* context)
 {
 	// Hello vertex, my old code
 	std::vector<Vertex> vertices = {
