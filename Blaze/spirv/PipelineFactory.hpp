@@ -149,6 +149,7 @@ struct SetVector
 	vkw::DescriptorPool pool;
 	vkw::DescriptorSetVector sets;
 	uint32_t setIdx;
+	std::vector<UniformInfo> info;
 
 	const VkDescriptorSet& operator[](uint32_t idx) const
 	{
@@ -173,6 +174,7 @@ struct SetSingleton
 	vkw::DescriptorPool pool;
 	vkw::DescriptorSet set;
 	uint32_t setIdx;
+	std::vector<UniformInfo> info;
 
 	const VkDescriptorSet& get() const
 	{

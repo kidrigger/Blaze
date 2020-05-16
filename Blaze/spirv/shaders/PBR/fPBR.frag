@@ -1,7 +1,6 @@
 #version 450
 
-#define MAX_TEX_IN_MAT 32
-#define MAX_POINT_LIGHTS 16
+#define MAX_TEX_IN_MAT 16
 
 #define MANUAL_SRGB 1
 
@@ -31,16 +30,6 @@ layout(set = 2, binding = 1) uniform sampler2D normalMap[MAX_TEX_IN_MAT];
 layout(set = 2, binding = 2) uniform sampler2D metalRoughMap[MAX_TEX_IN_MAT];
 layout(set = 2, binding = 3) uniform sampler2D occlusionMap[MAX_TEX_IN_MAT];
 layout(set = 2, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
-
-struct PointLightData {
-	vec3 position;
-	float brightness;
-	int shadowIndex;
-};
-
-layout(set = 3, binding = 0) uniform PointLightUBO {
-	PointLightData data[MAX_POINT_LIGHTS];
-} lights;
 
 layout(push_constant) uniform ModelBlock {
 	float opaque_[16];
@@ -150,7 +139,6 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 
 void main()
 {
-	// Setup
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
 	vec3 N = (pcb.normalTextureSet > -1 ? getNormal() : normalize(V_NORMAL.xyz));
 	vec3 V = normalize(camera.viewPos - V_POSITION.xyz);
@@ -190,45 +178,13 @@ void main()
 		emission = SRGBtoLINEAR(texture(emissionMap[pcb.textureArrIdx], V_UV0)).rgb * pcb.emissiveColorFactor.rgb;
 	}
 
-	// Lighting setup
-
 	vec3 F0 = vec3(0.04);
 	F0		= mix(F0, albedo, metallic);
 
 	vec3 L0 = vec3(0.0f);
 
 	vec3 ambient = vec3(0.03f) * ao;
-
-	// Point Lighting
-	for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
-		if (lights.data[i].brightness < 0.0f) continue;
-		
-		vec3 L		 = normalize(lights.data[i].position.xyz - V_POSITION.xyz);
-		vec3 H		 = normalize(V + L);
-		float cosine = max(dot(L, N), 0.0f);
-
-		float dist		  = length(lights.data[i].position.xyz - V_POSITION.xyz);
-		float attenuation = 1.0 / (dist * dist);
-		vec3 radiance	  = lightColor * attenuation * lights.data[i].brightness;
-		
-		float NDF = DistributionGGX(N, H, roughness);
-		float G	  = GeometrySmith(N, V, L, roughness);
-		vec3 F	  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
-
-		vec3 ks = F;
-		vec3 kd = vec3(1.0f) - ks;
-		kd *= 1.0f - metallic;
-
-		vec3 numerator	  = NDF * G * F;
-		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-		vec3 specular	  = numerator / max(denominator, 0.001);
-
-		float NdotL = max(dot(N, L), 0.0f);
-
-		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
-	}
-
-	if (false/* debugSettings.enableIBL > 0 */) {
+	//if (debugSettings.enableIBL > 0) {
 		vec3 R = reflect(-V, N);
 
 		const float MAX_REFLECTION_LOD = 4.0f;
@@ -245,7 +201,7 @@ void main()
 		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
 		ambient = (kd * diffuse + specular) * ao;
-	}
+	//}
 
 	vec3 color	 = ambient + L0 + emission;
 	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, 1.0f)));

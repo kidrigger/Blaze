@@ -634,6 +634,7 @@ SetVector PipelineFactory::createSets(const Shader::Set& set, uint32_t count)
 	retVal.pool = std::move(pool);
 	retVal.sets = vkw::DescriptorSetVector(std::move(descriptorSets));
 	retVal.setIdx = set.set;
+	retVal.info = set.uniforms;
 
 	return retVal;
 }
@@ -660,6 +661,7 @@ SetSingleton PipelineFactory::createSet(const Shader::Set& set)
 	retVal.pool = std::move(pool);
 	retVal.set = vkw::DescriptorSet(descriptorSet);
 	retVal.setIdx = set.set;
+	retVal.info = set.uniforms;
 
 	return retVal;
 }

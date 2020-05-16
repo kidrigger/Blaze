@@ -2,6 +2,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 namespace blaze::util
 {
@@ -88,9 +89,9 @@ class PackedHandler
 public:
 	using Handle = OuterHandle;
 
-    /**
-     * @brief Adds the new value to the packed handler and returns the handle.
-     */
+	/**
+	 * @brief Adds the new value to the packed handler and returns the handle.
+	 */
 	[[nodiscard]] Handle add(T&& val)
 	{
 		auto handle = std::make_shared<InnerHandle>(this, static_cast<uint32_t>(data.size()));
@@ -99,9 +100,9 @@ public:
 		return {handle};
 	}
 
-    /**
-     * @brief Adds the new value to the packed handler and returns the handle.
-     */
+	/**
+	 * @brief Adds the new value to the packed handler and returns the handle.
+	 */
 	[[nodiscard]] Handle add(const T& val)
 	{
 		auto handle = std::make_shared<InnerHandle>(this, static_cast<uint32_t>(data.size()));
@@ -120,9 +121,14 @@ public:
 		return data.end();
 	}
 
-	const std::vector<T>& get_data()
+	const std::vector<T>& get_data() const
 	{
 		return data;
+	}
+
+	uint32_t get_size() const
+	{
+		return static_cast<uint32_t>(data.size());
 	}
 
 private:

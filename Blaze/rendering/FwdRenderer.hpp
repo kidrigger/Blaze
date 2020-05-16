@@ -12,6 +12,8 @@
 
 #include <core/Bindable.hpp>
 
+#include <rendering/FwdLightCaster.hpp>
+
 namespace blaze
 {
 /**
@@ -27,16 +29,18 @@ private:
 	spirv::RenderPass renderPass;
 	vkw::FramebufferVector renderFramebuffers;
 	
-    spirv::Shader shader;
+	spirv::Shader shader;
 	spirv::Pipeline pipeline;
-    spirv::Shader skyboxShader;
-    spirv::Pipeline skyboxPipeline;
+	spirv::Shader skyboxShader;
+	spirv::Pipeline skyboxPipeline;
 
 	CameraUBOV cameraUBOs;
 	spirv::SetVector cameraSets;
 
 	const Bindable* environment;
-    IndexedVertexBuffer<Vertex> skyboxCube;
+	IndexedVertexBuffer<Vertex> skyboxCube;
+
+	std::unique_ptr<FwdLightCaster> lightCaster;
 
 public:
 	/**
@@ -96,8 +100,12 @@ private:
     spirv::Pipeline createSkyboxPipeline();
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
+	spirv::SetVector createLightsDataSet();
 
 	// Inherited via ARenderer
 	virtual void setEnvironment(const Bindable* env) override;
+
+	// Inherited via ARenderer
+	virtual FwdLightCaster* get_lightCaster() override;
 };
 } // namespace blaze

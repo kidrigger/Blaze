@@ -151,6 +151,11 @@ public:
 	{
 		return aspect;
 	}
+	inline void set_aspect(float newAspect)
+	{
+		aspect = newAspect;
+		uboDirty = true;
+	}
 	/**
 	 * @}
 	 */

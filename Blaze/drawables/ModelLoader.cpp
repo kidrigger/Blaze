@@ -50,8 +50,7 @@ void ModelLoader::scan()
 	}
 }
 
-std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spirv::Shader& shader,
-											   spirv::SetSingleton&& set, uint32_t index)
+std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, spirv::SetSingleton&& set, uint32_t index)
 {
 	fs::path filePath = modelFilePaths[index];
 
@@ -471,7 +470,7 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 	}
 
 	materialPack.dset = std::move(set);
-	setupMaterialSet(context, shader, materialPack);
+	setupMaterialSet(context, materialPack);
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 
@@ -481,10 +480,10 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 									std::move(materialPack));
 }
 
-void ModelLoader::setupMaterialSet(const Context* context, const spirv::Shader& shader, Model2::Material& mat)
+void ModelLoader::setupMaterialSet(const Context* context, Model2::Material& mat)
 {
 	std::array<VkWriteDescriptorSet, 5> writes;
-	auto& uniforms = shader.sets[mat.dset.setIdx].uniforms;
+	auto& uniforms = mat.dset.info;
 	std::array<std::vector<VkDescriptorImageInfo>, 5> imageInfos;
 
 	assert(uniforms.size() == 5);

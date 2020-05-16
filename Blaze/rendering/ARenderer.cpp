@@ -151,6 +151,8 @@ void ARenderer::recreateSwapchain()
 
 		gui->recreate(context.get(), swapchain.get());
 
+		camera->set_aspect(width / static_cast<float>(height));
+
 		// Recreate all number based
 		recreateSwapchainDependents();
 	}

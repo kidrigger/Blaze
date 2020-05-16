@@ -7,14 +7,14 @@
 #include <core/Camera.hpp>
 #include <drawables/ModelLoader.hpp>
 #include <rendering/FwdRenderer.hpp>
-#include <util/files.hpp>
 #include <util/Environment.hpp>
+#include <util/files.hpp>
 
 namespace blaze
 {
 // Constants
-const int WIDTH = 640;
-const int HEIGHT = 480;
+const int WIDTH = 1280;
+const int HEIGHT = 720;
 const bool FULLSCREEN = false;
 
 #ifdef VALIDATION_LAYERS_ENABLED
@@ -71,6 +71,12 @@ void glfwErrorCallback(int error, const char* desc)
 	std::cerr << "GLFW_ERROR: " << desc << std::endl;
 }
 
+struct SettingsOverlay
+{
+	bool rotate;
+	float rotSpeed;
+};
+
 void runRefactored()
 {
 	// Usings
@@ -120,6 +126,65 @@ void runRefactored()
 		int modelIndex;
 	};
 
+	struct LightsInfo
+	{
+		struct PointLights
+		{
+			glm::vec3 pos{0};
+			float brightness{1};
+			bool hasShadow{false};
+
+			bool draw()
+			{
+				bool edited = false;
+				edited |= ImGui::InputFloat3("Position##Position", &pos[0]);
+				edited |= ImGui::InputFloat("Brightness##Brightness", &brightness);
+				edited |= ImGui::Checkbox("Enable Shadow##Shadow", &hasShadow);
+				return edited;
+			}
+		};
+
+		std::vector<ALightCaster::Handle> pointHandles;
+		PointLights editable;
+		std::vector<PointLights> lights;
+
+		int toDelete{-1};
+		int toAdd{-1};
+		int toUpdate{-1};
+
+		void update(ARenderer* renderer)
+		{
+			if (toDelete >= 0)
+			{
+				lights.erase(lights.begin() + toDelete);
+				renderer->get_lightCaster()->removeLight(pointHandles[toDelete]);
+				pointHandles.erase(pointHandles.begin() + toDelete);
+			}
+			if (toAdd >= 0)
+			{
+				lights.push_back(editable);
+				auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness,
+																			editable.hasShadow);
+				pointHandles.push_back(handle);
+
+				editable.brightness = 1.0f;
+				editable.pos = glm::vec3{0.0f};
+				editable.hasShadow = false;
+			}
+			if (toUpdate >= 0)
+			{
+				auto h = pointHandles[toUpdate];
+				auto& l = lights[toUpdate];
+				renderer->get_lightCaster()->setPosition(h, l.pos);
+				renderer->get_lightCaster()->setBrightness(h, l.brightness);
+				renderer->get_lightCaster()->setShadow(h, l.hasShadow);
+			}
+			toDelete = -1;
+			toAdd = -1;
+			toUpdate = -1;
+		}
+	} lightInfo;
+
 	SceneInfo sceneInfo;
 	sceneInfo.modelName = "DamagedHelmet";
 	sceneInfo.modelIndex = 0;
@@ -138,8 +203,8 @@ void runRefactored()
 	int holderKey = 0;
 	std::map<int, std::shared_ptr<Model2>> modelHolder;
 
-	auto mod = modelHolder[holderKey++] = modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
-																 renderer->createMaterialSet(), sceneInfo.modelIndex);
+	auto mod = modelHolder[holderKey++] =
+		modelLoader->loadModel(renderer->get_context(), renderer->createMaterialSet(), sceneInfo.modelIndex);
 	auto handle = renderer->submit(mod.get());
 
 	// Run
@@ -149,6 +214,10 @@ void runRefactored()
 	double deltaTime = 0.0;
 	double elapsed = 0.0;
 
+	SettingsOverlay settings;
+	settings.rotate = false;
+	settings.rotSpeed = 1.0f;
+
 	while (!glfwWindowShouldClose(window))
 	{
 		prevTime = glfwGetTime();
@@ -157,8 +226,11 @@ void runRefactored()
 
 		for (auto& [k, model] : modelHolder)
 		{
-			model->get_root()->rotation =
-				glm::rotate(model->get_root()->rotation, static_cast<float>(deltaTime), glm::vec3(0, 1, 0));
+			if (settings.rotate)
+			{
+				model->get_root()->rotation = glm::rotate(
+					model->get_root()->rotation, settings.rotSpeed * static_cast<float>(deltaTime), glm::vec3(0, 1, 0));
+			}
 			model->update();
 		}
 
@@ -175,6 +247,12 @@ void runRefactored()
 			{
 				if (ImGui::Begin("Settings"))
 				{
+					ImGui::Checkbox("Rotate##Model", &settings.rotate);
+					ImGui::SameLine();
+					ImGui::PushItemWidth(100);
+					ImGui::InputFloat("Speed##Rotation", &settings.rotSpeed, 0.1f, 0.3f, 2);
+					ImGui::PopItemWidth();
+
 					bool quit = ImGui::Button("Exit");
 					if (quit)
 					{
@@ -200,33 +278,75 @@ void runRefactored()
 
 				if (ImGui::Begin("Scene"))
 				{
-					auto& modelNames = modelLoader->getFileNames();
-					if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
+					if (ImGui::CollapsingHeader("Models##InTheScene"))
 					{
-						int i = 0;
-						for (const auto& label : modelNames)
+						auto& modelNames = modelLoader->getFileNames();
+						if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
 						{
-							bool selected = (sceneInfo.modelIndex == i);
-							if (ImGui::Selectable(label.c_str(), selected))
+							int i = 0;
+							for (const auto& label : modelNames)
 							{
-								sceneInfo.modelIndex = i;
-								sceneInfo.modelName = label;
-								handle.destroy();
-								auto mod = modelHolder[holderKey++] = modelLoader->loadModel(
-									renderer->get_context(), renderer->get_shader(), renderer->createMaterialSet(),
-									sceneInfo.modelIndex); // TODo
-								handle = renderer->submit(mod.get());
-								renderer->waitIdle();
-								modelHolder.erase(holderKey - 2);
-								// TODO(Improvement) Make this smoother
+								bool selected = (sceneInfo.modelIndex == i);
+								if (ImGui::Selectable(label.c_str(), selected))
+								{
+									sceneInfo.modelIndex = i;
+									sceneInfo.modelName = label;
+									handle.destroy();
+									auto mod = modelHolder[holderKey++] =
+										modelLoader->loadModel(renderer->get_context(), renderer->createMaterialSet(),
+															   sceneInfo.modelIndex); // TODO
+									handle = renderer->submit(mod.get());
+									renderer->waitIdle();
+									modelHolder.erase(holderKey - 2);
+									// TODO(Improvement) Make this smoother
+								}
+								if (selected)
+								{
+									ImGui::SetItemDefaultFocus();
+								}
+								++i;
 							}
-							if (selected)
-							{
-								ImGui::SetItemDefaultFocus();
-							}
-							++i;
+							ImGui::EndCombo();
 						}
-						ImGui::EndCombo();
+					}
+
+					ImGui::Text("Num Lights %lu", lightInfo.lights.size());
+					if (ImGui::CollapsingHeader("Lights"))
+					{
+						int idx = 0;
+						for (auto& light : lightInfo.lights)
+						{
+							ImGui::PushID(idx);
+							if (ImGui::TreeNode("Light##", "light %d", idx))
+							{
+								bool edited = light.draw();
+								if (edited)
+								{
+									lightInfo.toUpdate = idx;
+								}
+								if (ImGui::Button("Remove"))
+								{
+									lightInfo.toDelete = idx;
+								}
+								ImGui::TreePop();
+							}
+							ImGui::PopID();
+							ImGui::Separator();
+							idx++;
+						}
+						ImGui::Text("New Light");
+						ImGui::TreePush("new light");
+						{
+							ImGui::PushID("LightEditable");
+							lightInfo.editable.draw();
+							ImGui::PopID();
+							if (ImGui::Button("Add"))
+							{
+								lightInfo.toAdd = 1;
+							}
+						}
+						ImGui::TreePop();
+						lightInfo.update(renderer.get());
 					}
 				}
 				ImGui::End();

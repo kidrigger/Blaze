@@ -66,18 +66,17 @@ public:
 	 */
 
     /**
-     * @brief Destructor
-     */
-    virtual ~BaseUBO();
-
-protected:
-    /**
      * @brief Writes data to the buffer.
      *
      * @param data The pointer to the data to write into buffer.
      * @param size The size of the data to write into the buffer.
      */
 	void writeData(const void* data, size_t size);
+
+    /**
+     * @brief Destructor
+     */
+    virtual ~BaseUBO();
 };
 
 /**
@@ -115,6 +114,59 @@ public:
 	void write(const T& data)
 	{
 		this->writeData(&data, sizeof(T));
+	}
+};
+
+class UBODataVector
+{
+private:
+	using ubo_t = BaseUBO;
+	std::vector<ubo_t> ubos;
+	uint32_t count;
+
+public:
+	UBODataVector() noexcept
+	{
+	}
+
+	UBODataVector(const Context* context, uint32_t size, uint32_t numUBOS) noexcept : count(numUBOS)
+	{
+		ubos.reserve(count);
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			ubos.emplace_back(context, size);
+		}
+	}
+
+	UBODataVector(const UBODataVector& other) = delete;
+	UBODataVector& operator=(const UBODataVector& other) = delete;
+	UBODataVector(UBODataVector&& other) = default;
+	UBODataVector& operator=(UBODataVector&& other) = default;
+
+	const std::vector<ubo_t>& get() const
+	{
+		return ubos;
+	}
+
+	uint32_t size() const
+	{
+		return count;
+	}
+
+	ubo_t& operator[](uint32_t idx)
+	{
+		return ubos[idx];
+	}
+
+	const ubo_t& operator[](uint32_t idx) const
+	{
+		return ubos[idx];
+	}
+
+	~UBODataVector()
+	{
+		ubos.clear();
+		count = 0;
 	}
 };
 

@@ -14,6 +14,7 @@
 
 namespace blaze
 {
+class ALightCaster;
 /**
  * @brief The abstract base renderer class.
  *
@@ -87,6 +88,9 @@ public:
 	{
 		camera = p_camera;
 	}
+
+	// Light Controls
+	virtual ALightCaster* get_lightCaster() = 0;
 
 	const Context* get_context() const
 	{

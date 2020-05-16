@@ -17,15 +17,18 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// Pipeline
 	shader = createShader();
 	pipeline = createPipeline();
-    skyboxShader = createSkyboxShader();
-    skyboxPipeline = createSkyboxPipeline();
+	skyboxShader = createSkyboxShader();
+	skyboxPipeline = createSkyboxPipeline();
 
 	// All uniform buffer stuff
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
 
-    // Skybox mesh
-    skyboxCube = getUVCube(context.get());
+	// Skybox mesh
+	skyboxCube = getUVCube(context.get());
+
+	// Lights
+	lightCaster = std::make_unique<FwdLightCaster>(context.get(), createLightsDataSet());
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -47,7 +50,7 @@ void FwdRenderer::recreateSwapchainDependents()
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
 
-	// DescriptorPool
+	lightCaster->recreate(context.get(), createLightsDataSet());
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -55,6 +58,7 @@ void FwdRenderer::recreateSwapchainDependents()
 
 void FwdRenderer::update(uint32_t frame)
 {
+	lightCaster->update(frame);
 	cameraUBOs[frame].write(camera->getUbo());
 }
 
@@ -95,16 +99,17 @@ void FwdRenderer::recordCommands(uint32_t frame)
 	// Do the systemic thing
 	pipeline.bind(commandBuffers[frame]);
 	environment->bind(commandBuffers[frame], shader.pipelineLayout.get());
-	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
-							&cameraSets[frame], 0, nullptr);
+	lightCaster->bind(commandBuffers[frame], shader.pipelineLayout.get(), frame);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(),
+							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 	for (Drawable* drawable : drawables)
 	{
 		drawable->draw(commandBuffers[frame], shader.pipelineLayout.get());
 	}
 
-    skyboxPipeline.bind(commandBuffers[frame]);
-    skyboxCube.bind(commandBuffers[frame]);
-    vkCmdDrawIndexed(commandBuffers[frame], skyboxCube.get_indexCount(), 1, 0, 0, 0);
+	skyboxPipeline.bind(commandBuffers[frame]);
+	skyboxCube.bind(commandBuffers[frame]);
+	vkCmdDrawIndexed(commandBuffers[frame], skyboxCube.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
 }
@@ -183,7 +188,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
 	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
 	info.rasterizerCreateInfo.pNext = nullptr;
@@ -265,7 +270,7 @@ spirv::Pipeline FwdRenderer::createSkyboxPipeline()
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
 	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
-    info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
 	info.rasterizerCreateInfo.pNext = nullptr;
@@ -416,6 +421,11 @@ void FwdRenderer::setEnvironment(const Bindable* env)
 	this->environment = env;
 }
 
+FwdLightCaster* FwdRenderer::get_lightCaster()
+{
+	return lightCaster.get();
+}
+
 const spirv::Shader& FwdRenderer::get_shader() const
 {
 	return shader;
@@ -442,5 +452,17 @@ spirv::SetSingleton FwdRenderer::createMaterialSet()
 	assert(counter == (1 << 5) - 1);
 
 	return pipelineFactory->createSet(set);
+}
+
+spirv::SetVector FwdRenderer::createLightsDataSet()
+{
+	auto found = shader.uniformLocations.find("lights");
+	assert(found != shader.uniformLocations.end() && "No uniform 'lights' in shader");
+
+	auto [setIdx, bindingIdx] = found->second;
+
+	auto& set = shader.sets[setIdx];
+
+	return pipelineFactory->createSets(shader.sets[setIdx], swapchain->get_imageCount());
 }
 } // namespace blaze
