@@ -5,12 +5,14 @@
 #include <util/DeviceSelection.hpp>
 #include <util/debugMessenger.hpp>
 #include <vkwrap/VkWrap.hpp>
+#include <spirv/PipelineFactory.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <thirdparty/vma/vk_mem_alloc.h>
 
+#include <memory>
 #include <exception>
 
 namespace blaze
@@ -52,6 +54,8 @@ private:
 	vkw::MemAllocator allocator;
 
 	GLFWwindow* window{nullptr};
+
+	std::unique_ptr<spirv::PipelineFactory> pipelineFactory;
 
 public:
 	/**
@@ -249,6 +253,11 @@ public:
 	inline VmaAllocator get_allocator() const
 	{
 		return allocator.get();
+	}
+
+	inline spirv::PipelineFactory* get_pipelineFactory() const
+	{
+		return pipelineFactory.get();
 	}
 
 	inline GLFWwindow* get_window() const

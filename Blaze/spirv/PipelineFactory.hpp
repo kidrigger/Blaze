@@ -21,19 +21,19 @@ namespace blaze::spirv
  */
 struct LoadStoreConfig
 {
-    /// Description of behavior at RenderPass begin.
+	/// Description of behavior at RenderPass begin.
 	enum class LoadAction : uint8_t
 	{
-		CLEAR,      ///< Clear to the predefined 'empty' value.
-		READ,       ///< Was being used to sample.
-		DONT_CARE,  ///< Whatever, doesn't matter.
-		CONTINUE,   ///< Was used as at attachment before.
+		CLEAR,	   ///< Clear to the predefined 'empty' value.
+		READ,	   ///< Was being used to sample.
+		DONT_CARE, ///< Whatever, doesn't matter.
+		CONTINUE,  ///< Was used as at attachment before.
 	};
 	enum class StoreAction : uint8_t
 	{
-		READ,       ///< Will be used as a sample image next.
-		DONT_CARE,  ///< Doesn't matter if you store the data.
-		CONTINUE,   ///< Will be continued to use as attachment.
+		READ,	   ///< Will be used as a sample image next.
+		DONT_CARE, ///< Doesn't matter if you store the data.
+		CONTINUE,  ///< Will be continued to use as attachment.
 	};
 
 	LoadAction colorLoad;
@@ -138,7 +138,7 @@ struct Framebuffer
 /**
  * @brief Collection of descriptor sets.
  *
- * Specially made for uniforms that vary per-frame, and thus have a 
+ * Specially made for uniforms that vary per-frame, and thus have a
  * \ref UBOVector for the buffers.
  *
  * Each SetVector should ideally map to a UBOVector.
@@ -155,6 +155,8 @@ struct SetVector
 	{
 		return sets[idx];
 	}
+
+	const UniformInfo* getUniform(const std::string_view& name) const;
 
 	uint32_t size() const
 	{
@@ -187,6 +189,8 @@ struct SetSingleton
 		return set.get();
 	}
 
+	const UniformInfo* getUniform(const std::string_view& name) const;
+
 	uint32_t size() const
 	{
 		return 1u;
@@ -206,6 +210,11 @@ struct RenderPass
 	VkRenderPass get() const
 	{
 		return renderPass.get();
+	}
+
+	inline bool valid() const
+	{
+		return renderPass.valid();
 	}
 };
 
@@ -239,51 +248,51 @@ public:
 	{
 	}
 
-    /**
-     * @brief Creates the Shader with all the reflection information.
-     *
-     * @param stages The ShaderStageData of each of the stages to be used in the pipeline.
-     */
+	/**
+	 * @brief Creates the Shader with all the reflection information.
+	 *
+	 * @param stages The ShaderStageData of each of the stages to be used in the pipeline.
+	 */
 	Shader createShader(const std::vector<ShaderStageData>& stages);
 
-    /**
-     * @brief Creates the graphic pipeline from the shader and renderpass.
-     *
-     * @param shader The Shader to use to create the pipeline.
-     * @param renderPass The RenderPass that would use the pipeline.
-     * @param createInfo The complete set of structs that describe the pipeline variables.
-     */
+	/**
+	 * @brief Creates the graphic pipeline from the shader and renderpass.
+	 *
+	 * @param shader The Shader to use to create the pipeline.
+	 * @param renderPass The RenderPass that would use the pipeline.
+	 * @param createInfo The complete set of structs that describe the pipeline variables.
+	 */
 	Pipeline createGraphicsPipeline(const Shader& shader, const RenderPass& renderPass,
 									const GraphicsPipelineCreateInfo& createInfo);
 
-    /**
-     * @brief Creates a renderpass given the attachments and subpasses.
-     *
-     * @param formats The collection of all the attachments that the renderpass will use.
-     * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
-     * @param config Describes the load/store behaviour on all the attachments.
-     * @param multiview If the renderpass uses multiview, this struct must be provided.
-     */
+	/**
+	 * @brief Creates a renderpass given the attachments and subpasses.
+	 *
+	 * @param formats The collection of all the attachments that the renderpass will use.
+	 * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
+	 * @param config Describes the load/store behaviour on all the attachments.
+	 * @param multiview If the renderpass uses multiview, this struct must be provided.
+	 */
 	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
 								const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
 
-    /**
-     * @brief Creates the DescriptorSets for the given set.
-     *
-     * @param set The Set that must be bound to.
-     * @param count The number of sets that the vector must contain.
-     */
+	/**
+	 * @brief Creates the DescriptorSets for the given set.
+	 *
+	 * @param set The Set that must be bound to.
+	 * @param count The number of sets that the vector must contain.
+	 */
 	SetVector createSets(const Shader::Set& set, uint32_t count);
 
-    /**
-     * @brief Creates the DescriptorSets for the given set.
-     *
-     * @param set The Set that must be bound to.
-     */
+	/**
+	 * @brief Creates the DescriptorSets for the given set.
+	 *
+	 * @param set The Set that must be bound to.
+	 */
 	SetSingleton createSet(const Shader::Set& set);
 
-    /// @brief Asserts validity of the factory.
+	/// @brief Asserts validity of the factory.
 	inline bool valid() const
 	{
 		return device != VK_NULL_HANDLE;

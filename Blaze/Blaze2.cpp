@@ -6,7 +6,7 @@
 
 #include <core/Camera.hpp>
 #include <drawables/ModelLoader.hpp>
-#include <rendering/FwdRenderer.hpp>
+#include <rendering/forward/FwdRenderer.hpp>
 #include <util/Environment.hpp>
 #include <util/files.hpp>
 
@@ -132,6 +132,7 @@ void runRefactored()
 		{
 			glm::vec3 pos{0};
 			float brightness{1};
+			float radius{1};
 			bool hasShadow{false};
 
 			bool draw()
@@ -139,6 +140,7 @@ void runRefactored()
 				bool edited = false;
 				edited |= ImGui::InputFloat3("Position##Position", &pos[0]);
 				edited |= ImGui::InputFloat("Brightness##Brightness", &brightness);
+				edited |= ImGui::InputFloat("Radius##Radius", &radius);
 				edited |= ImGui::Checkbox("Enable Shadow##Shadow", &hasShadow);
 				return edited;
 			}
@@ -147,6 +149,7 @@ void runRefactored()
 		std::vector<ALightCaster::Handle> pointHandles;
 		PointLights editable;
 		std::vector<PointLights> lights;
+		uint32_t maxLights;
 
 		int toDelete{-1};
 		int toAdd{-1};
@@ -163,12 +166,13 @@ void runRefactored()
 			if (toAdd >= 0)
 			{
 				lights.push_back(editable);
-				auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness,
+				auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness, editable.radius,
 																			editable.hasShadow);
 				pointHandles.push_back(handle);
 
 				editable.brightness = 1.0f;
 				editable.pos = glm::vec3{0.0f};
+				editable.radius = 1.0f;
 				editable.hasShadow = false;
 			}
 			if (toUpdate >= 0)
@@ -177,6 +181,7 @@ void runRefactored()
 				auto& l = lights[toUpdate];
 				renderer->get_lightCaster()->setPosition(h, l.pos);
 				renderer->get_lightCaster()->setBrightness(h, l.brightness);
+				renderer->get_lightCaster()->setRadius(h, l.radius);
 				renderer->get_lightCaster()->setShadow(h, l.hasShadow);
 			}
 			toDelete = -1;
@@ -184,6 +189,7 @@ void runRefactored()
 			toUpdate = -1;
 		}
 	} lightInfo;
+	lightInfo.maxLights = renderer->get_lightCaster()->getMaxPointLights();
 
 	SceneInfo sceneInfo;
 	sceneInfo.modelName = "DamagedHelmet";
@@ -204,7 +210,7 @@ void runRefactored()
 	std::map<int, std::shared_ptr<Model2>> modelHolder;
 
 	auto mod = modelHolder[holderKey++] =
-		modelLoader->loadModel(renderer->get_context(), renderer->createMaterialSet(), sceneInfo.modelIndex);
+		modelLoader->loadModel(renderer->get_context(), &renderer->get_shader(), sceneInfo.modelIndex);
 	auto handle = renderer->submit(mod.get());
 
 	// Run
@@ -293,7 +299,7 @@ void runRefactored()
 									sceneInfo.modelName = label;
 									handle.destroy();
 									auto mod = modelHolder[holderKey++] =
-										modelLoader->loadModel(renderer->get_context(), renderer->createMaterialSet(),
+										modelLoader->loadModel(renderer->get_context(), &renderer->get_shader(),
 															   sceneInfo.modelIndex); // TODO
 									handle = renderer->submit(mod.get());
 									renderer->waitIdle();
@@ -310,7 +316,6 @@ void runRefactored()
 						}
 					}
 
-					ImGui::Text("Num Lights %lu", lightInfo.lights.size());
 					if (ImGui::CollapsingHeader("Lights"))
 					{
 						int idx = 0;
@@ -334,18 +339,21 @@ void runRefactored()
 							ImGui::Separator();
 							idx++;
 						}
-						ImGui::Text("New Light");
-						ImGui::TreePush("new light");
+						if (lightInfo.lights.size() < lightInfo.maxLights)
 						{
-							ImGui::PushID("LightEditable");
-							lightInfo.editable.draw();
-							ImGui::PopID();
-							if (ImGui::Button("Add"))
+							ImGui::Text("New Light");
+							ImGui::TreePush("new light");
 							{
-								lightInfo.toAdd = 1;
+								ImGui::PushID("LightEditable");
+								lightInfo.editable.draw();
+								ImGui::PopID();
+								if (ImGui::Button("Add"))
+								{
+									lightInfo.toAdd = 1;
+								}
 							}
+							ImGui::TreePop();
 						}
-						ImGui::TreePop();
 						lightInfo.update(renderer.get());
 					}
 				}

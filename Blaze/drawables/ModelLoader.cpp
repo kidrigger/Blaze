@@ -50,7 +50,7 @@ void ModelLoader::scan()
 	}
 }
 
-std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, spirv::SetSingleton&& set, uint32_t index)
+std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spirv::Shader* shader, uint32_t index)
 {
 	fs::path filePath = modelFilePaths[index];
 
@@ -469,7 +469,7 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, spirv::Se
 						   node.children, node_range);
 	}
 
-	materialPack.dset = std::move(set);
+	materialPack.dset = context->get_pipelineFactory()->createSet(*shader->getSetWithUniform("diffuseMap"));
 	setupMaterialSet(context, materialPack);
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];

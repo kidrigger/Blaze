@@ -8,6 +8,8 @@
 #include <util/createFunctions.hpp>
 #include <vector>
 
+#include <Version.hpp>
+
 #undef max
 #undef min
 
@@ -140,10 +142,10 @@ vkw::Instance Context::createInstance(const std::vector<const char*>& requiredEx
 	// Vulkan Setup
 	VkApplicationInfo applicationInfo = {};
 	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	applicationInfo.pApplicationName = "Hello Vulkan";
-	applicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	applicationInfo.pEngineName = "No Engine";
-	applicationInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+	applicationInfo.pApplicationName = VERSION.FULL_NAME;
+	applicationInfo.applicationVersion = VK_MAKE_VERSION(VERSION.MAJOR, VERSION.MINOR, VERSION.PATCH);
+	applicationInfo.pEngineName = VERSION.NAME;
+	applicationInfo.engineVersion = VK_MAKE_VERSION(VERSION.MAJOR, VERSION.MINOR, VERSION.PATCH);
 	applicationInfo.apiVersion = VK_API_VERSION_1_1;
 
 	VkInstanceCreateInfo createInfo = {};
@@ -416,6 +418,8 @@ Context::Context(GLFWwindow* window, bool enableValidationLayers) noexcept
 		std::cerr << "CONTEXT_CREATION_FAILED: " << e.what() << std::endl;
 		isComplete = false;
 	}
+
+	pipelineFactory = std::make_unique<spirv::PipelineFactory>(device.get());
 }
 
 Context::Context(Context&& other) noexcept
@@ -424,7 +428,8 @@ Context::Context(Context&& other) noexcept
 	  surface(std::move(other.surface)), physicalDevice(std::move(other.physicalDevice)),
 	  queueFamilyIndices(std::move(other.queueFamilyIndices)), device(std::move(other.device)),
 	  graphicsQueue(std::move(other.graphicsQueue)), presentQueue(std::move(other.presentQueue)),
-	  graphicsCommandPool(std::move(other.graphicsCommandPool)), allocator(std::move(other.allocator))
+	  graphicsCommandPool(std::move(other.graphicsCommandPool)), allocator(std::move(other.allocator)),
+	  pipelineFactory(std::move(other.pipelineFactory))
 {
 }
 
@@ -447,6 +452,7 @@ Context& Context::operator=(Context&& other) noexcept
 	presentQueue = std::move(other.presentQueue);
 	graphicsCommandPool = std::move(other.graphicsCommandPool);
 	allocator = std::move(other.allocator);
+	pipelineFactory = std::move(other.pipelineFactory);
 	return *this;
 }
 } // namespace blaze

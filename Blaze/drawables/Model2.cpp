@@ -25,6 +25,7 @@ void Model2::update()
 void Model2::draw(VkCommandBuffer buf, VkPipelineLayout layout)
 {
 	vbo.bind(buf);
+
 	vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, material.dset.setIdx,
 							static_cast<uint32_t>(material.dset.size()), &material.dset.get(), 0, nullptr);
 	for (auto& node : nodes)

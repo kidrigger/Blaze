@@ -44,8 +44,6 @@ protected:
 	vkw::SemaphoreVector renderFinishedSem;
 	vkw::FenceVector inFlightFences;
 
-	std::unique_ptr<spirv::PipelineFactory> pipelineFactory;
-
 	using DrawList = util::PackedHandler<Drawable*>;
 	DrawList drawables;
 
@@ -65,11 +63,6 @@ public:
      * @brief Renders the next frame.
      */
 	void render();
-
-    /**
-     * @brief Creates and returns a SetSingleton that corresponds to the shader's material uniform.
-     */
-	virtual spirv::SetSingleton createMaterialSet() = 0;
 
     /**
      * @brief Allows setting up of the environment descriptor as a bindable.
@@ -99,7 +92,7 @@ public:
 
 	spirv::PipelineFactory* get_pipelineFactory()
 	{
-		return pipelineFactory.get();
+		return context->get_pipelineFactory();
 	}
 
     /**

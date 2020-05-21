@@ -129,7 +129,7 @@ public:
 	{
 	}
 
-	UBODataVector(const Context* context, uint32_t size, uint32_t numUBOS) noexcept : count(numUBOS)
+	UBODataVector(const Context* context, size_t size, uint32_t numUBOS) noexcept : count(numUBOS)
 	{
 		ubos.reserve(count);
 		for (uint32_t i = 0; i < count; ++i)

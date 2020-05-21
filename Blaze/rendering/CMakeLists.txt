@@ -5,14 +5,12 @@ set( HEADER_FILES
 	"Renderer.hpp"
 	"ForwardRenderer.hpp"
 	"ARenderer.hpp"
-	"FwdRenderer.hpp"
-	"ALightCaster.hpp"
-	"FwdLightCaster.hpp" )
+	"ALightCaster.hpp" )
 
 set( SOURCE_FILES
 	"ForwardRenderer.cpp"
-	"ARenderer.cpp"
-	"FwdRenderer.cpp"
-	"FwdLightCaster.cpp" )
+	"ARenderer.cpp")
 
 target_sources( Blaze PRIVATE ${HEADER_FILES} ${SOURCE_FILES} )
+
+add_subdirectory( "forward" )

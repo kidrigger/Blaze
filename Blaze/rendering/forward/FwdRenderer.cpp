@@ -28,7 +28,7 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	skyboxCube = getUVCube(context.get());
 
 	// Lights
-	lightCaster = std::make_unique<FwdLightCaster>(context.get(), createLightsDataSet());
+	lightCaster = std::make_unique<FwdLightCaster>(context.get(), &shader, maxFrameInFlight);
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -50,7 +50,7 @@ void FwdRenderer::recreateSwapchainDependents()
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
 
-	lightCaster->recreate(context.get(), createLightsDataSet());
+	lightCaster->recreate(context.get(), &shader, maxFrameInFlight);
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
@@ -64,6 +64,8 @@ void FwdRenderer::update(uint32_t frame)
 
 void FwdRenderer::recordCommands(uint32_t frame)
 {
+	lightCaster->cast(commandBuffers[frame], drawables.get_data());
+
 	VkRenderPassBeginInfo renderpassBeginInfo = {};
 	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderpassBeginInfo.renderPass = renderPass.renderPass.get();
@@ -152,7 +154,7 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
 	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::DONT_CARE;
 
-	return pipelineFactory->createRenderPass(attachments, {subpassDesc}, loadStore);
+	return context->get_pipelineFactory()->createRenderPass(attachments, {subpassDesc}, loadStore);
 }
 
 spirv::Shader FwdRenderer::createShader()
@@ -168,7 +170,7 @@ spirv::Shader FwdRenderer::createShader()
 	stage->spirv = util::loadBinaryFile("shaders/PBR/fPBR.frag.spv");
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	return pipelineFactory->createShader(stages);
+	return context->get_pipelineFactory()->createShader(stages);
 }
 
 spirv::Pipeline FwdRenderer::createPipeline()
@@ -234,7 +236,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	return pipelineFactory->createGraphicsPipeline(shader, renderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(shader, renderPass, info);
 }
 
 spirv::Shader FwdRenderer::createSkyboxShader()
@@ -250,7 +252,7 @@ spirv::Shader FwdRenderer::createSkyboxShader()
 	stage->spirv = util::loadBinaryFile("shaders/PBR/fSkybox.frag.spv");
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	return pipelineFactory->createShader(stages);
+	return context->get_pipelineFactory()->createShader(stages);
 }
 
 spirv::Pipeline FwdRenderer::createSkyboxPipeline()
@@ -316,7 +318,7 @@ spirv::Pipeline FwdRenderer::createSkyboxPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	return pipelineFactory->createGraphicsPipeline(skyboxShader, renderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(skyboxShader, renderPass, info);
 }
 
 vkw::FramebufferVector FwdRenderer::createFramebuffers() const
@@ -331,7 +333,7 @@ vkw::FramebufferVector FwdRenderer::createFramebuffers() const
 
 		VkFramebufferCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		createInfo.renderPass = renderPass.renderPass.get();
+		createInfo.renderPass = renderPass.get();
 		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		createInfo.pAttachments = attachments.data();
 		createInfo.width = swapchain->get_extent().width;
@@ -375,38 +377,25 @@ Texture2D FwdRenderer::createDepthBuffer() const
 
 spirv::SetVector FwdRenderer::createCameraSets()
 {
-	auto found = shader.uniformLocations.find("camera");
-	assert(found != shader.uniformLocations.end() && "No uniform called 'camera' in shader");
-
-	auto [setIdx, bindingIdx] = found->second;
-
-	auto& set = shader.sets[setIdx];
-
-	return pipelineFactory->createSets(set, swapchain->get_imageCount());
+	return context->get_pipelineFactory()->createSets(*shader.getSetWithUniform("camera"), maxFrameInFlight);
 }
 
 FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
 {
-	assert(cameraSets.size());
+	auto unif = shader.getUniform("camera");
 
-	auto found = shader.uniformLocations.find("camera");
-	assert(found != shader.uniformLocations.end() && "No uniform called 'camera' in shader");
+	auto ubos = CameraUBOV(context.get(), {}, maxFrameInFlight);
 
-	auto [setIdx, bindingIdx] = found->second;
-	auto& unif = shader.sets[setIdx].uniforms[bindingIdx];
-
-	auto ubos = CameraUBOV(context.get(), {}, swapchain->get_imageCount());
-
-	for (uint32_t i = 0; i < swapchain->get_imageCount(); i++)
+	for (uint32_t i = 0; i < maxFrameInFlight; i++)
 	{
 		VkDescriptorBufferInfo info = ubos[i].get_descriptorInfo();
 
 		VkWriteDescriptorSet write = {};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.descriptorType = unif.type;
-		write.descriptorCount = unif.arrayLength;
+		write.descriptorType = unif->type;
+		write.descriptorCount = unif->arrayLength;
 		write.dstSet = cameraSets[i];
-		write.dstBinding = unif.binding;
+		write.dstBinding = unif->binding;
 		write.dstArrayElement = 0;
 		write.pBufferInfo = &info;
 
@@ -429,40 +418,5 @@ FwdLightCaster* FwdRenderer::get_lightCaster()
 const spirv::Shader& FwdRenderer::get_shader() const
 {
 	return shader;
-}
-
-spirv::SetSingleton FwdRenderer::createMaterialSet()
-{
-	auto found = shader.uniformLocations.find("diffuseMap");
-	assert(found != shader.uniformLocations.end() && "No uniform called 'diffuseMap' in shader");
-
-	auto [setIdx, bindingIdx] = found->second;
-
-	auto& set = shader.sets[setIdx];
-
-	uint8_t counter = 0;
-	for (auto& uniform : set.uniforms)
-	{
-		counter |= (uniform.name == "diffuseMap") ? 1 << 0 : 0;
-		counter |= (uniform.name == "normalMap") ? 1 << 1 : 0;
-		counter |= (uniform.name == "metalRoughMap") ? 1 << 2 : 0;
-		counter |= (uniform.name == "occlusionMap") ? 1 << 3 : 0;
-		counter |= (uniform.name == "emissionMap") ? 1 << 4 : 0;
-	}
-	assert(counter == (1 << 5) - 1);
-
-	return pipelineFactory->createSet(set);
-}
-
-spirv::SetVector FwdRenderer::createLightsDataSet()
-{
-	auto found = shader.uniformLocations.find("lights");
-	assert(found != shader.uniformLocations.end() && "No uniform 'lights' in shader");
-
-	auto [setIdx, bindingIdx] = found->second;
-
-	auto& set = shader.sets[setIdx];
-
-	return pipelineFactory->createSets(shader.sets[setIdx], swapchain->get_imageCount());
 }
 } // namespace blaze

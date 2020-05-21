@@ -1,23 +1,22 @@
 #version 450
+#extension GL_EXT_multiview : enable
 
 layout(location = 0) in vec3 A_POSITION;
 layout(location = 1) in vec3 A_NORMAL;
 layout(location = 2) in vec2 A_UV0;
 layout(location = 3) in vec2 A_UV1;
 
-layout(location = 0) out vec4 outPosition;
-
 layout(set = 0, binding = 0) uniform ProjView {
+	mat4 projection;
 	mat4 view[6];
-} pv;
+} views;
 
 layout(push_constant) uniform PushConsts {
-	layout (offset = 0) mat4 model;
-	layout (offset = 64) mat4 pv;
-	layout (offset = 128) vec3 lightDir;
-} trs;
+	mat4 model;
+	vec3 lightPos;
+	float radius;
+} pcb;
 
 void main() {
-	outPosition = trs.model * vec4(A_POSITION.xyz, 1.0f);
-	gl_Position = trs.pv * trs.model * vec4(A_POSITION.xyz, 1.0f);
+	gl_Position = views.projection * views.view[gl_ViewIndex] * (vec4(vec3(1.0f/pcb.radius), 1.0f) * (pcb.model * vec4(A_POSITION, 1.0f) - vec4(pcb.lightPos, 0.0f)));
 }

@@ -112,6 +112,24 @@ struct Shader
 				return false;
 			}
 		};
+
+		const UniformInfo* getUniform(const std::string_view& name) const
+		{
+			const spirv::UniformInfo* unif = nullptr;
+			for (auto& uniform : uniforms)
+			{
+				if (uniform.name == name)
+				{
+					unif = &uniform;
+					break;
+				}
+			}
+			if (unif == nullptr)
+			{
+				throw std::invalid_argument("No uniform named " + std::string(name) + " in arg");
+			}
+			return unif;
+		}
 	};
 
     /**
@@ -137,6 +155,26 @@ struct Shader
 	std::vector<vkw::ShaderModule> shaderModules; // to take ownership
 	vkw::PipelineLayout pipelineLayout;
 	std::map<std::string, std::pair<uint32_t, uint32_t>> uniformLocations;
+
+	const Set* getSetWithUniform(const std::string& name) const
+	{
+		auto loc = uniformLocations.find(name);
+		if (loc == uniformLocations.end())
+		{
+			throw std::invalid_argument("No uniform named " + name + " in shader");
+		}
+		return &sets[loc->second.first];
+	}
+
+	const UniformInfo* getUniform(const std::string& name) const
+	{
+		auto loc = uniformLocations.find(name);
+		if (loc == uniformLocations.end())
+		{
+			throw std::invalid_argument("No uniform named " + name + " in shader");
+		}
+		return &sets[loc->second.first].uniforms[loc->second.second];
+	}
 
 	inline bool valid() const
 	{

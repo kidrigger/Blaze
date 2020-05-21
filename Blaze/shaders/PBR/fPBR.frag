@@ -2,6 +2,7 @@
 
 #define MAX_TEX_IN_MAT 32
 #define MAX_POINT_LIGHTS 16
+#define MAX_SHADOWS 16
 
 #define MANUAL_SRGB 1
 
@@ -35,12 +36,15 @@ layout(set = 2, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
 struct PointLightData {
 	vec3 position;
 	float brightness;
+	float radius;
 	int shadowIndex;
 };
 
 layout(set = 3, binding = 0) uniform PointLightUBO {
 	PointLightData data[MAX_POINT_LIGHTS];
 } lights;
+
+layout(set = 4, binding = 0) uniform sampler2D shadows[MAX_SHADOWS];
 
 layout(push_constant) uniform ModelBlock {
 	float opaque_[16];
@@ -202,6 +206,7 @@ void main()
 	// Point Lighting
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
 		if (lights.data[i].brightness < 0.0f) continue;
+		if (distance(V_POSITION.xyz, lights.data[i].position) >= lights.data[i].radius) continue;
 		
 		vec3 L		 = normalize(lights.data[i].position.xyz - V_POSITION.xyz);
 		vec3 H		 = normalize(V + L);
@@ -228,7 +233,7 @@ void main()
 		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
 	}
 
-	if (false/* debugSettings.enableIBL > 0 */) {
+	if (true) {
 		vec3 R = reflect(-V, N);
 
 		const float MAX_REFLECTION_LOD = 4.0f;

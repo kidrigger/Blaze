@@ -32,7 +32,7 @@ public:
 		return modelFileNames;
 	}
 
-	std::shared_ptr<Model2> loadModel(const Context* context, spirv::SetSingleton&& set, uint32_t idx);
+	std::shared_ptr<Model2> loadModel(const Context* context, const spirv::Shader* set, uint32_t idx);
 
 private:
 	void setupMaterialSet(const Context* context, Model2::Material& mat);

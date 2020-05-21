@@ -466,7 +466,7 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				description.initialLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 			else
 			{
@@ -483,7 +483,8 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				description.initialLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+													   : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 			else
 			{
@@ -519,7 +520,8 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				description.finalLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+													 : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 			else
 			{
@@ -536,7 +538,8 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-				description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				description.finalLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+													 : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 			else
 			{
@@ -664,5 +667,41 @@ SetSingleton PipelineFactory::createSet(const Shader::Set& set)
 	retVal.info = set.uniforms;
 
 	return retVal;
+}
+
+const UniformInfo* SetVector::getUniform(const std::string_view& name) const
+{
+	const spirv::UniformInfo* unif = nullptr;
+	for (auto& uniform : info)
+	{
+		if (uniform.name == name)
+		{
+			unif = &uniform;
+			break;
+		}
+	}
+	if (unif == nullptr)
+	{
+		throw std::invalid_argument("No uniform named " + std::string(name) + " in arg");
+	}
+	return unif;
+}
+
+const UniformInfo* SetSingleton::getUniform(const std::string_view& name) const
+{
+	const spirv::UniformInfo* unif = nullptr;
+	for (auto& uniform : info)
+	{
+		if (uniform.name == name)
+		{
+			unif = &uniform;
+			break;
+		}
+	}
+	if (unif == nullptr)
+	{
+		throw std::invalid_argument("No uniform named " + std::string(name) + " in arg");
+	}
+	return unif;
 }
 } // namespace blaze::spirv
