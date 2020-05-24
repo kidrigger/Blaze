@@ -48,7 +48,7 @@ void Model2::drawGeometry(VkCommandBuffer buf, VkPipelineLayout layout)
 	vbo.bind(buf);
 	for (auto& node : nodes)
 	{
-		vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+		vkCmdPushConstants(buf, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
 						   sizeof(ModelPushConstantBlock), &node.pcb);
 		for (int i = node.primitive_range.first; i < node.primitive_range.second; i++)
 		{

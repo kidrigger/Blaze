@@ -32,6 +32,8 @@ struct PointShadow2
 	{
 		alignas(16) glm::vec3 position;
 		alignas(4) float radius;
+		alignas(4) float p22;
+		alignas(4) float p32;
 	};
 
 	PointShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept;
@@ -84,6 +86,7 @@ public:
 
 	uint16_t createLight(const glm::vec3& position, float brightness, float radius, bool enableShadow);
 	void removeLight(uint16_t idx);
+	void setShadow(uint16_t idx, bool enableShadow);
 
 	int createShadow();
 	void removeShadow(int idx);

@@ -89,7 +89,7 @@ void runRefactored()
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
-	Camera cam({3.0f, 3.0f, 3.0f}, {-0.5773f, -0.5773f, -0.5773f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
+	Camera cam({0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);
 
 	// GLFW Setup
@@ -124,6 +124,17 @@ void runRefactored()
 	{
 		string modelName;
 		int modelIndex;
+	};
+
+	struct CameraInfo
+	{
+		glm::vec3 position;
+		float pitch;
+		float yaw;
+	} camInfo = {
+		cam.get_position(),
+		0,
+		0,
 	};
 
 	struct LightsInfo
@@ -166,8 +177,8 @@ void runRefactored()
 			if (toAdd >= 0)
 			{
 				lights.push_back(editable);
-				auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness, editable.radius,
-																			editable.hasShadow);
+				auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness,
+																			editable.radius, editable.hasShadow);
 				pointHandles.push_back(handle);
 
 				editable.brightness = 1.0f;
@@ -192,7 +203,7 @@ void runRefactored()
 	lightInfo.maxLights = renderer->get_lightCaster()->getMaxPointLights();
 
 	SceneInfo sceneInfo;
-	sceneInfo.modelName = "DamagedHelmet";
+	sceneInfo.modelName = "Sponza";
 	sceneInfo.modelIndex = 0;
 	{
 		auto& ms = modelLoader->getFileNames();
@@ -219,6 +230,7 @@ void runRefactored()
 	double prevTime = glfwGetTime();
 	double deltaTime = 0.0;
 	double elapsed = 0.0;
+	double delay = 0.0f;
 
 	SettingsOverlay settings;
 	settings.rotate = false;
@@ -229,6 +241,15 @@ void runRefactored()
 		prevTime = glfwGetTime();
 		glfwPollEvents();
 		elapsed += deltaTime;
+		/*if (deltaTime < 0.006)
+		{
+			delay += 0.5;
+		}
+		else if (deltaTime > 0.007)
+		{
+			delay -= 0.5;
+		}
+		Sleep(delay);*/
 
 		for (auto& [k, model] : modelHolder)
 		{
@@ -253,6 +274,8 @@ void runRefactored()
 			{
 				if (ImGui::Begin("Settings"))
 				{
+					ImGui::Text("Delta: %.3lf", deltaTime);
+
 					ImGui::Checkbox("Rotate##Model", &settings.rotate);
 					ImGui::SameLine();
 					ImGui::PushItemWidth(100);
@@ -269,15 +292,17 @@ void runRefactored()
 
 				if (ImGui::Begin("Camera"))
 				{
-					glm::vec3 val = cam.get_position();
-					if (ImGui::InputFloat3("Position", &val[0]))
+					if (ImGui::InputFloat3("Position", &camInfo.position[0]))
 					{
-						cam.moveTo(val);
+						cam.moveTo(camInfo.position);
 					}
-					val = cam.get_direction();
-					if (ImGui::InputFloat3("Direction", &val[0]))
+					bool lookChange = false;
+					lookChange |= ImGui::SliderAngle("Yaw", &camInfo.yaw, -179.99f, 180.0f, "%.2f deg");
+					lookChange |= ImGui::SliderAngle("Pitch", &camInfo.pitch, -89.99f, 89.99f, "%.2f deg");
+					if (lookChange)
 					{
-						cam.lookTo(val);
+						cam.lookTo(glm::vec3(glm::sin(camInfo.yaw) * glm::cos(camInfo.pitch), glm::sin(camInfo.pitch),
+											 -glm::cos(camInfo.yaw) * glm::cos(camInfo.pitch)));
 					}
 				}
 				ImGui::End();

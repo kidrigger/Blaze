@@ -6,8 +6,6 @@
 
 #define MANUAL_SRGB 1
 
-const float shadow_bias = 0.05f;
-
 layout(location = 0) in vec4 V_POSITION;
 layout(location = 1) in vec4 V_NORMAL;
 layout(location = 2, component = 0) in vec2 V_UV0;
@@ -44,7 +42,7 @@ layout(set = 3, binding = 0) uniform PointLightUBO {
 	PointLightData data[MAX_POINT_LIGHTS];
 } lights;
 
-layout(set = 4, binding = 0) uniform sampler2D shadows[MAX_SHADOWS];
+layout(set = 4, binding = 0) uniform samplerCube shadows[MAX_SHADOWS];
 
 layout(push_constant) uniform ModelBlock {
 	float opaque_[16];
@@ -152,6 +150,20 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
+float getPointShadow(int lightIdx, vec3 N) {
+	int shadowIdx = lights.data[lightIdx].shadowIndex;
+	if (shadowIdx < 0) {
+		return 0.0f;
+	}
+	vec3 dir = V_POSITION.xyz - lights.data[lightIdx].position;
+	dir.x *= -1;
+	float current_depth = length(dir);
+	dir = normalize(dir);
+	float closest_depth = texture(shadows[shadowIdx], dir).r * lights.data[lightIdx].radius;
+	float shadow_bias = max(0.05f * (1.0f - dot(N, dir)), 0.005f);
+	return ((current_depth - shadow_bias) > closest_depth ? 1.0f: 0.0f);
+}
+
 void main()
 {
 	// Setup
@@ -229,11 +241,12 @@ void main()
 		vec3 specular	  = numerator / max(denominator, 0.001);
 
 		float NdotL = max(dot(N, L), 0.0f);
+		float shade = getPointShadow(i, N);
 
-		L0 += (kd * albedo / PI + specular) * radiance * NdotL;
+		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
 
-	if (true) {
+	if (false) {
 		vec3 R = reflect(-V, N);
 
 		const float MAX_REFLECTION_LOD = 4.0f;
@@ -254,4 +267,10 @@ void main()
 
 	vec3 color	 = ambient + L0 + emission;
 	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, 1.0f)));
+	
+//	vec3 dir = V_POSITION.xyz - lights.data[0].position;
+//	dir.x *= -1;
+//	float dist = length(dir);
+//	dir = normalize(dir);
+//	outColor = mix(vec4(vec3(texture(shadows[0], dir).r), 1.0f), outColor, 0.3);
 }

@@ -54,7 +54,7 @@ PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVecto
 	bindTextureSet(context, texSet);
 
 	CubemapUBlock block = {
-		glm::perspective(90.0f, 1.0f, 1.0f/256.0f, 1.0f),
+		glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, 2.0f),
 		{
 			// POSITIVE_X (Outside in - so NEG_X face)
 			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
@@ -158,6 +158,30 @@ void PointLightCaster::removeLight(uint16_t idx)
 	freeLight = idx;
 }
 
+void PointLightCaster::setShadow(uint16_t idx, bool enableShadow)
+{
+	assert(idx < maxLights);
+
+	LightData* pLight = &lights[idx];
+
+	assert(pLight->brightness > 0);
+
+	if ((pLight->shadowIdx < 0) != enableShadow)
+	{
+		return;
+	}
+	else if (enableShadow)
+	{
+		pLight->shadowIdx = createShadow();
+		shadows[pLight->shadowIdx].next = idx;
+	}
+	else
+	{
+		removeShadow(pLight->shadowIdx);
+		pLight->shadowIdx = -1;
+	}
+}
+
 int PointLightCaster::createShadow()
 {
 	if (freeShadow < 0)
@@ -200,9 +224,15 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 
 		vkCmdBeginRenderPass(cmd, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+		float denom = (0.3f - light.radius);
+		float p22 = light.radius / denom;
+		float p32 = (0.3f * light.radius) / denom;
+
 		PointShadow2::PCB pcb = {
 			light.position,
 			light.radius,
+			p22,
+			p32,
 		};
 
 		VkRect2D scissor;
@@ -346,7 +376,7 @@ spirv::Pipeline PointLightCaster::createPipeline(const Context* context)
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;

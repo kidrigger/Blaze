@@ -97,7 +97,21 @@ void FwdLightCaster::setBrightness(Handle handle, float brightness)
 
 void FwdLightCaster::setShadow(Handle handle, bool hasShadow)
 {
-	std::cerr << __FUNCTION__ << " is Unimplemented NL: " << pointLights->get_count() << std::endl;
+	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
+	Type type = static_cast<Type>(exposed.type);
+	switch (type)
+	{
+	case Type::POINT: {
+		pointLights->setShadow(exposed.idx, hasShadow);
+	};
+	break;
+	case Type::DIRECTIONAL: {
+		throw std::invalid_argument("Can't set radius of directional light");
+	}
+	break;
+	default:
+		throw std::invalid_argument("Unimplemented");
+	}
 }
 
 void FwdLightCaster::setRadius(Handle handle, float radius)
