@@ -1,20 +1,15 @@
 
-#include "PointLightCaster.hpp"
+#include "DirectionLightCaster.hpp"
 
 #include <util/files.hpp>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 #undef min
 #undef max
 
 namespace blaze
 {
-PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVector& sets,
-								   const spirv::SetSingleton& texSet) noexcept
+DirectionLightCaster::DirectionLightCaster(const Context* context, const spirv::SetVector& sets,
+										   const spirv::SetSingleton& texSet) noexcept
 {
 	renderPass = createRenderPass(context);
 	shadowShader = createShader(context);
@@ -29,9 +24,8 @@ PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVecto
 	int i = -1;
 	for (auto& light : lights)
 	{
-		light.position = glm::vec3(0);
+		light.direction = glm::vec3(0);
 		light.brightness = static_cast<float>(i);
-		light.radius = 0.0f;
 		light.shadowIdx = -1;
 		i--;
 	}
@@ -44,53 +38,53 @@ PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVecto
 
 	for (uint32_t i = 0; i < maxShadows; ++i)
 	{
-		auto& shadow = shadows.emplace_back(context, renderPass.get(), OMNI_MAP_RESOLUTION);
+		auto& shadow = shadows.emplace_back(context, renderPass.get(), DIRECTION_MAP_RESOLUTION, MAX_CSM_SPLITS);
 		shadow.next = i + 1;
 	}
 	shadows.back().next = -1;
 	freeShadow = 0;
 
 	bindDataSet(context, sets);
-	bindTextureSet(context, texSet);
+	//bindTextureSet(context, texSet);
 
-	CubemapUBlock block = {
-		glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, 2.0f),
-		{
-			// POSITIVE_X (Outside in - so NEG_X face)
-			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-			// NEGATIVE_X (Outside in - so POS_X face)
-			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-			// POSITIVE_Y
-			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-			// NEGATIVE_Y
-			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-			// POSITIVE_Z
-			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-			// NEGATIVE_Z
-			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		},
-	};
+	//CubemapUBlock block = {
+	//	glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, 2.0f),
+	//	{
+	//		// POSITIVE_X (Outside in - so NEG_X face)
+	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	//		// NEGATIVE_X (Outside in - so POS_X face)
+	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	//		// POSITIVE_Y
+	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+	//		// NEGATIVE_Y
+	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+	//		// POSITIVE_Z
+	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	//		// NEGATIVE_Z
+	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	//	},
+	//};
 
-	viewSet = context->get_pipelineFactory()->createSet(*shadowShader.getSetWithUniform("views"));
-	viewUBO = UBO(context, block);
-	{
-		auto unif = viewSet.getUniform("views");
-		VkDescriptorBufferInfo info = viewUBO.get_descriptorInfo();
+	//viewSet = context->get_pipelineFactory()->createSet(*shadowShader.getSetWithUniform("views"));
+	//viewUBO = UBO(context, block);
+	//{
+	//	auto unif = viewSet.getUniform("views");
+	//	VkDescriptorBufferInfo info = viewUBO.get_descriptorInfo();
 
-		VkWriteDescriptorSet write = {};
-		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.descriptorType = unif->type;
-		write.descriptorCount = unif->arrayLength;
-		write.dstSet = viewSet.get();
-		write.dstBinding = unif->binding;
-		write.dstArrayElement = 0;
-		write.pBufferInfo = &info;
+	//	VkWriteDescriptorSet write = {};
+	//	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	//	write.descriptorType = unif->type;
+	//	write.descriptorCount = unif->arrayLength;
+	//	write.dstSet = viewSet.get();
+	//	write.dstBinding = unif->binding;
+	//	write.dstArrayElement = 0;
+	//	write.pBufferInfo = &info;
 
-		vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
-	}
+	//	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
+	//}
 }
 
-void PointLightCaster::recreate(const Context* context, const spirv::SetVector& sets)
+void DirectionLightCaster::recreate(const Context* context, const spirv::SetVector& sets)
 {
 	ubos = UBODataVector(context, maxLights * sizeof(LightData), sets.size());
 
@@ -102,12 +96,12 @@ void PointLightCaster::recreate(const Context* context, const spirv::SetVector& 
 	bindDataSet(context, sets);
 }
 
-void PointLightCaster::update(uint32_t frame)
+void DirectionLightCaster::update(uint32_t frame)
 {
 	ubos[frame].writeData(lights.data(), maxLights * sizeof(LightData));
 }
 
-uint16_t PointLightCaster::createLight(const glm::vec3& position, float brightness, float radius, bool enableShadow)
+uint16_t DirectionLightCaster::createLight(const glm::vec3& direction, float brightness, uint32_t numCascades)
 {
 	if (freeLight < 0)
 	{
@@ -119,22 +113,23 @@ uint16_t PointLightCaster::createLight(const glm::vec3& position, float brightne
 
 	freeLight = -static_cast<int>(pLight->brightness);
 
-	pLight->position = position;
+	pLight->direction = direction;
 	pLight->brightness = brightness;
-	pLight->radius = radius;
 	pLight->shadowIdx = -1;
-	if (enableShadow)
+	// TODO Shadow
+	
+	/*if (enableShadow)
 	{
 		pLight->shadowIdx = createShadow();
 		shadows[pLight->shadowIdx].next = idx;
-	}
+	}*/
 
 	count++;
 
 	return idx;
 }
 
-void PointLightCaster::removeLight(uint16_t idx)
+void DirectionLightCaster::removeLight(uint16_t idx)
 {
 	assert(idx < maxLights);
 
@@ -143,13 +138,13 @@ void PointLightCaster::removeLight(uint16_t idx)
 	assert(pLight->brightness > 0);
 
 	pLight->brightness = -static_cast<float>(freeLight);
-	pLight->position = glm::vec3(0.0f);
+	pLight->direction = glm::vec3(0.0f);
 
-	if (pLight->shadowIdx >= 0)
+	/*if (pLight->shadowIdx >= 0)
 	{
 		assert(shadows[pLight->shadowIdx].next == idx);
 		removeShadow(pLight->shadowIdx);
-	}
+	}*/
 
 	pLight->shadowIdx = -1;
 
@@ -157,109 +152,7 @@ void PointLightCaster::removeLight(uint16_t idx)
 	freeLight = idx;
 }
 
-bool PointLightCaster::setShadow(uint16_t idx, bool enableShadow)
-{
-	assert(idx < maxLights);
-
-	LightData* pLight = &lights[idx];
-
-	assert(pLight->brightness > 0);
-
-	if ((pLight->shadowIdx < 0) != enableShadow)
-	{
-		return pLight->shadowIdx >= 0;
-	}
-	else if (enableShadow)
-	{
-		pLight->shadowIdx = createShadow();
-		if (pLight->shadowIdx >= 0)
-		{
-			shadows[pLight->shadowIdx].next = idx;
-			return true;
-		}
-	}
-	else
-	{
-		removeShadow(pLight->shadowIdx);
-		pLight->shadowIdx = -1;
-	}
-	return false;
-}
-
-int PointLightCaster::createShadow()
-{
-	if (freeShadow < 0)
-	{
-		return -1;
-	}
-	auto i = freeShadow;
-	freeShadow = shadows[i].next;
-	shadowCount++;
-
-	return i;
-}
-
-void PointLightCaster::removeShadow(int idx)
-{
-	shadows[idx].next = freeShadow;
-	freeShadow = idx;
-	shadowCount--;
-}
-
-void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
-{
-	for (auto& light : lights)
-	{
-		if (light.shadowIdx < 0)
-			continue;
-		PointShadow2* shadow = &shadows[light.shadowIdx];
-
-		VkRenderPassBeginInfo renderpassBeginInfo = {};
-		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpassBeginInfo.renderPass = renderPass.get();
-		renderpassBeginInfo.framebuffer = shadow->framebuffer.get();
-		renderpassBeginInfo.renderArea.offset = {0, 0};
-		renderpassBeginInfo.renderArea.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
-
-		std::array<VkClearValue, 1> clearColor;
-		clearColor[0].depthStencil = {1.0f, 0};
-		renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-		renderpassBeginInfo.pClearValues = clearColor.data();
-
-		vkCmdBeginRenderPass(cmd, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		float denom = (0.3f - light.radius);
-		float p22 = light.radius / denom;
-		float p32 = (0.3f * light.radius) / denom;
-
-		PointShadow2::PCB pcb = {
-			light.position,
-			light.radius,
-			p22,
-			p32,
-		};
-
-		VkRect2D scissor;
-		scissor.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
-		scissor.offset = {0, 0};
-
-		shadowPipeline.bind(cmd);
-		vkCmdSetViewport(cmd, 0, 1, &shadow->viewport);
-		vkCmdSetScissor(cmd, 0, 1, &scissor);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowShader.pipelineLayout.get(), viewSet.setIdx,
-								1, &viewSet.get(), 0, nullptr);
-		vkCmdPushConstants(cmd, shadowShader.pipelineLayout.get(), shadowShader.pushConstant.stage,
-						   sizeof(ModelPushConstantBlock), sizeof(PointShadow2::PCB), &pcb);
-		for (Drawable* d : drawables)
-		{
-			d->drawGeometry(cmd, shadowShader.pipelineLayout.get());
-		}
-
-		vkCmdEndRenderPass(cmd);
-	}
-}
-
-void PointLightCaster::bindDataSet(const Context* context, const spirv::SetVector& sets)
+void DirectionLightCaster::bindDataSet(const Context* context, const spirv::SetVector& sets)
 {
 	const spirv::UniformInfo* unif = sets.getUniform(dataUniformName);
 
@@ -280,31 +173,9 @@ void PointLightCaster::bindDataSet(const Context* context, const spirv::SetVecto
 	}
 }
 
-void PointLightCaster::bindTextureSet(const Context* context, const spirv::SetSingleton& set)
+spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
 {
-	const spirv::UniformInfo* unif = set.getUniform(textureUniformName);
 
-	std::vector<VkDescriptorImageInfo> infos;
-	infos.reserve(maxShadows);
-	for (auto& shadow : shadows)
-	{
-		infos.push_back(shadow.shadowMap.get_imageInfo());
-	}
-
-	VkWriteDescriptorSet write = {};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.descriptorType = unif->type;
-	write.descriptorCount = unif->arrayLength;
-	write.dstSet = set.get();
-	write.dstBinding = unif->binding;
-	write.dstArrayElement = 0;
-	write.pImageInfo = infos.data();
-
-	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
-}
-
-spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
-{
 	std::vector<spirv::AttachmentFormat> format(1);
 	format[0].usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	format[0].format = VK_FORMAT_D32_SFLOAT;
@@ -332,7 +203,7 @@ spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
 	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::READ;
 
-	uint32_t viewmask = 0b111111;
+	uint32_t viewmask = 0b1111;
 
 	VkRenderPassMultiviewCreateInfo multiview = {};
 	multiview.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
@@ -347,23 +218,23 @@ spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 	return context->get_pipelineFactory()->createRenderPass(format, subpass, loadStore, &multiview);
 }
 
-spirv::Shader PointLightCaster::createShader(const Context* context)
+spirv::Shader DirectionLightCaster::createShader(const Context* context)
 {
 	std::vector<spirv::ShaderStageData> stages;
 
 	spirv::ShaderStageData* stage;
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/vPointShadow.vert.spv");
+	stage->spirv = util::loadBinaryFile("shaders/PBR/vDirectionShadow.vert.spv");
 	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
 
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/fPointShadow.frag.spv");
+	stage->spirv = util::loadBinaryFile("shaders/PBR/fDirectionShadow.frag.spv");
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	return context->get_pipelineFactory()->createShader(stages);
 }
 
-spirv::Pipeline PointLightCaster::createPipeline(const Context* context)
+spirv::Pipeline DirectionLightCaster::createPipeline(const Context* context)
 {
 	assert(shadowShader.valid());
 	assert(renderPass.valid());
@@ -419,21 +290,20 @@ spirv::Pipeline PointLightCaster::createPipeline(const Context* context)
 	return context->get_pipelineFactory()->createGraphicsPipeline(shadowShader, renderPass, info);
 }
 
-// Point Shadow 2
-PointShadow2::PointShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept
+DirectionShadow2::DirectionShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept
 {
-	ImageDataCube idc{};
+	ImageData2D idc{};
 	idc.height = mapResolution;
 	idc.width = mapResolution;
 	idc.numChannels = 1;
-	idc.size = 6 * mapResolution * mapResolution;
-	idc.layerSize = mapResolution * mapResolution;
+	idc.size = mapResolution * mapResolution;
+	idc.layerCount = numCascades;
 	idc.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	idc.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	idc.format = VK_FORMAT_D32_SFLOAT;
 	idc.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 	idc.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	shadowMap = TextureCube(context, idc, false);
+	shadowMap = Texture2D(context, idc, false);
 
 	viewport = VkViewport{0.0f,
 						  static_cast<float>(mapResolution),
@@ -443,14 +313,14 @@ PointShadow2::PointShadow2(const Context* context, VkRenderPass renderPass, uint
 						  1.0f};
 
 	{
-		std::vector<VkImageView> attachments = {shadowMap.get_imageView()};
+		std::vector<VkImageView> attachments = {shadowMap.get_allImageViews()};
 
 		VkFramebuffer fbo = VK_NULL_HANDLE;
 		VkFramebufferCreateInfo fbCreateInfo = {};
 		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fbCreateInfo.width = mapResolution;
 		fbCreateInfo.height = mapResolution;
-		fbCreateInfo.layers = 6;
+		fbCreateInfo.layers = numCascades;
 		fbCreateInfo.renderPass = renderPass;
 		fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		fbCreateInfo.pAttachments = attachments.data();
@@ -458,5 +328,4 @@ PointShadow2::PointShadow2(const Context* context, VkRenderPass renderPass, uint
 		framebuffer = vkw::Framebuffer(fbo, context->get_device());
 	}
 }
-
 } // namespace blaze

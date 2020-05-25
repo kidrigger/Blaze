@@ -157,43 +157,95 @@ void runRefactored()
 			}
 		};
 
+		struct DirLight
+		{
+			glm::vec3 dir{-1.0f};
+			float brightness{1};
+			int numCascades{0};
+
+			bool draw()
+			{
+				bool edited = false;
+				edited |= ImGui::InputFloat3("Position##Position", &dir[0]);
+				edited |= ImGui::InputFloat("Brightness##Brightness", &brightness);
+				edited |= ImGui::InputInt("Num Cascades##Shadow", &numCascades);
+				return edited;
+			}
+		};
+
 		std::vector<ALightCaster::Handle> pointHandles;
 		PointLights editable;
 		std::vector<PointLights> lights;
 		uint32_t maxLights;
 
+		std::vector<ALightCaster::Handle> dirHandles;
+		DirLight dirEditable;
+		std::vector<DirLight> dirLights;
+		uint32_t maxDirLights;
+
+		ALightCaster::Type type;
 		int toDelete{-1};
 		int toAdd{-1};
 		int toUpdate{-1};
 
 		void update(ARenderer* renderer)
 		{
-			if (toDelete >= 0)
+			if (type == ALightCaster::Type::POINT)
 			{
-				lights.erase(lights.begin() + toDelete);
-				renderer->get_lightCaster()->removeLight(pointHandles[toDelete]);
-				pointHandles.erase(pointHandles.begin() + toDelete);
-			}
-			if (toAdd >= 0)
-			{
-				lights.push_back(editable);
-				auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness,
-																			editable.radius, editable.hasShadow);
-				pointHandles.push_back(handle);
+				if (toDelete >= 0)
+				{
+					lights.erase(lights.begin() + toDelete);
+					renderer->get_lightCaster()->removeLight(pointHandles[toDelete]);
+					pointHandles.erase(pointHandles.begin() + toDelete);
+				}
+				if (toAdd >= 0)
+				{
+					lights.push_back(editable);
+					auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness,
+																				editable.radius, editable.hasShadow);
+					pointHandles.push_back(handle);
 
-				editable.brightness = 1.0f;
-				editable.pos = glm::vec3{0.0f};
-				editable.radius = 1.0f;
-				editable.hasShadow = false;
+					editable.brightness = 1.0f;
+					editable.pos = glm::vec3{0.0f};
+					editable.radius = 1.0f;
+					editable.hasShadow = false;
+				}
+				if (toUpdate >= 0)
+				{
+					auto h = pointHandles[toUpdate];
+					auto& l = lights[toUpdate];
+					renderer->get_lightCaster()->setPosition(h, l.pos);
+					renderer->get_lightCaster()->setBrightness(h, l.brightness);
+					renderer->get_lightCaster()->setRadius(h, l.radius);
+					l.hasShadow = renderer->get_lightCaster()->setShadow(h, l.hasShadow);
+				}
 			}
-			if (toUpdate >= 0)
+			else if (type == ALightCaster::Type::DIRECTIONAL)
 			{
-				auto h = pointHandles[toUpdate];
-				auto& l = lights[toUpdate];
-				renderer->get_lightCaster()->setPosition(h, l.pos);
-				renderer->get_lightCaster()->setBrightness(h, l.brightness);
-				renderer->get_lightCaster()->setRadius(h, l.radius);
-				renderer->get_lightCaster()->setShadow(h, l.hasShadow);
+				if (toDelete >= 0)
+				{
+					dirLights.erase(dirLights.begin() + toDelete);
+					renderer->get_lightCaster()->removeLight(dirHandles[toDelete]);
+					dirHandles.erase(dirHandles.begin() + toDelete);
+				}
+				if (toAdd >= 0)
+				{
+					dirLights.push_back(dirEditable);
+					auto handle = renderer->get_lightCaster()->createDirectionLight(dirEditable.dir, dirEditable.brightness, dirEditable.numCascades);
+					dirHandles.push_back(handle);
+
+					dirEditable.brightness = 1.0f;
+					dirEditable.dir = glm::vec3{-1.0f};
+					dirEditable.numCascades = 0;
+				}
+				if (toUpdate >= 0)
+				{
+					auto h = dirHandles[toUpdate];
+					auto& l = dirLights[toUpdate];
+					renderer->get_lightCaster()->setDirection(h, l.dir);
+					renderer->get_lightCaster()->setBrightness(h, l.brightness);
+					// l.numCascades = renderer->get_lightCaster()->setShadow(h, l.numCascades);
+				}
 			}
 			toDelete = -1;
 			toAdd = -1;
@@ -201,6 +253,7 @@ void runRefactored()
 		}
 	} lightInfo;
 	lightInfo.maxLights = renderer->get_lightCaster()->getMaxPointLights();
+	lightInfo.maxDirLights = renderer->get_lightCaster()->getMaxDirectionLights();
 
 	SceneInfo sceneInfo;
 	sceneInfo.modelName = "Sponza";
@@ -241,7 +294,7 @@ void runRefactored()
 		prevTime = glfwGetTime();
 		glfwPollEvents();
 		elapsed += deltaTime;
-		/*if (deltaTime < 0.006)
+		if (deltaTime < 0.006)
 		{
 			delay += 0.5;
 		}
@@ -249,7 +302,7 @@ void runRefactored()
 		{
 			delay -= 0.5;
 		}
-		Sleep(delay);*/
+		Sleep(glm::max(delay, 5.0));
 
 		for (auto& [k, model] : modelHolder)
 		{
@@ -353,10 +406,12 @@ void runRefactored()
 								if (edited)
 								{
 									lightInfo.toUpdate = idx;
+									lightInfo.type = ALightCaster::Type::POINT;
 								}
 								if (ImGui::Button("Remove"))
 								{
 									lightInfo.toDelete = idx;
+									lightInfo.type = ALightCaster::Type::POINT;
 								}
 								ImGui::TreePop();
 							}
@@ -375,6 +430,49 @@ void runRefactored()
 								if (ImGui::Button("Add"))
 								{
 									lightInfo.toAdd = 1;
+									lightInfo.type = ALightCaster::Type::POINT;
+								}
+							}
+							ImGui::TreePop();
+						}
+					}
+					if (ImGui::CollapsingHeader("DirLights"))
+					{
+						int idx = 0;
+						for (auto& light : lightInfo.dirLights)
+						{
+							ImGui::PushID(idx);
+							if (ImGui::TreeNode("Light##", "light %d", idx))
+							{
+								bool edited = light.draw();
+								if (edited)
+								{
+									lightInfo.toUpdate = idx;
+									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
+								}
+								if (ImGui::Button("Remove"))
+								{
+									lightInfo.toDelete = idx;
+									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
+								}
+								ImGui::TreePop();
+							}
+							ImGui::PopID();
+							ImGui::Separator();
+							idx++;
+						}
+						if (lightInfo.lights.size() < lightInfo.maxDirLights)
+						{
+							ImGui::Text("New Directional Light");
+							ImGui::TreePush("new dir light");
+							{
+								ImGui::PushID("LightEditable");
+								lightInfo.dirEditable.draw();
+								ImGui::PopID();
+								if (ImGui::Button("Add"))
+								{
+									lightInfo.toAdd = 1;
+									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
 								}
 							}
 							ImGui::TreePop();

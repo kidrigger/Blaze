@@ -18,6 +18,7 @@ FwdLightCaster::FwdLightCaster(const Context* context, const spirv::Shader* shad
 	dataSet = context->get_pipelineFactory()->createSets(*set, frames);
 	textureSet = context->get_pipelineFactory()->createSet(*texSet);
 	pointLights = std::make_unique<PointLightCaster>(context, dataSet, textureSet);
+	directionLights = std::make_unique<DirectionLightCaster>(context, dataSet, textureSet);
 }
 
 void FwdLightCaster::recreate(const Context* context, const spirv::Shader* shader, uint32_t frames)
@@ -25,6 +26,7 @@ void FwdLightCaster::recreate(const Context* context, const spirv::Shader* shade
 	auto set = shader->getSetWithUniform("lights");
 	dataSet = context->get_pipelineFactory()->createSets(*set, frames);
 	pointLights->recreate(context, dataSet);
+	directionLights->recreate(context, dataSet);
 }
 
 void FwdLightCaster::bind(VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frame) const
@@ -48,7 +50,7 @@ FwdLightCaster::Handle FwdLightCaster::createPointLight(const glm::vec3& positio
 		idx,
 	};
 
-	pointGeneration = (pointGeneration + 1) % UINT16_MAX;
+	pointGeneration = pointGeneration + 1;
 
 	Handle handle = reinterpret_cast<Handle&>(exposed);
 	validHandles.insert(handle);
@@ -77,11 +79,27 @@ void FwdLightCaster::setPosition(Handle handle, const glm::vec3& position)
 
 void FwdLightCaster::setDirection(Handle handle, const glm::vec3& direction)
 {
-	throw std::invalid_argument(std::string(__FUNCTION__) + "Unimplemented");
+	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
+	Type type = static_cast<Type>(exposed.type);
+	switch (type)
+	{
+	case Type::POINT: {
+		throw std::invalid_argument("Can't set direction of point light");
+	};
+	break;
+	case Type::DIRECTIONAL: {
+		directionLights->getLight(exposed.idx)->direction = direction;
+	}
+	break;
+	default:
+		throw std::invalid_argument("Unimplemented");
+	}
 }
 
 void FwdLightCaster::setBrightness(Handle handle, float brightness)
 {
+	assert(brightness >= 0.0f);
+
 	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
 	Type type = static_cast<Type>(exposed.type);
 	switch (type)
@@ -90,23 +108,27 @@ void FwdLightCaster::setBrightness(Handle handle, float brightness)
 		pointLights->getLight(exposed.idx)->brightness = brightness;
 	};
 	break;
+	case Type::DIRECTIONAL: {
+		directionLights->getLight(exposed.idx)->brightness = brightness;
+	}
+	break;
 	default:
 		throw std::invalid_argument("Unimplemented");
 	}
 }
 
-void FwdLightCaster::setShadow(Handle handle, bool hasShadow)
+bool FwdLightCaster::setShadow(Handle handle, bool hasShadow)
 {
 	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
 	Type type = static_cast<Type>(exposed.type);
 	switch (type)
 	{
 	case Type::POINT: {
-		pointLights->setShadow(exposed.idx, hasShadow);
+		return pointLights->setShadow(exposed.idx, hasShadow);
 	};
 	break;
 	case Type::DIRECTIONAL: {
-		throw std::invalid_argument("Can't set radius of directional light");
+		throw std::invalid_argument("Unimplemented");
 	}
 	break;
 	default:
@@ -148,6 +170,9 @@ void FwdLightCaster::removeLight(Handle handle)
 	case Type::POINT:
 		pointLights->removeLight(idx);
 		break;
+	case Type::DIRECTIONAL:
+		directionLights->removeLight(idx);
+		break;
 	default:
 		throw std::invalid_argument("Only point lights are supported so far");
 	}
@@ -158,6 +183,7 @@ void FwdLightCaster::removeLight(Handle handle)
 void FwdLightCaster::update(uint32_t frame)
 {
 	pointLights->update(frame);
+	directionLights->update(frame);
 }
 
 uint32_t FwdLightCaster::getMaxPointLights()
@@ -169,8 +195,43 @@ uint32_t FwdLightCaster::getMaxPointShadows()
 {
 	return pointLights->getMaxShadows();
 }
+
 void FwdLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
 {
 	pointLights->cast(cmd, drawables);
+}
+
+
+FwdLightCaster::Handle FwdLightCaster::createDirectionLight(const glm::vec3& direction, float brightness,
+															uint32_t numCascades)
+{
+	uint16_t idx = directionLights->createLight(direction, brightness, numCascades);
+	if (idx == UINT16_MAX)
+	{
+		return 0;
+	}
+
+	HandleExposed exposed = {
+		static_cast<uint8_t>(Type::POINT),
+		directionGeneration,
+		idx,
+	};
+
+	directionGeneration = directionGeneration + 1;
+
+	Handle handle = reinterpret_cast<Handle&>(exposed);
+	validHandles.insert(handle);
+
+	return handle;
+}
+
+uint32_t FwdLightCaster::getMaxDirectionLights()
+{
+	return directionLights->getMaxLights();
+}
+
+uint32_t FwdLightCaster::getMaxDirectionShadows()
+{
+	return directionLights->getMaxShadows();
 }
 } // namespace blaze

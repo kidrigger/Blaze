@@ -3,14 +3,14 @@
 
 #include <core/Context.hpp>
 #include <core/Drawable.hpp>
-#include <core/TextureCube.hpp>
+#include <core/Texture2D.hpp>
 #include <core/UniformBuffer.hpp>
 #include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
 /**
- * @class PointShadow2
+ * @class DirectionShadow2
  *
  * @brief Encapsulates the attachments and framebuffer for a point light shadow.
  *
@@ -21,13 +21,13 @@ namespace blaze
  *
  * @cond PRIVATE
  */
-struct PointShadow2
+struct DirectionShadow2
 {
-	TextureCube shadowMap;
+	Texture2D shadowMap;
 	vkw::Framebuffer framebuffer;
 	VkViewport viewport;
 	uint16_t next;
-	
+
 	struct PCB
 	{
 		alignas(16) glm::vec3 position;
@@ -36,22 +36,22 @@ struct PointShadow2
 		alignas(4) float p32;
 	};
 
-	PointShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept;
+	DirectionShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept;
 };
 /**
  * @endcond
  */
 
-class PointLightCaster
+class DirectionLightCaster
 {
 private:
-	constexpr static uint32_t OMNI_MAP_RESOLUTION = 512;
+	constexpr static uint32_t DIRECTION_MAP_RESOLUTION = 512;
 
 	struct LightData
 	{
-		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 direction;
 		alignas(4) float brightness;
-		alignas(4) float radius;
+		alignas(4) int numCascades;
 		alignas(4) int shadowIdx;
 	};
 
@@ -62,8 +62,8 @@ private:
 	int16_t freeLight;
 	std::vector<LightData> lights;
 
-	constexpr static std::string_view dataUniformName = "lights";
-	constexpr static std::string_view textureUniformName = "shadows";
+	constexpr static std::string_view dataUniformName = "dirLights";
+	constexpr static std::string_view textureUniformName = "dirShadows";
 
 	spirv::RenderPass renderPass;
 	spirv::Shader shadowShader;
@@ -74,17 +74,18 @@ private:
 	spirv::SetVector shadowInfoSet;
 
 	UBODataVector ubos;
-	
+
 	uint32_t shadowCount;
 	int freeShadow;
-	std::vector<PointShadow2> shadows;
+	std::vector<DirectionShadow2> shadows;
 
 public:
-	PointLightCaster(const Context* context, const spirv::SetVector& sets, const spirv::SetSingleton& texSet) noexcept;
+	DirectionLightCaster(const Context* context, const spirv::SetVector& sets,
+						const spirv::SetSingleton& texSet) noexcept;
 	void recreate(const Context* context, const spirv::SetVector& sets);
 	void update(uint32_t frame);
 
-	uint16_t createLight(const glm::vec3& position, float brightness, float radius, bool enableShadow);
+	uint16_t createLight(const glm::vec3& direction, float brightness, uint32_t numCascades);
 	void removeLight(uint16_t idx);
 	bool setShadow(uint16_t idx, bool enableShadow);
 
@@ -120,4 +121,4 @@ private:
 	spirv::Shader createShader(const Context* context);
 	spirv::Pipeline createPipeline(const Context* context);
 };
-} // namespace blaze
+}

@@ -2,6 +2,7 @@
 
 #define MAX_TEX_IN_MAT 32
 #define MAX_POINT_LIGHTS 16
+#define MAX_DIRECTION_LIGHTS 4
 #define MAX_SHADOWS 16
 
 #define MANUAL_SRGB 1
@@ -38,11 +39,22 @@ struct PointLightData {
 	int shadowIndex;
 };
 
+struct DirLightData {
+	vec3 direction;
+	float brightness;
+	int numCascades;
+	int shadowIndex;
+};
+
 layout(set = 3, binding = 0) uniform PointLightUBO {
 	PointLightData data[MAX_POINT_LIGHTS];
 } lights;
+layout(set = 3, binding = 1) uniform DirLightUBO {
+	DirLightData data[MAX_DIRECTION_LIGHTS];
+} dirLights;
 
 layout(set = 4, binding = 0) uniform samplerCube shadows[MAX_SHADOWS];
+layout(set = 4, binding = 1) uniform sampler2DArray dirShadows[MAX_SHADOWS];
 
 layout(push_constant) uniform ModelBlock {
 	float opaque_[16];
@@ -242,6 +254,34 @@ void main()
 
 		float NdotL = max(dot(N, L), 0.0f);
 		float shade = getPointShadow(i, N);
+
+		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
+	}
+
+	// Direction Lighting
+	for (int i = 0; i < MAX_DIRECTION_LIGHTS; i++) {
+		if (dirLights.data[i].brightness < 0.0f) continue;
+		
+		vec3 L		 = normalize(-dirLights.data[i].direction.xyz);
+		vec3 H		 = normalize(V + L);
+		float cosine = max(dot(L, N), 0.0f);
+
+		vec3 radiance = lightColor * 0.25f * dirLights.data[i].brightness;
+		
+		float NDF = DistributionGGX(N, H, roughness);
+		float G	  = GeometrySmith(N, V, L, roughness);
+		vec3 F	  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
+
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
+
+		vec3 numerator	  = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+		vec3 specular	  = numerator / max(denominator, 0.001);
+
+		float NdotL = max(dot(N, L), 0.0f);
+		float shade = 0.0f; //getPointShadow(i, N);
 
 		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
