@@ -58,7 +58,7 @@ void FwdRenderer::recreateSwapchainDependents()
 
 void FwdRenderer::update(uint32_t frame)
 {
-	lightCaster->update(frame);
+	lightCaster->update(camera, frame);
 	cameraUBOs[frame].write(camera->getUbo());
 }
 

@@ -7,6 +7,7 @@
 #include <rendering/ALightCaster.hpp>
 #include <spirv/PipelineFactory.hpp>
 #include <util/PackedHandler.hpp>
+#include <core/Camera.hpp>
 
 #include "PointLightCaster.hpp"
 #include "DirectionLightCaster.hpp"
@@ -54,7 +55,7 @@ public:
 	virtual void setBrightness(Handle handle, float brightness) override;
 	virtual bool setShadow(Handle handle, bool hasShadow) override;
 	virtual void setRadius(Handle handle, float radius) override;
-	virtual void update(uint32_t frame) override;
+	virtual void update(const Camera* camera, uint32_t frame) override;
 	virtual uint32_t getMaxPointLights() override;
 	virtual uint32_t getMaxPointShadows() override;
 

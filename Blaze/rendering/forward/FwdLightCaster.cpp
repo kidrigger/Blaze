@@ -88,7 +88,7 @@ void FwdLightCaster::setDirection(Handle handle, const glm::vec3& direction)
 	};
 	break;
 	case Type::DIRECTIONAL: {
-		directionLights->getLight(exposed.idx)->direction = direction;
+		directionLights->getLight(exposed.idx)->direction = glm::normalize(direction);
 	}
 	break;
 	default:
@@ -128,7 +128,7 @@ bool FwdLightCaster::setShadow(Handle handle, bool hasShadow)
 	};
 	break;
 	case Type::DIRECTIONAL: {
-		throw std::invalid_argument("Unimplemented");
+		return directionLights->setShadow(exposed.idx, hasShadow);
 	}
 	break;
 	default:
@@ -180,10 +180,10 @@ void FwdLightCaster::removeLight(Handle handle)
 	validHandles.erase(handle);
 }
 
-void FwdLightCaster::update(uint32_t frame)
+void FwdLightCaster::update(const Camera* camera, uint32_t frame)
 {
 	pointLights->update(frame);
-	directionLights->update(frame);
+	directionLights->update(camera, frame);
 }
 
 uint32_t FwdLightCaster::getMaxPointLights()
@@ -199,6 +199,7 @@ uint32_t FwdLightCaster::getMaxPointShadows()
 void FwdLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
 {
 	pointLights->cast(cmd, drawables);
+	directionLights->cast(cmd, drawables);
 }
 
 
@@ -212,7 +213,7 @@ FwdLightCaster::Handle FwdLightCaster::createDirectionLight(const glm::vec3& dir
 	}
 
 	HandleExposed exposed = {
-		static_cast<uint8_t>(Type::POINT),
+		static_cast<uint8_t>(Type::DIRECTIONAL),
 		directionGeneration,
 		idx,
 	};

@@ -117,7 +117,7 @@ public:
 	{
 		return position;
 	}
-	inline const glm::vec3& get_direction()
+	inline const glm::vec3& get_direction() const
 	{
 		return direction;
 	}

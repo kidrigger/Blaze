@@ -2,6 +2,7 @@
 #pragma once
 
 #include <core/Drawable.hpp>
+#include <core/Camera.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -41,7 +42,7 @@ public:
 	virtual void setBrightness(Handle handle, float brightness) = 0;
 	virtual bool setShadow(Handle handle, bool hasShadow) = 0;
 
-	virtual void update(uint32_t frame) = 0;
+	virtual void update(const Camera* camera, uint32_t frame) = 0;
 	virtual void cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables) = 0;
 };
 }

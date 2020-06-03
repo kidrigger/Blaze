@@ -149,10 +149,10 @@ void runRefactored()
 			bool draw()
 			{
 				bool edited = false;
-				edited |= ImGui::InputFloat3("Position##Position", &pos[0]);
-				edited |= ImGui::InputFloat("Brightness##Brightness", &brightness);
-				edited |= ImGui::InputFloat("Radius##Radius", &radius);
-				edited |= ImGui::Checkbox("Enable Shadow##Shadow", &hasShadow);
+				edited |= ImGui::InputFloat3("Position##POINT", &pos[0]);
+				edited |= ImGui::InputFloat("Brightness##POINT", &brightness);
+				edited |= ImGui::InputFloat("Radius##POINT", &radius);
+				edited |= ImGui::Checkbox("Enable Shadow##POINT", &hasShadow);
 				return edited;
 			}
 		};
@@ -161,14 +161,23 @@ void runRefactored()
 		{
 			glm::vec3 dir{-1.0f};
 			float brightness{1};
-			int numCascades{0};
+			int numCascades{1};
+			bool hasShadow{false};
 
-			bool draw()
+			bool draw(bool editCascade = false)
 			{
 				bool edited = false;
-				edited |= ImGui::InputFloat3("Position##Position", &dir[0]);
-				edited |= ImGui::InputFloat("Brightness##Brightness", &brightness);
-				edited |= ImGui::InputInt("Num Cascades##Shadow", &numCascades);
+				edited |= ImGui::InputFloat3("Direction##DIR", &dir[0]);
+				edited |= ImGui::InputFloat("Brightness##DIR", &brightness);
+				edited |= ImGui::Checkbox("Enable Shadow##DIR", &hasShadow);
+				if (hasShadow && editCascade)
+				{
+					edited |= ImGui::SliderInt("Num Cascades##DIR", &numCascades, 1, 4);
+				}
+				else if (!editCascade)
+				{
+					ImGui::Text("Num Cascades: %d", numCascades);
+				}
 				return edited;
 			}
 		};
@@ -231,12 +240,13 @@ void runRefactored()
 				if (toAdd >= 0)
 				{
 					dirLights.push_back(dirEditable);
-					auto handle = renderer->get_lightCaster()->createDirectionLight(dirEditable.dir, dirEditable.brightness, dirEditable.numCascades);
+					auto handle = renderer->get_lightCaster()->createDirectionLight(dirEditable.dir, dirEditable.brightness, dirEditable.hasShadow ? dirEditable.numCascades : 0);
 					dirHandles.push_back(handle);
 
 					dirEditable.brightness = 1.0f;
 					dirEditable.dir = glm::vec3{-1.0f};
-					dirEditable.numCascades = 0;
+					dirEditable.numCascades = 1;
+					dirEditable.hasShadow = false;
 				}
 				if (toUpdate >= 0)
 				{
@@ -244,7 +254,7 @@ void runRefactored()
 					auto& l = dirLights[toUpdate];
 					renderer->get_lightCaster()->setDirection(h, l.dir);
 					renderer->get_lightCaster()->setBrightness(h, l.brightness);
-					// l.numCascades = renderer->get_lightCaster()->setShadow(h, l.numCascades);
+					l.numCascades = renderer->get_lightCaster()->setShadow(h, l.numCascades) ? l.numCascades : 0;
 				}
 			}
 			toDelete = -1;
@@ -400,7 +410,7 @@ void runRefactored()
 						for (auto& light : lightInfo.lights)
 						{
 							ImGui::PushID(idx);
-							if (ImGui::TreeNode("Light##", "light %d", idx))
+							if (ImGui::TreeNode("Light##POINT", "light %d", idx))
 							{
 								bool edited = light.draw();
 								if (edited)
@@ -408,7 +418,7 @@ void runRefactored()
 									lightInfo.toUpdate = idx;
 									lightInfo.type = ALightCaster::Type::POINT;
 								}
-								if (ImGui::Button("Remove"))
+								if (ImGui::Button("Remove##POINT"))
 								{
 									lightInfo.toDelete = idx;
 									lightInfo.type = ALightCaster::Type::POINT;
@@ -427,7 +437,7 @@ void runRefactored()
 								ImGui::PushID("LightEditable");
 								lightInfo.editable.draw();
 								ImGui::PopID();
-								if (ImGui::Button("Add"))
+								if (ImGui::Button("Add##POINT"))
 								{
 									lightInfo.toAdd = 1;
 									lightInfo.type = ALightCaster::Type::POINT;
@@ -442,7 +452,7 @@ void runRefactored()
 						for (auto& light : lightInfo.dirLights)
 						{
 							ImGui::PushID(idx);
-							if (ImGui::TreeNode("Light##", "light %d", idx))
+							if (ImGui::TreeNode("Light##DIR", "light %d", idx))
 							{
 								bool edited = light.draw();
 								if (edited)
@@ -450,7 +460,7 @@ void runRefactored()
 									lightInfo.toUpdate = idx;
 									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
 								}
-								if (ImGui::Button("Remove"))
+								if (ImGui::Button("Remove##DIR"))
 								{
 									lightInfo.toDelete = idx;
 									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
@@ -467,9 +477,9 @@ void runRefactored()
 							ImGui::TreePush("new dir light");
 							{
 								ImGui::PushID("LightEditable");
-								lightInfo.dirEditable.draw();
+								lightInfo.dirEditable.draw(true);
 								ImGui::PopID();
-								if (ImGui::Button("Add"))
+								if (ImGui::Button("Add##DIR"))
 								{
 									lightInfo.toAdd = 1;
 									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
@@ -477,8 +487,8 @@ void runRefactored()
 							}
 							ImGui::TreePop();
 						}
-						lightInfo.update(renderer.get());
 					}
+					lightInfo.update(renderer.get());
 				}
 				ImGui::End();
 			}

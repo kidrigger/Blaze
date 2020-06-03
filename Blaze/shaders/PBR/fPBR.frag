@@ -4,6 +4,7 @@
 #define MAX_POINT_LIGHTS 16
 #define MAX_DIRECTION_LIGHTS 4
 #define MAX_SHADOWS 16
+#define MAX_CASCADES 4
 
 #define MANUAL_SRGB 1
 
@@ -11,6 +12,8 @@ layout(location = 0) in vec4 V_POSITION;
 layout(location = 1) in vec4 V_NORMAL;
 layout(location = 2, component = 0) in vec2 V_UV0;
 layout(location = 2, component = 2) in vec2 V_UV1;
+layout(location = 3) in vec4 V_VIEWPOS;
+layout(location = 4) in vec4 V_LIGHTCOORD[MAX_DIRECTION_LIGHTS][MAX_CASCADES];
 
 layout(location = 0) out vec4 outColor;
 
@@ -42,6 +45,8 @@ struct PointLightData {
 struct DirLightData {
 	vec3 direction;
 	float brightness;
+	vec4 cascadeSplits;
+	mat4 cascadeViewProj[MAX_CASCADES];
 	int numCascades;
 	int shadowIndex;
 };
@@ -176,6 +181,41 @@ float getPointShadow(int lightIdx, vec3 N) {
 	return ((current_depth - shadow_bias) > closest_depth ? 1.0f: 0.0f);
 }
 
+float getDirectionShadow(int lightIdx, vec3 N) {
+	int shadowIdx = dirLights.data[lightIdx].shadowIndex;
+	if (shadowIdx < 0) {
+		return 0.0f;
+	}
+
+	int cascade = 0;
+	for (int i = 0; i < dirLights.data[lightIdx].numCascades; i++) {
+		if (-V_VIEWPOS.z > dirLights.data[lightIdx].cascadeSplits[i]) {
+			cascade = i+1;
+		}
+	}
+
+	vec4 shadowCoord = V_LIGHTCOORD[shadowIdx][cascade];
+	float shade = 0.0f;
+
+	vec2 texelSize = vec2(1.0f) / textureSize(dirShadows[shadowIdx], 0).xy;
+	for (int i = -1; i <= 1; i++)
+	{
+		for (int j = -1; j <= 1; j++)
+		{
+			if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+			{
+				float dist = texture( dirShadows[shadowIdx], vec3(shadowCoord.st + vec2(i,j) * texelSize, cascade)).r;
+				if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
+				{
+					shade += 1.0f;
+				}
+			}
+		}
+	}
+	shade /= 9.0f;
+	return shade;
+}
+
 void main()
 {
 	// Setup
@@ -281,7 +321,7 @@ void main()
 		vec3 specular	  = numerator / max(denominator, 0.001);
 
 		float NdotL = max(dot(N, L), 0.0f);
-		float shade = 0.0f; //getPointShadow(i, N);
+		float shade = getDirectionShadow(i, N);
 
 		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
@@ -307,10 +347,4 @@ void main()
 
 	vec3 color	 = ambient + L0 + emission;
 	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, 1.0f)));
-	
-//	vec3 dir = V_POSITION.xyz - lights.data[0].position;
-//	dir.x *= -1;
-//	float dist = length(dir);
-//	dir = normalize(dir);
-//	outColor = mix(vec4(vec3(texture(shadows[0], dir).r), 1.0f), outColor, 0.3);
 }

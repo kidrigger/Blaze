@@ -8,18 +8,11 @@ layout(location = 1) in vec3 A_NORMAL;
 layout(location = 2) in vec2 A_UV0;
 layout(location = 3) in vec2 A_UV1;
 
-layout(location = 0) out vec4 O_POSITION;
-
-layout(set = 0, binding = 0) uniform ProjView {
-	mat4 projection;
-	mat4 view[MAX_CASCADES];
-} views;
-
 layout(push_constant) uniform PushConsts {
 	mat4 model;
-	vec3 lightDir;
+	mat4 PV;
 } pcb;
 
 void main() {
-	gl_Position = views.projection * views.view[gl_ViewIndex] * O_POSITION;
+	gl_Position = pcb.PV * pcb.model * vec4(A_POSITION, 1.0f);
 }

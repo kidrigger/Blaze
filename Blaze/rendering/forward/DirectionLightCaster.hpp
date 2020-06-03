@@ -6,6 +6,7 @@
 #include <core/Texture2D.hpp>
 #include <core/UniformBuffer.hpp>
 #include <spirv/PipelineFactory.hpp>
+#include <core/Camera.hpp>
 
 namespace blaze
 {
@@ -24,14 +25,14 @@ namespace blaze
 struct DirectionShadow2
 {
 	Texture2D shadowMap;
-	vkw::Framebuffer framebuffer;
+	vkw::FramebufferVector framebuffer;
 	VkViewport viewport;
 	uint16_t next;
 
 	struct PCB
 	{
-		alignas(16) glm::vec3 position;
-		alignas(4) float radius;
+		alignas(16) glm::vec3 direction;
+		alignas(4) float brightness;
 		alignas(4) float p22;
 		alignas(4) float p32;
 	};
@@ -45,12 +46,14 @@ struct DirectionShadow2
 class DirectionLightCaster
 {
 private:
-	constexpr static uint32_t DIRECTION_MAP_RESOLUTION = 512;
+	constexpr static uint32_t DIRECTION_MAP_RESOLUTION = 1024;
 
 	struct LightData
 	{
 		alignas(16) glm::vec3 direction;
 		alignas(4) float brightness;
+		alignas(16) glm::vec4 cascadeSplits;
+		alignas(16) glm::mat4 cascadeViewProj[MAX_CSM_SPLITS];
 		alignas(4) int numCascades;
 		alignas(4) int shadowIdx;
 	};
@@ -83,7 +86,7 @@ public:
 	DirectionLightCaster(const Context* context, const spirv::SetVector& sets,
 						const spirv::SetSingleton& texSet) noexcept;
 	void recreate(const Context* context, const spirv::SetVector& sets);
-	void update(uint32_t frame);
+	void update(const Camera* camera, uint32_t frame);
 
 	uint16_t createLight(const glm::vec3& direction, float brightness, uint32_t numCascades);
 	void removeLight(uint16_t idx);
@@ -120,5 +123,9 @@ private:
 	spirv::RenderPass createRenderPass(const Context* context);
 	spirv::Shader createShader(const Context* context);
 	spirv::Pipeline createPipeline(const Context* context);
+
+	float centerDist(float n, float f, float cosine) const;
+	glm::vec4 createCascadeSplits(int numSplits, float nearPlane, float farPlane, float lambda = 0.5f) const;
+	void updateLight(const Camera* camera, LightData* light);
 };
 }

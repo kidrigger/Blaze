@@ -3,6 +3,12 @@
 
 #include <util/files.hpp>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #undef min
 #undef max
 
@@ -45,59 +51,114 @@ DirectionLightCaster::DirectionLightCaster(const Context* context, const spirv::
 	freeShadow = 0;
 
 	bindDataSet(context, sets);
-	//bindTextureSet(context, texSet);
-
-	//CubemapUBlock block = {
-	//	glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, 2.0f),
-	//	{
-	//		// POSITIVE_X (Outside in - so NEG_X face)
-	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	//		// NEGATIVE_X (Outside in - so POS_X face)
-	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	//		// POSITIVE_Y
-	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-	//		// NEGATIVE_Y
-	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-	//		// POSITIVE_Z
-	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	//		// NEGATIVE_Z
-	//		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f) + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	//	},
-	//};
-
-	//viewSet = context->get_pipelineFactory()->createSet(*shadowShader.getSetWithUniform("views"));
-	//viewUBO = UBO(context, block);
-	//{
-	//	auto unif = viewSet.getUniform("views");
-	//	VkDescriptorBufferInfo info = viewUBO.get_descriptorInfo();
-
-	//	VkWriteDescriptorSet write = {};
-	//	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	//	write.descriptorType = unif->type;
-	//	write.descriptorCount = unif->arrayLength;
-	//	write.dstSet = viewSet.get();
-	//	write.dstBinding = unif->binding;
-	//	write.dstArrayElement = 0;
-	//	write.pBufferInfo = &info;
-
-	//	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
-	//}
+	bindTextureSet(context, texSet);
 }
 
 void DirectionLightCaster::recreate(const Context* context, const spirv::SetVector& sets)
 {
 	ubos = UBODataVector(context, maxLights * sizeof(LightData), sets.size());
 
-	for (uint32_t i = 0; i < sets.size(); ++i)
-	{
-		update(i);
-	}
-
 	bindDataSet(context, sets);
 }
 
-void DirectionLightCaster::update(uint32_t frame)
+glm::vec4 DirectionLightCaster::createCascadeSplits(int numSplits, float nearPlane, float farPlane, float lambda) const
 {
+	static_assert(MAX_CSM_SPLITS <= 4);
+	glm::vec4 splits(farPlane);
+	// Ref:
+	// https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-10-parallel-split-shadow-maps-programmable-gpus
+	float _m = 1.0f / static_cast<float>(numSplits);
+	for (int i = 1; i < numSplits; i++)
+	{
+		float c_log = nearPlane * pow(farPlane / nearPlane, i * _m);
+		float c_uni = nearPlane + (farPlane - nearPlane) * i * _m;
+
+		splits[i - 1] = (lambda * c_log + (1.0f - lambda) * c_uni);
+	}
+	splits[3] = farPlane;
+
+	return splits;
+}
+
+float DirectionLightCaster::centerDist(float n, float f, float cosine) const
+{
+	// TODO: FIX: Min waste
+	float secTheta = 1.0f / cosine;
+	return 0.5f * (f + n) * secTheta * secTheta;
+}
+
+void DirectionLightCaster::updateLight(const Camera* camera, LightData* light)
+{
+	// TODO: Recheck
+	glm::vec4 frustumCorners[] = {
+		{-1, -1, -1, 1}, // ---
+		{-1, 1, -1, 1},	 // -+-
+		{1, -1, -1, 1},	 // +--
+		{1, 1, -1, 1},	 // ++-
+		{-1, -1, 1, 1},	 // --+
+		{-1, 1, 1, 1},	 // -++
+		{1, -1, 1, 1},	 // +-+
+		{1, 1, 1, 1}	 // +++
+	};
+	glm::mat4 invProj = glm::inverse(camera->get_projection() * camera->get_view());
+
+	for (auto& vert : frustumCorners)
+	{
+		vert = invProj * vert;
+		vert /= vert.w;
+	}
+
+	light->cascadeSplits = createCascadeSplits(light->numCascades, camera->get_nearPlane(), camera->get_farPlane());
+
+	float cosine =
+		glm::dot(glm::normalize(glm::vec3(frustumCorners[4]) - camera->get_position()), camera->get_direction());
+	glm::vec3 cornerRay = glm::normalize(glm::vec3(frustumCorners[4] - frustumCorners[0]));
+	
+	float prevPlane = camera->get_nearPlane();
+	float plane = 0;
+	for (int i = 0; i < light->numCascades; ++i)
+	{
+		plane = light->cascadeSplits[i];
+		float cDist = centerDist(prevPlane, plane, cosine);
+		auto center = camera->get_direction() * cDist + camera->get_position();
+
+		float nearRatio = (prevPlane / camera->get_farPlane());
+		auto corner = cornerRay * nearRatio + camera->get_position();
+
+		float r = glm::distance(center, corner);
+		auto& bz = light->direction;
+
+		// TODO Farplane fixes
+		auto lightOrthoMatrix = glm::ortho(-r, r, -r, r, 0.0f, 4*r);
+		auto lightViewMatrix =
+			glm::lookAt(center - 3.0f * bz * r, center, glm::vec3(0, 1, 0));
+		glm::mat4 shadowMatrix = lightOrthoMatrix * lightViewMatrix;
+		glm::vec4 shadowOrigin = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		shadowOrigin = shadowMatrix * shadowOrigin;
+		shadowOrigin = shadowOrigin * (float)DIRECTION_MAP_RESOLUTION / 2.0f;
+
+		glm::vec4 roundedOrigin = glm::round(shadowOrigin);
+		glm::vec4 roundOffset = roundedOrigin - shadowOrigin;
+		roundOffset = roundOffset * 2.0f / (float)DIRECTION_MAP_RESOLUTION;
+		roundOffset.z = 0.0f;
+		roundOffset.w = 0.0f;
+
+		glm::mat4 shadowProj = lightOrthoMatrix;
+		shadowProj[3] += roundOffset;
+		lightOrthoMatrix = shadowProj;
+
+		light->cascadeViewProj[i] = lightOrthoMatrix * lightViewMatrix;
+
+		prevPlane = plane;
+	}
+}
+
+void DirectionLightCaster::update(const Camera* camera, uint32_t frame)
+{
+	for (auto& light : lights)
+	{
+		updateLight(camera, &light);
+	}
 	ubos[frame].writeData(lights.data(), maxLights * sizeof(LightData));
 }
 
@@ -113,16 +174,17 @@ uint16_t DirectionLightCaster::createLight(const glm::vec3& direction, float bri
 
 	freeLight = -static_cast<int>(pLight->brightness);
 
-	pLight->direction = direction;
+	pLight->direction = glm::normalize(direction);
 	pLight->brightness = brightness;
+	pLight->numCascades = numCascades;
 	pLight->shadowIdx = -1;
 	// TODO Shadow
-	
-	/*if (enableShadow)
+
+	if (numCascades > 0)
 	{
 		pLight->shadowIdx = createShadow();
 		shadows[pLight->shadowIdx].next = idx;
-	}*/
+	}
 
 	count++;
 
@@ -140,16 +202,108 @@ void DirectionLightCaster::removeLight(uint16_t idx)
 	pLight->brightness = -static_cast<float>(freeLight);
 	pLight->direction = glm::vec3(0.0f);
 
-	/*if (pLight->shadowIdx >= 0)
+	if (pLight->shadowIdx >= 0)
 	{
 		assert(shadows[pLight->shadowIdx].next == idx);
 		removeShadow(pLight->shadowIdx);
-	}*/
+	}
 
 	pLight->shadowIdx = -1;
 
 	count--;
 	freeLight = idx;
+}
+
+bool DirectionLightCaster::setShadow(uint16_t idx, bool enableShadow)
+{
+	assert(idx < maxLights);
+
+	LightData* pLight = &lights[idx];
+
+	assert(pLight->brightness > 0);
+
+	if ((pLight->shadowIdx < 0) != enableShadow)
+	{
+		return pLight->shadowIdx >= 0;
+	}
+	else if (enableShadow)
+	{
+		pLight->shadowIdx = createShadow();
+		if (pLight->shadowIdx >= 0)
+		{
+			shadows[pLight->shadowIdx].next = idx;
+			return true;
+		}
+	}
+	else
+	{
+		removeShadow(pLight->shadowIdx);
+		pLight->shadowIdx = -1;
+	}
+	return false;
+}
+
+int DirectionLightCaster::createShadow()
+{
+	if (freeShadow < 0)
+	{
+		return -1;
+	}
+	auto i = freeShadow;
+	freeShadow = shadows[i].next;
+	shadowCount++;
+
+	return i;
+}
+
+void DirectionLightCaster::removeShadow(int idx)
+{
+	shadows[idx].next = freeShadow;
+	freeShadow = idx;
+	shadowCount--;
+}
+
+void DirectionLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
+{
+	for (auto& light : lights)
+	{
+		if (light.shadowIdx < 0)
+			continue;
+		DirectionShadow2* shadow = &shadows[light.shadowIdx];
+
+		for (int i = 0; i < light.numCascades; ++i)
+		{
+			VkRenderPassBeginInfo renderpassBeginInfo = {};
+			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderpassBeginInfo.renderPass = renderPass.get();
+			renderpassBeginInfo.framebuffer = shadow->framebuffer[i];
+			renderpassBeginInfo.renderArea.offset = {0, 0};
+			renderpassBeginInfo.renderArea.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
+
+			std::array<VkClearValue, 1> clearColor;
+			clearColor[0].depthStencil = {1.0f, 0};
+			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+			renderpassBeginInfo.pClearValues = clearColor.data();
+
+			vkCmdBeginRenderPass(cmd, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			VkRect2D scissor;
+			scissor.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
+			scissor.offset = {0, 0};
+
+			shadowPipeline.bind(cmd);
+			vkCmdSetViewport(cmd, 0, 1, &shadow->viewport);
+			vkCmdSetScissor(cmd, 0, 1, &scissor);
+			vkCmdPushConstants(cmd, shadowShader.pipelineLayout.get(), shadowShader.pushConstant.stage,
+							   sizeof(ModelPushConstantBlock), sizeof(glm::mat4), &light.cascadeViewProj[i]);
+			for (Drawable* d : drawables)
+			{
+				d->drawGeometry(cmd, shadowShader.pipelineLayout.get());
+			}
+
+			vkCmdEndRenderPass(cmd);
+		}
+	}
 }
 
 void DirectionLightCaster::bindDataSet(const Context* context, const spirv::SetVector& sets)
@@ -171,6 +325,29 @@ void DirectionLightCaster::bindDataSet(const Context* context, const spirv::SetV
 
 		vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 	}
+}
+
+void DirectionLightCaster::bindTextureSet(const Context* context, const spirv::SetSingleton& set)
+{
+	const spirv::UniformInfo* unif = set.getUniform(textureUniformName);
+
+	std::vector<VkDescriptorImageInfo> infos;
+	infos.reserve(maxShadows);
+	for (auto& shadow : shadows)
+	{
+		infos.push_back(shadow.shadowMap.get_imageInfo());
+	}
+
+	VkWriteDescriptorSet write = {};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.descriptorType = unif->type;
+	write.descriptorCount = unif->arrayLength;
+	write.dstSet = set.get();
+	write.dstBinding = unif->binding;
+	write.dstArrayElement = 0;
+	write.pImageInfo = infos.data();
+
+	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 }
 
 spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
@@ -203,19 +380,7 @@ spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
 	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
 	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::READ;
 
-	uint32_t viewmask = 0b1111;
-
-	VkRenderPassMultiviewCreateInfo multiview = {};
-	multiview.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
-	multiview.pNext = nullptr;
-	multiview.subpassCount = 1;
-	multiview.pViewMasks = &viewmask;
-	multiview.correlationMaskCount = 0;
-	multiview.pCorrelationMasks = nullptr;
-	multiview.dependencyCount = 0;
-	multiview.pViewOffsets = nullptr;
-
-	return context->get_pipelineFactory()->createRenderPass(format, subpass, loadStore, &multiview);
+	return context->get_pipelineFactory()->createRenderPass(format, subpass, loadStore);
 }
 
 spirv::Shader DirectionLightCaster::createShader(const Context* context)
@@ -251,7 +416,7 @@ spirv::Pipeline DirectionLightCaster::createPipeline(const Context* context)
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
@@ -290,20 +455,23 @@ spirv::Pipeline DirectionLightCaster::createPipeline(const Context* context)
 	return context->get_pipelineFactory()->createGraphicsPipeline(shadowShader, renderPass, info);
 }
 
-DirectionShadow2::DirectionShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept
+DirectionShadow2::DirectionShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution,
+								   uint32_t numCascades) noexcept
 {
-	ImageData2D idc{};
-	idc.height = mapResolution;
-	idc.width = mapResolution;
-	idc.numChannels = 1;
-	idc.size = mapResolution * mapResolution;
-	idc.layerCount = numCascades;
-	idc.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	idc.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-	idc.format = VK_FORMAT_D32_SFLOAT;
-	idc.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-	idc.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	shadowMap = Texture2D(context, idc, false);
+	ImageData2D id2d{};
+	id2d.height = mapResolution;
+	id2d.width = mapResolution;
+	id2d.numChannels = 1;
+	id2d.size = mapResolution * mapResolution;
+	id2d.layerCount = numCascades;
+	id2d.anisotropy = VK_FALSE;
+	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	id2d.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	id2d.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	id2d.format = VK_FORMAT_D32_SFLOAT;
+	id2d.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+	id2d.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	shadowMap = Texture2D(context, id2d, false);
 
 	viewport = VkViewport{0.0f,
 						  static_cast<float>(mapResolution),
@@ -312,20 +480,22 @@ DirectionShadow2::DirectionShadow2(const Context* context, VkRenderPass renderPa
 						  0.0f,
 						  1.0f};
 
+	std::vector<VkFramebuffer> fbos;
+	for (int i = 0; i < MAX_CSM_SPLITS; ++i)
 	{
-		std::vector<VkImageView> attachments = {shadowMap.get_allImageViews()};
+		std::vector<VkImageView> attachments = {shadowMap.get_imageView(i)};
 
-		VkFramebuffer fbo = VK_NULL_HANDLE;
+		VkFramebuffer& fbo = fbos.emplace_back<VkFramebuffer>(VK_NULL_HANDLE);
 		VkFramebufferCreateInfo fbCreateInfo = {};
 		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fbCreateInfo.width = mapResolution;
 		fbCreateInfo.height = mapResolution;
-		fbCreateInfo.layers = numCascades;
+		fbCreateInfo.layers = 1;
 		fbCreateInfo.renderPass = renderPass;
 		fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		fbCreateInfo.pAttachments = attachments.data();
 		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		framebuffer = vkw::Framebuffer(fbo, context->get_device());
 	}
+	framebuffer = vkw::FramebufferVector(std::move(fbos), context->get_device());
 }
 } // namespace blaze
