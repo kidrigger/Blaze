@@ -10,7 +10,7 @@
 namespace blaze
 {
 /**
- * @class PointShadow2
+ * @class PointShadow
  *
  * @brief Encapsulates the attachments and framebuffer for a point light shadow.
  *
@@ -21,7 +21,7 @@ namespace blaze
  *
  * @cond PRIVATE
  */
-struct PointShadow2
+struct PointShadow
 {
 	TextureCube shadowMap;
 	vkw::Framebuffer framebuffer;
@@ -36,7 +36,7 @@ struct PointShadow2
 		alignas(4) float p32;
 	};
 
-	PointShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept;
+	PointShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept;
 };
 /**
  * @endcond
@@ -65,19 +65,21 @@ private:
 	constexpr static std::string_view dataUniformName = "lights";
 	constexpr static std::string_view textureUniformName = "shadows";
 
+	constexpr static std::string_view vertShaderFileName = "shaders/forward/vPointShadow.vert.spv";
+	constexpr static std::string_view fragShaderFileName = "shaders/forward/fPointShadow.frag.spv";
+
 	spirv::RenderPass renderPass;
 	spirv::Shader shadowShader;
 	spirv::Pipeline shadowPipeline;
 
 	spirv::SetSingleton viewSet;
 	UBO<CubemapUBlock> viewUBO;
-	spirv::SetVector shadowInfoSet;
 
 	UBODataVector ubos;
 	
 	uint32_t shadowCount;
 	int freeShadow;
-	std::vector<PointShadow2> shadows;
+	std::vector<PointShadow> shadows;
 
 public:
 	PointLightCaster(const Context* context, const spirv::SetVector& sets, const spirv::SetSingleton& texSet) noexcept;

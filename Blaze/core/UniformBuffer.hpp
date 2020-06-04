@@ -18,9 +18,7 @@ namespace blaze
 class BaseUBO
 {
 protected:
-	VkBuffer buffer{VK_NULL_HANDLE};
-	VmaAllocation allocation{VK_NULL_HANDLE};
-	VmaAllocator allocator{VK_NULL_HANDLE};
+	vkw::Buffer buffer;
 	size_t size{0};
 
 public:
@@ -57,9 +55,13 @@ public:
 	/**
 	 * @brief Creates a new VkDescriptorBufferInfo for the UBO
 	 */
-	VkDescriptorBufferInfo get_descriptorInfo() const
+	inline VkDescriptorBufferInfo get_descriptorInfo() const
 	{
-		return VkDescriptorBufferInfo{buffer, 0, size};
+		return VkDescriptorBufferInfo{
+			buffer.handle,
+			0,
+			size,
+		};
 	}
 	/**
 	 * @}
@@ -72,11 +74,6 @@ public:
      * @param size The size of the data to write into the buffer.
      */
 	void writeData(const void* data, size_t size);
-
-    /**
-     * @brief Destructor
-     */
-    virtual ~BaseUBO();
 };
 
 /**

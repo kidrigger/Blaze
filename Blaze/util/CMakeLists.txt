@@ -8,7 +8,6 @@ set( HEADER_FILES
 	"DebugTimer.hpp"
 	"DeviceSelection.hpp"
 	"files.hpp"
-	"Managed.hpp"
 	"processing.hpp"
 	"Environment.hpp")
 

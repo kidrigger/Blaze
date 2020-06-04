@@ -6,7 +6,6 @@
 #include <thirdparty/imgui/imgui_impl_vulkan.h>
 
 #include <core/Context.hpp>
-#include <util/Managed.hpp>
 #include <util/createFunctions.hpp>
 
 #define GLFW_INCLUDE_VULKAN

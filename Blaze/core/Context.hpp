@@ -123,7 +123,7 @@ public:
 	 *
 	 * @returns BufferObject of buffer handle and the allocation.
 	 */
-	BufferObject createBuffer(size_t size, VkBufferUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const;
+	vkw::Buffer createBuffer(size_t size, VkBufferUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const;
 
 	/**
 	 * @brief Creates a 2D image object accourding to the configured flags.
@@ -139,27 +139,8 @@ public:
 	 *
 	 * @returns ImageObject of the image.
 	 */
-	ImageObject createImage(uint32_t width, uint32_t height, uint32_t miplevels, uint32_t layerCount, VkFormat format,
+	vkw::Image createImage(uint32_t width, uint32_t height, uint32_t miplevels, uint32_t layerCount, VkFormat format,
 							VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const;
-
-	/**
-	 * @brief Creates a 2D image object accourding to the configured flags.
-	 *
-	 * @param width The width of the image.
-	 * @param height The height of the image.
-	 * @param miplevels The number of MIP levels in the image.
-	 * @param format The format of the image storage.
-	 * @param tiling The tiling used in the image storage.
-	 * @param vulkanUsage The VkBufferUsageFlags describing the usage.
-	 * @param vmaUsage The VmaMemoryUsage describing where the buffer would be used (GPU, CPU, etc)
-	 *
-	 * @deprecated Since layers were added.
-	 *
-	 * @returns ImageObject of the image.
-	 */
-	[[deprecated]] ImageObject createImage(uint32_t width, uint32_t height, uint32_t miplevels, VkFormat format,
-										   VkImageTiling tiling, VkImageUsageFlags vulkanUsage,
-										   VmaMemoryUsage vmaUsage) const;
 
 	/**
 	 * @fn createImageCube
@@ -176,7 +157,7 @@ public:
 	 *
 	 * @returns ImageObject Contains image, allocation and format information.
 	 */
-	ImageObject createImageCube(uint32_t width, uint32_t height, uint32_t miplevels, VkFormat format,
+	vkw::Image createImageCube(uint32_t width, uint32_t height, uint32_t miplevels, VkFormat format,
 								VkImageTiling tiling, VkImageUsageFlags vulkanUsage, VmaMemoryUsage vmaUsage) const;
 
 	/**

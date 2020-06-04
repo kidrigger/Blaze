@@ -7,7 +7,6 @@
 #include <cstring>
 #include <thirdparty/stbi/stb_image.h>
 #include <util/createFunctions.hpp>
-#include <util/Managed.hpp>
 
 namespace blaze
 {
@@ -42,9 +41,9 @@ struct ImageDataCube
 class TextureCube
 {
 private:
-	util::Managed<ImageObject> image;
-	util::Managed<VkImageView> imageView;
-	util::Managed<VkSampler> imageSampler;
+	vkw::Image image;
+	vkw::ImageView imageView;
+	vkw::Sampler imageSampler;
 	uint32_t width{0};
 	uint32_t height{0};
 	VkFormat format{VK_FORMAT_R8G8B8A8_UNORM};
@@ -118,7 +117,7 @@ public:
 	 */
 	const VkImage& get_image() const
 	{
-		return image.get().image;
+		return image.get();
 	}
 	const VkImageView& get_imageView() const
 	{

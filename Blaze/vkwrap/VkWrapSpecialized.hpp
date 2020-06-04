@@ -137,4 +137,109 @@ struct MemAllocator
 		}
 	}
 };
+
+struct Buffer
+{
+	VkBuffer handle{VK_NULL_HANDLE};
+	VmaAllocation allocation{VK_NULL_HANDLE};
+	VmaAllocator allocator{VK_NULL_HANDLE};
+
+	Buffer() noexcept
+	{
+	}
+
+	explicit Buffer(VkBuffer buffer, VmaAllocation allocation, VmaAllocator allocator) noexcept
+		: handle(buffer), allocation(allocation), allocator(allocator)
+	{
+	}
+
+	Buffer(const Buffer& other) = delete;
+	Buffer& operator=(const Buffer& other) = delete;
+	Buffer(Buffer&& other) noexcept : Buffer(base::take(other.handle), base::take(other.allocation), base::take(other.allocator))
+	{
+	}
+
+	Buffer& operator=(Buffer&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+		std::swap(handle, other.handle);
+		std::swap(allocation, other.allocation);
+		std::swap(allocator, other.allocator);
+		return *this;
+	}
+
+	const VkBuffer& get() const
+	{
+		return handle;
+	}
+
+	inline bool valid() const
+	{
+		return handle != VK_NULL_HANDLE;
+	}
+
+	~Buffer()
+	{
+		if (valid())
+		{
+			vmaDestroyBuffer(base::take(allocator), base::take(handle), base::take(allocation));
+		}
+	}
+};
+
+struct Image
+{
+	VkImage handle{VK_NULL_HANDLE};
+	VmaAllocation allocation{VK_NULL_HANDLE};
+	VmaAllocator allocator{VK_NULL_HANDLE};
+
+	Image() noexcept
+	{
+	}
+
+	explicit Image(VkImage image, VmaAllocation allocation, VmaAllocator allocator) noexcept
+		: handle(image), allocation(allocation), allocator(allocator)
+	{
+	}
+
+	Image(const Image& other) = delete;
+	Image& operator=(const Image& other) = delete;
+	Image(Image&& other) noexcept
+		: Image(base::take(other.handle), base::take(other.allocation), base::take(other.allocator))
+	{
+	}
+
+	Image& operator=(Image&& other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+		std::swap(handle, other.handle);
+		std::swap(allocation, other.allocation);
+		std::swap(allocator, other.allocator);
+		return *this;
+	}
+
+	const VkImage& get() const
+	{
+		return handle;
+	}
+
+	inline bool valid() const
+	{
+		return handle != VK_NULL_HANDLE;
+	}
+
+	~Image()
+	{
+		if (valid())
+		{
+			vmaDestroyImage(base::take(allocator), base::take(handle), base::take(allocation));
+		}
+	}
+};
 }

@@ -212,7 +212,7 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 	{
 		if (light.shadowIdx < 0)
 			continue;
-		PointShadow2* shadow = &shadows[light.shadowIdx];
+		PointShadow* shadow = &shadows[light.shadowIdx];
 
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -232,7 +232,7 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 		float p22 = light.radius / denom;
 		float p32 = (0.3f * light.radius) / denom;
 
-		PointShadow2::PCB pcb = {
+		PointShadow::PCB pcb = {
 			light.position,
 			light.radius,
 			p22,
@@ -249,7 +249,7 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowShader.pipelineLayout.get(), viewSet.setIdx,
 								1, &viewSet.get(), 0, nullptr);
 		vkCmdPushConstants(cmd, shadowShader.pipelineLayout.get(), shadowShader.pushConstant.stage,
-						   sizeof(ModelPushConstantBlock), sizeof(PointShadow2::PCB), &pcb);
+						   sizeof(ModelPushConstantBlock), sizeof(PointShadow::PCB), &pcb);
 		for (Drawable* d : drawables)
 		{
 			d->drawGeometry(cmd, shadowShader.pipelineLayout.get());
@@ -353,11 +353,11 @@ spirv::Shader PointLightCaster::createShader(const Context* context)
 
 	spirv::ShaderStageData* stage;
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/vPointShadow.vert.spv");
+	stage->spirv = util::loadBinaryFile(vertShaderFileName);
 	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
 
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/fPointShadow.frag.spv");
+	stage->spirv = util::loadBinaryFile(fragShaderFileName);
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	return context->get_pipelineFactory()->createShader(stages);
@@ -420,7 +420,7 @@ spirv::Pipeline PointLightCaster::createPipeline(const Context* context)
 }
 
 // Point Shadow 2
-PointShadow2::PointShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept
+PointShadow::PointShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept
 {
 	ImageDataCube idc{};
 	idc.height = mapResolution;

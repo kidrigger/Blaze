@@ -24,6 +24,12 @@ namespace blaze
 class FwdRenderer final : public ARenderer
 {
 private:
+	constexpr static std::string_view vertShaderFileName = "shaders/forward/vPBR.vert.spv";
+	constexpr static std::string_view fragShaderFileName = "shaders/forward/fPBR.frag.spv";
+
+	constexpr static std::string_view vertSkyboxShaderFileName = "shaders/forward/vSkybox.vert.spv";
+	constexpr static std::string_view fragSkyboxShaderFileName = "shaders/forward/fSkybox.frag.spv";
+
 	struct SettingsUBlock
 	{
 		alignas(4) float exposure;
@@ -35,7 +41,7 @@ private:
 		1,
 	};
 
-	using CameraUBOV = UBOVector<CameraUBlock>;
+	using CameraUBOV = UBOVector<Camera::UBlock>;
 	using SettingsUBOV = UBOVector<SettingsUBlock>;
 
 	Texture2D depthBuffer;
@@ -91,7 +97,7 @@ public:
 	 */
 
 	// Inherited via ARenderer
-	virtual const spirv::Shader& get_shader() const override;
+	virtual const spirv::Shader* get_shader() const override;
 	virtual FwdLightCaster* get_lightCaster() override;
 	virtual void setEnvironment(const Bindable* env) override;
 	virtual void drawSettings() override;

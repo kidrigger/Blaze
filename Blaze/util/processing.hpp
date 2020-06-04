@@ -89,13 +89,13 @@ public:
 		auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
 		const uint32_t dim = info.cube_side;
 
-		util::Managed<VkPipelineLayout> irPipelineLayout;
-		util::Managed<VkPipeline> irPipeline;
-		util::Managed<VkRenderPass> irRenderPass;
-		util::Managed<VkFramebuffer> irFramebuffer;
-		util::Managed<VkDescriptorSetLayout> views;
-		util::Managed<VkDescriptorPool> descriptorPool;
-		util::Managed<VkDescriptorSet> descriptorSet;
+		vkw::PipelineLayout irPipelineLayout;
+		vkw::Pipeline irPipeline;
+		vkw::RenderPass irRenderPass;
+		vkw::Framebuffer irFramebuffer;
+		vkw::DescriptorSetLayout views;
+		vkw::DescriptorPool descriptorPool;
+		vkw::DescriptorSet descriptorSet;
 
 		VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 
@@ -119,17 +119,12 @@ public:
 
 		{
 			std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}};
-			descriptorPool = util::Managed(util::createDescriptorPool(context->get_device(), poolSizes, 1),
-										   [dev = context->get_device()](VkDescriptorPool& descPool) {
-											   vkDestroyDescriptorPool(dev, descPool, nullptr);
-										   });
+			descriptorPool = vkw::DescriptorPool(util::createDescriptorPool(context->get_device(), poolSizes, 1),
+												 context->get_device());
 			std::vector<VkDescriptorSetLayoutBinding> bindings = {
 				{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr}};
 
-			views = util::Managed(util::createDescriptorSetLayout(context->get_device(), bindings),
-								  [dev = context->get_device()](VkDescriptorSetLayout& lay) {
-									  vkDestroyDescriptorSetLayout(dev, lay, nullptr);
-								  });
+			views = vkw::DescriptorSetLayout(util::createDescriptorSetLayout(context->get_device(), bindings), context->get_device());
 		}
 
 		{
@@ -151,21 +146,19 @@ public:
 					pushConstantRanges.push_back(pushConstantRange);
 				}
 			}
-			irPipelineLayout = util::Managed(
+			irPipelineLayout = vkw::PipelineLayout(
 				util::createPipelineLayout(context->get_device(), descriptorSetLayouts, pushConstantRanges),
-				[dev = context->get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+				context->get_device());
 		}
 
-		irRenderPass = util::Managed(
-			util::createRenderPassMultiView(context->get_device(), 0b00111111, format),
-			[dev = context->get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+		irRenderPass = vkw::RenderPass(util::createRenderPassMultiView(context->get_device(), 0b00111111, format),
+									   context->get_device());
 
 		{
 			auto tPipeline = util::createGraphicsPipeline(context->get_device(), irPipelineLayout.get(),
 														  irRenderPass.get(), {dim, dim}, info.vert_shader,
 														  info.frag_shader, {}, VK_CULL_MODE_FRONT_BIT);
-			irPipeline = util::Managed(
-				tPipeline, [dev = context->get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
+			irPipeline = vkw::Pipeline(tPipeline, context->get_device());
 		}
 
 		{
@@ -179,8 +172,7 @@ public:
 			fbCreateInfo.attachmentCount = 1;
 			fbCreateInfo.pAttachments = &irradianceMap.get_imageView();
 			vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-			irFramebuffer = util::Managed(
-				fbo, [dev = context->get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+			irFramebuffer = vkw::Framebuffer(fbo, context->get_device());
 		}
 
 		auto cube = getUVCube(context);
@@ -209,7 +201,7 @@ public:
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 			allocInfo.descriptorPool = descriptorPool.get();
 			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = views.data();
+			allocInfo.pSetLayouts = &views.get();
 
 			VkDescriptorSet dSet;
 			auto result = vkAllocateDescriptorSets(context->get_device(), &allocInfo, &dSet);
@@ -217,8 +209,7 @@ public:
 			{
 				throw std::runtime_error("Descriptor Set allocation failed with " + std::to_string(result));
 			}
-			descriptorSet = util::Managed(dSet, [dev = context->get_device(), pool = descriptorPool.get()](
-													VkDescriptorSet& ds) { vkFreeDescriptorSets(dev, pool, 1, &ds); });
+			descriptorSet = vkw::DescriptorSet(dSet);
 
 			VkDescriptorBufferInfo info = ubo.get_descriptorInfo();
 
@@ -259,7 +250,7 @@ public:
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 0, 1,
 									&info.descriptor, 0, nullptr);
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 1, 1,
-									descriptorSet.data(), 0, nullptr);
+									&descriptorSet.get(), 0, nullptr);
 
 			pcb.mvp = glm::mat4(1.0f);
 			vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0,

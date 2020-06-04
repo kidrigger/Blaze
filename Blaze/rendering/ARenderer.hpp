@@ -12,7 +12,6 @@
 #include <core/Swapchain.hpp>
 #include <gui/GUI.hpp>
 #include <spirv/PipelineFactory.hpp>
-#include <util/Managed.hpp>
 #include <util/PackedHandler.hpp>
 #include <vkwrap/VkWrap.hpp>
 
@@ -76,7 +75,7 @@ public:
     /**
      * @brief Returns the currently used primary shader.
      */
-	virtual const spirv::Shader& get_shader() const = 0;
+	virtual const spirv::Shader* get_shader() const = 0;
 
 	/**
 	 * @brief Manages all settings for the renderer

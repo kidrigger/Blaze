@@ -11,7 +11,7 @@
 namespace blaze
 {
 /**
- * @class DirectionShadow2
+ * @class DirectionShadow
  *
  * @brief Encapsulates the attachments and framebuffer for a point light shadow.
  *
@@ -22,7 +22,7 @@ namespace blaze
  *
  * @cond PRIVATE
  */
-struct DirectionShadow2
+struct DirectionShadow
 {
 	Texture2D shadowMap;
 	vkw::FramebufferVector framebuffer;
@@ -37,7 +37,7 @@ struct DirectionShadow2
 		alignas(4) float p32;
 	};
 
-	DirectionShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept;
+	DirectionShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept;
 };
 /**
  * @endcond
@@ -67,20 +67,19 @@ private:
 
 	constexpr static std::string_view dataUniformName = "dirLights";
 	constexpr static std::string_view textureUniformName = "dirShadows";
+	
+	constexpr static std::string_view vertShaderFileName = "shaders/forward/vDirectionShadow.vert.spv";
+	constexpr static std::string_view fragShaderFileName = "shaders/forward/fDirectionShadow.frag.spv";
 
 	spirv::RenderPass renderPass;
 	spirv::Shader shadowShader;
 	spirv::Pipeline shadowPipeline;
 
-	spirv::SetSingleton viewSet;
-	UBO<CubemapUBlock> viewUBO;
-	spirv::SetVector shadowInfoSet;
-
 	UBODataVector ubos;
 
 	uint32_t shadowCount;
 	int freeShadow;
-	std::vector<DirectionShadow2> shadows;
+	std::vector<DirectionShadow> shadows;
 
 public:
 	DirectionLightCaster(const Context* context, const spirv::SetVector& sets,

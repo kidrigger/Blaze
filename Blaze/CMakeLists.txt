@@ -8,7 +8,7 @@ find_package( Vulkan REQUIRED )
 configure_file("Version.src" "Version.hpp")
 
 set( SOURCE_FILES
-        "Source.cpp"
+        "Blaze.cpp"
         "Primitives.cpp")
 
 set( HEADER_FILES
@@ -19,7 +19,7 @@ include_directories( "." )
 include_directories( "${CMAKE_CURRENT_BINARY_DIR}" )
 
 # Add source to this project's executable.
-add_executable( Blaze "Blaze.hpp" "Blaze.cpp" ${SOURCE_FILES} ${HEADER_FILES} )
+add_executable( Blaze "Source.cpp" "Blaze.hpp"  ${SOURCE_FILES} ${HEADER_FILES} )
 set_property( TARGET Blaze PROPERTY CXX_STANDARD 17 )
 
 add_subdirectory( "core" )

@@ -7,7 +7,6 @@
 #include <cstring>
 #include <thirdparty/stbi/stb_image.h>
 #include <util/createFunctions.hpp>
-#include <util/Managed.hpp>
 
 namespace blaze
 {
@@ -72,10 +71,10 @@ struct ImageData2D
 class Texture2D
 {
 private:
-	util::Managed<ImageObject> image;
-	util::Managed<VkImageView> allViews;
-	util::ManagedVector<VkImageView> imageViews;
-	util::Managed<VkSampler> imageSampler;
+	vkw::Image image;
+	vkw::ImageView allViews;
+	vkw::ImageViewVector imageViews;
+	vkw::Sampler imageSampler;
 	uint32_t width{0};
 	uint32_t height{0};
 	VkFormat format{VK_FORMAT_R8G8B8A8_UNORM};
@@ -152,7 +151,7 @@ public:
 	 */
 	const VkImage& get_image() const
 	{
-		return image.get().image;
+		return image.get();
 	}
 	const VkImageView& get_allImageViews() const
 	{
@@ -160,7 +159,7 @@ public:
 	}
 	const VkImageView& get_imageView(uint32_t index = 0) const
 	{
-		return imageViews.get(index);
+		return imageViews[index];
 	}
 	const VkSampler& get_imageSampler() const
 	{

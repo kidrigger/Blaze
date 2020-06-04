@@ -42,9 +42,8 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 
 	if (!image_data.data)
 	{
-		image = Managed(
-			context->createImage(width, height, miplevels, layerCount, format, tiling, usage, VMA_MEMORY_USAGE_GPU_ONLY),
-			[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+		image = context->createImage(width, height, miplevels, layerCount, format, tiling, usage,
+									 VMA_MEMORY_USAGE_GPU_ONLY);
 
 		VkCommandBuffer commandBuffer = context->startCommandBufferRecord();
 
@@ -58,7 +57,7 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		barrier.image = image.get().image;
+		barrier.image = image.get();
 		barrier.subresourceRange.aspectMask = aspect;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = miplevels;
@@ -70,10 +69,11 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		context->flushCommandBuffer(commandBuffer);
 
-		allViews = Managed(createImageView(context->get_device(), get_image(),
+		allViews =
+			vkw::ImageView(createImageView(context->get_device(), get_image(),
 										   (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D),
 										   format, aspect, miplevels, layerCount),
-						   [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+						   context->get_device());
 		std::vector<VkImageView> views(layerCount);
 		uint32_t index = 0;
 		for (auto& view : views)
@@ -82,11 +82,10 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 								   1, index);
 			index++;
 		}
-		imageViews = ManagedVector(
-			views, [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+		imageViews = vkw::ImageViewVector(std::move(views), context->get_device());
 		imageSampler =
-			Managed(createSampler(context->get_device(), miplevels, image_data.samplerAddressMode, anisotropy),
-					[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			vkw::Sampler(createSampler(context->get_device(), miplevels, image_data.samplerAddressMode, anisotropy),
+						 context->get_device());
 
 		imageInfo.imageView = allViews.get();
 		imageInfo.sampler = imageSampler.get();
@@ -96,21 +95,15 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 		return;
 	}
 
-	auto [stagingBuffer, stagingAlloc] =
-		context->createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-	auto stagingBufferRAII = Managed<BufferObject>({stagingBuffer, stagingAlloc}, [allocator](BufferObject& bo) {
-		vmaDestroyBuffer(allocator, bo.buffer, bo.allocation);
-	});
+	auto stagingBuffer = context->createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	void* bufferdata;
-	vmaMapMemory(allocator, stagingAlloc, &bufferdata);
+	vmaMapMemory(allocator, stagingBuffer.allocation, &bufferdata);
 	memcpy(bufferdata, image_data.data, image_data.size);
-	vmaUnmapMemory(allocator, stagingAlloc);
+	vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
-	image = Managed(context->createImage(width, height, miplevels, layerCount, format, VK_IMAGE_TILING_OPTIMAL, usage,
-										VMA_MEMORY_USAGE_GPU_ONLY),
-					[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+	image = context->createImage(width, height, miplevels, layerCount, format, VK_IMAGE_TILING_OPTIMAL, usage,
+								 VMA_MEMORY_USAGE_GPU_ONLY);
 
 	try
 	{
@@ -126,7 +119,7 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		barrier.image = image.get().image;
+		barrier.image = image.get();
 		barrier.subresourceRange.aspectMask = aspect;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = miplevels;
@@ -149,7 +142,7 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 		region.imageOffset = {0, 0};
 		region.imageExtent = {width, height, 1};
 
-		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+		vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.handle, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
 							   &region);
 
 		barrier.oldLayout = barrier.newLayout;
@@ -189,7 +182,7 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 			blit.dstSubresource.baseArrayLayer = 0;
 			blit.dstSubresource.layerCount = layerCount;
 
-			vkCmdBlitImage(commandBuffer, image.get().image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.get().image,
+			vkCmdBlitImage(commandBuffer, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.get(),
 						   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
 			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -220,10 +213,10 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 		std::cerr << e.what() << std::endl;
 	}
 
-	allViews = Managed(createImageView(context->get_device(), get_image(),
-									   (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D), format,
-									   aspect, miplevels, layerCount),
-					   [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+	allViews = vkw::ImageView(createImageView(context->get_device(), get_image(),
+											  (layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D),
+											  format, aspect, miplevels, layerCount),
+							  context->get_device());
 	std::vector<VkImageView> views(layerCount);
 	uint32_t index = 0;
 	for (auto& view : views)
@@ -232,11 +225,10 @@ Texture2D::Texture2D(const Context* context, const ImageData2D& image_data, bool
 							   index);
 		index++;
 	}
-	imageViews =
-		ManagedVector(views, [dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+	imageViews = vkw::ImageViewVector(std::move(views), context->get_device());
 	imageSampler =
-		Managed(createSampler(context->get_device(), miplevels, image_data.samplerAddressMode, anisotropy),
-				[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+		vkw::Sampler(createSampler(context->get_device(), miplevels, image_data.samplerAddressMode, anisotropy),
+					 context->get_device());
 
 	imageInfo.imageView = allViews.get();
 	imageInfo.sampler = imageSampler.get();
@@ -292,7 +284,7 @@ void Texture2D::transferLayout(VkCommandBuffer cmdbuffer, VkImageLayout newImage
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-	barrier.image = image.get().image;
+	barrier.image = image.get();
 	barrier.subresourceRange.aspectMask = aspect;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = miplevels;

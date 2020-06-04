@@ -15,7 +15,7 @@ TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout e
 	} pcb = {};
 
 	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/vIrradianceMultiview.vert.spv", "shaders/fIrradiance.frag.spv", environment, envLayout, 64u, pcb,
+		"shaders/env/vIrradiance.vert.spv", "shaders/env/fIrradiance.frag.spv", environment, envLayout, 64u, pcb,
 	};
 
 	return util::Process<PCB>::convertDescriptorToCubemap(context, info);
@@ -30,17 +30,18 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 	};
 
 	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/vIrradiance.vert.spv", "shaders/fPrefilter.frag.spv", environment, envLayout, 128u, {0, 0},
+		"shaders/env/vPrefilter.vert.spv", "shaders/env/fPrefilter.frag.spv", environment, envLayout, 128u, {0, 0},
 	};
 	auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
 
 	const uint32_t dim = info.cube_side;
 
-	util::Managed<VkPipelineLayout> irPipelineLayout;
-	util::Managed<VkPipeline> irPipeline;
-	util::Managed<VkRenderPass> irRenderPass;
-	util::Managed<VkFramebuffer> irFramebuffer;
+	vkw::PipelineLayout irPipelineLayout;
+	vkw::Pipeline irPipeline;
+	vkw::RenderPass irRenderPass;
+	vkw::Framebuffer irFramebuffer;
 
+	VkDevice device = context->get_device();
 	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 	// Setup the TextureCube
@@ -87,14 +88,11 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 			pushConstantRanges.push_back(pushConstantRange);
 		}
 
-		irPipelineLayout = util::Managed(
-			util::createPipelineLayout(context->get_device(), descriptorSetLayouts, pushConstantRanges),
-			[dev = context->get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+		irPipelineLayout = vkw::PipelineLayout(
+			util::createPipelineLayout(context->get_device(), descriptorSetLayouts, pushConstantRanges), device);
 	}
 
-	irRenderPass =
-		util::Managed(util::createRenderPass(context->get_device(), format),
-					  [dev = context->get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+	irRenderPass = vkw::RenderPass(util::createRenderPass(context->get_device(), format), device);
 
 	{
 		std::vector<VkDynamicState> dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT};
@@ -102,8 +100,7 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 		VkPipeline tPipeline = util::createGraphicsPipeline(
 			context->get_device(), irPipelineLayout.get(), irRenderPass.get(), {dim, dim}, info.vert_shader,
 			info.frag_shader, dynamicStateEnables, VK_CULL_MODE_FRONT_BIT);
-		irPipeline = util::Managed(
-			tPipeline, [dev = context->get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
+		irPipeline = vkw::Pipeline(tPipeline, device);
 	}
 
 	{
@@ -117,8 +114,7 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 		fbCreateInfo.attachmentCount = 1;
 		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
 		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		irFramebuffer = util::Managed(
-			fbo, [dev = context->get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+		irFramebuffer = vkw::Framebuffer(fbo, device);
 	}
 
 	auto cube = getUVCube(context);
@@ -238,10 +234,12 @@ Texture2D createBrdfLut(const Context* context)
 {
 	const uint32_t dim = 512;
 
-	util::Managed<VkPipelineLayout> irPipelineLayout;
-	util::Managed<VkPipeline> irPipeline;
-	util::Managed<VkRenderPass> irRenderPass;
-	util::Managed<VkFramebuffer> irFramebuffer;
+	vkw::PipelineLayout irPipelineLayout;
+	vkw::Pipeline irPipeline;
+	vkw::RenderPass irRenderPass;
+	vkw::Framebuffer irFramebuffer;
+
+	VkDevice device = context->get_device();
 
 	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	auto timer = AutoTimer("Process fBrdfLut.frag.spv took (us)");
@@ -274,22 +272,19 @@ Texture2D createBrdfLut(const Context* context)
 		pcr.size = sizeof(CubePushConstantBlock);
 		pcr.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		irPipelineLayout = util::Managed(
+		irPipelineLayout = vkw::PipelineLayout(
 			util::createPipelineLayout(context->get_device(), std::vector<VkDescriptorSetLayout>(),
-									   std::vector<VkPushConstantRange>{pcr}),
-			[dev = context->get_device()](VkPipelineLayout& lay) { vkDestroyPipelineLayout(dev, lay, nullptr); });
+														   std::vector<VkPushConstantRange>{pcr}),
+								device);
 	}
 
-	irRenderPass =
-		util::Managed(util::createRenderPass(context->get_device(), format),
-					  [dev = context->get_device()](VkRenderPass& pass) { vkDestroyRenderPass(dev, pass, nullptr); });
+	irRenderPass = vkw::RenderPass(util::createRenderPass(context->get_device(), format), device);
 
 	{
 		auto tPipeline = util::createGraphicsPipeline(context->get_device(), irPipelineLayout.get(), irRenderPass.get(),
-													  {dim, dim}, "shaders/vBrdfLut.vert.spv",
-													  "shaders/fBrdfLut.frag.spv", {}, VK_CULL_MODE_FRONT_BIT);
-		irPipeline = util::Managed(
-			tPipeline, [dev = context->get_device()](VkPipeline& pipe) { vkDestroyPipeline(dev, pipe, nullptr); });
+													  {dim, dim}, "shaders/env/vBrdfLut.vert.spv",
+													  "shaders/env/fBrdfLut.frag.spv", {}, VK_CULL_MODE_FRONT_BIT);
+		irPipeline = vkw::Pipeline(tPipeline, device);
 	}
 
 	{
@@ -303,8 +298,7 @@ Texture2D createBrdfLut(const Context* context)
 		fbCreateInfo.attachmentCount = 1;
 		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
 		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		irFramebuffer = util::Managed(
-			fbo, [dev = context->get_device()](VkFramebuffer& fbo) { vkDestroyFramebuffer(dev, fbo, nullptr); });
+		irFramebuffer = vkw::Framebuffer(fbo, device);
 	}
 
 	auto rect = getUVRect(context);
@@ -376,18 +370,18 @@ Texture2D createBrdfLut(const Context* context)
 
 Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
 {
-	auto found = renderer->get_shader().uniformLocations.find("skybox");
-	assert(found != renderer->get_shader().uniformLocations.end());
+	auto found = renderer->get_shader()->uniformLocations.find("skybox");
+	assert(found != renderer->get_shader()->uniformLocations.end());
 
 	auto [setIdx, skyboxIdx] = found->second;
-	set = renderer->get_pipelineFactory()->createSet(renderer->get_shader().sets[setIdx]);
-	auto lay = renderer->get_shader().sets[setIdx].layout.get();
+	set = renderer->get_pipelineFactory()->createSet(renderer->get_shader()->sets[setIdx]);
+	auto lay = renderer->get_shader()->sets[setIdx].layout.get();
 
 	const spirv::UniformInfo* skyboxInfo = nullptr;
 	const spirv::UniformInfo* irradianceInfo = nullptr;
 	const spirv::UniformInfo* prefilteredInfo = nullptr;
 	const spirv::UniformInfo* brdfLutInfo = nullptr;
-	for (auto& uniform : renderer->get_shader().sets[setIdx].uniforms)
+	for (auto& uniform : renderer->get_shader()->sets[setIdx].uniforms)
 	{
 		if (uniform.name == "skybox")
 		{

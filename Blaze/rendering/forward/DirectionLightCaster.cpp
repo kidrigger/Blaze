@@ -271,7 +271,7 @@ void DirectionLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*
 	{
 		if (light.shadowIdx < 0)
 			continue;
-		DirectionShadow2* shadow = &shadows[light.shadowIdx];
+		DirectionShadow* shadow = &shadows[light.shadowIdx];
 
 		for (int i = 0; i < light.numCascades; ++i)
 		{
@@ -391,11 +391,11 @@ spirv::Shader DirectionLightCaster::createShader(const Context* context)
 
 	spirv::ShaderStageData* stage;
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/vDirectionShadow.vert.spv");
+	stage->spirv = util::loadBinaryFile(vertShaderFileName);
 	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
 
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/fDirectionShadow.frag.spv");
+	stage->spirv = util::loadBinaryFile(fragShaderFileName);
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	return context->get_pipelineFactory()->createShader(stages);
@@ -457,7 +457,7 @@ spirv::Pipeline DirectionLightCaster::createPipeline(const Context* context)
 	return context->get_pipelineFactory()->createGraphicsPipeline(shadowShader, renderPass, info);
 }
 
-DirectionShadow2::DirectionShadow2(const Context* context, VkRenderPass renderPass, uint32_t mapResolution,
+DirectionShadow::DirectionShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution,
 								   uint32_t numCascades) noexcept
 {
 	ImageData2D id2d{};

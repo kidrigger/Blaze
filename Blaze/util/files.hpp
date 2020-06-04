@@ -21,7 +21,7 @@ namespace blaze::util
  * @returns true If file exists.
  * @returns false Otherwise.
  */
-bool fileExists(const std::string& filename);
+bool fileExists(const std::string_view& filename);
 
 /**
  * @fn loadBinaryFile(const std::string& filename)
@@ -32,5 +32,5 @@ bool fileExists(const std::string& filename);
  *
  * @returns The binary data loaded from the file as \a vector<char>
  */
-std::vector<uint32_t> loadBinaryFile(const std::string& filename);
+std::vector<uint32_t> loadBinaryFile(const std::string_view& filename);
 } // namespace blaze::util

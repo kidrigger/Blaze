@@ -3,7 +3,6 @@
 
 #include <Datatypes.hpp>
 #include <core/Context.hpp>
-#include <util/Managed.hpp>
 
 #include <cstring>
 #include <stdexcept>
@@ -30,9 +29,7 @@ namespace blaze
 class BaseVBO
 {
 protected:
-	VkBuffer buffer{VK_NULL_HANDLE};
-	VmaAllocation allocation{VK_NULL_HANDLE};
-	VmaAllocator allocator{VK_NULL_HANDLE};
+	vkw::Buffer buffer;
 	uint32_t count{0};
 	size_t size{0};
 
@@ -55,15 +52,13 @@ public:
 
 	inline const VkBuffer& get_buffer() const
 	{
-		return buffer;
+		return buffer.get();
 	}
 
 	inline const uint32_t& get_count() const
 	{
 		return count;
 	}
-
-	virtual ~BaseVBO();
 };
 
 /**
@@ -100,7 +95,7 @@ public:
 	inline void bind(VkCommandBuffer buf) const
 	{
 		const static VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(buf, 0, 1, &buffer, &offset);
+		vkCmdBindVertexBuffers(buf, 0, 1, &buffer.handle, &offset);
 	}
 };
 
@@ -147,7 +142,7 @@ public:
 	 */
 	inline void bind(VkCommandBuffer buf)
 	{
-		vkCmdBindIndexBuffer(buf, buffer, 0, indexType);
+		vkCmdBindIndexBuffer(buf, buffer.handle, 0, indexType);
 	}
 };
 

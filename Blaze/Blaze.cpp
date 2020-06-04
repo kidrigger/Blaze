@@ -71,7 +71,7 @@ void glfwErrorCallback(int error, const char* desc)
 	std::cerr << "GLFW_ERROR: " << desc << std::endl;
 }
 
-void runRefactored()
+void run()
 {
 	// Usings
 	using namespace std;
@@ -278,7 +278,7 @@ void runRefactored()
 	std::map<int, std::shared_ptr<Model>> modelHolder;
 
 	auto mod = modelHolder[holderKey++] =
-		modelLoader->loadModel(renderer->get_context(), &renderer->get_shader(), sceneInfo.modelIndex);
+		modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), sceneInfo.modelIndex);
 	auto handle = renderer->submit(mod.get());
 
 	// Run
@@ -357,7 +357,7 @@ void runRefactored()
 									sceneInfo.modelName = label;
 									handle.destroy();
 									auto mod = modelHolder[holderKey++] =
-										modelLoader->loadModel(renderer->get_context(), &renderer->get_shader(),
+										modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
 															   sceneInfo.modelIndex); // TODO
 									handle = renderer->submit(mod.get());
 									renderer->waitIdle();

@@ -87,18 +87,13 @@ namespace blaze
 	poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSize.descriptorCount = 1;
 	std::vector<VkDescriptorPoolSize> poolSizes = {poolSize};
-	util::Managed<VkDescriptorPool> dsPool = util::Managed(
-		util::createDescriptorPool(context->get_device(), poolSizes, 2),
-		[dev = context->get_device()](VkDescriptorPool& pool) { vkDestroyDescriptorPool(dev, pool, nullptr); });
-	util::Managed<VkDescriptorSetLayout> dsLayout;
-	{
-		std::vector<VkDescriptorSetLayoutBinding> cubemapLayoutBindings = {
-			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}};
-		dsLayout = util::Managed(util::createDescriptorSetLayout(context->get_device(), cubemapLayoutBindings),
-								 [dev = context->get_device()](VkDescriptorSetLayout& dsl) {
-									 vkDestroyDescriptorSetLayout(dev, dsl, nullptr);
-								 });
-	}
+	auto dsPool =
+		vkw::DescriptorPool(util::createDescriptorPool(context->get_device(), poolSizes, 2), context->get_device());
+
+	std::vector<VkDescriptorSetLayoutBinding> cubemapLayoutBindings = {
+		{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}};
+	auto dsLayout = vkw::DescriptorSetLayout(
+		util::createDescriptorSetLayout(context->get_device(), cubemapLayoutBindings), context->get_device());
 
 	auto createDescriptorSet = [device = context->get_device()](VkDescriptorSetLayout layout, VkDescriptorPool pool,
 															   const Texture2D& texture, uint32_t binding) {
@@ -134,14 +129,10 @@ namespace blaze
 		return descriptorSet;
 	};
 
-	util::Managed<VkDescriptorSet> ds =
-		util::Managed(createDescriptorSet(dsLayout.get(), dsPool.get(), equirect, 1),
-					  [dev = context->get_device(), pool = dsPool.get()](VkDescriptorSet& dset) {
-						  vkFreeDescriptorSets(dev, pool, 1, &dset);
-					  });
+	auto ds = vkw::DescriptorSet(createDescriptorSet(dsLayout.get(), dsPool.get(), equirect, 1));
 
-	util::Texture2CubemapInfo<util::Ignore> convertInfo{"shaders/vIrradianceMultiview.vert.spv",
-														"shaders/fEqvrect2Cube.frag.spv", ds.get(), dsLayout.get(),
+	util::Texture2CubemapInfo<util::Ignore> convertInfo{"shaders/env/vEqvrect2Cube.vert.spv",
+														"shaders/env/fEqvrect2Cube.frag.spv", ds.get(), dsLayout.get(),
 														static_cast<uint32_t>(height)};
 
 	return util::Process<decltype(convertInfo.pcb)>::convertDescriptorToCubemap(context, convertInfo);
@@ -165,9 +156,8 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 	if (!image_data.data[0] || !image_data.data[1] || !image_data.data[2] || !image_data.data[3] ||
 		!image_data.data[4] || !image_data.data[5])
 	{
-		image = Managed(context->createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
-												VMA_MEMORY_USAGE_GPU_ONLY),
-						[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+		image = context->createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
+										 VMA_MEMORY_USAGE_GPU_ONLY);
 
 		VkCommandBuffer commandBuffer = context->startCommandBufferRecord();
 
@@ -181,7 +171,7 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		barrier.image = image.get().image;
+		barrier.image = image.get();
 		barrier.subresourceRange.aspectMask = aspect;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = miplevels;
@@ -193,12 +183,11 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 		vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		context->flushCommandBuffer(commandBuffer);
 
-		imageView = Managed(
+		imageView = vkw::ImageView(
 			createImageView(context->get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6),
-			[dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
-		imageSampler =
-			Managed(createSampler(context->get_device(), miplevels, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_TRUE),
-					[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+			context->get_device());
+		imageSampler = vkw::Sampler(createSampler(context->get_device(), miplevels, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_TRUE),
+							   context->get_device());
 
 		imageInfo.imageView = imageView.get();
 		imageInfo.sampler = imageSampler.get();
@@ -206,15 +195,10 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 		return;
 	}
 
-	auto [stagingBuffer, stagingAlloc] =
-		context->createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-	auto stagingBufferRAII = Managed<BufferObject>({stagingBuffer, stagingAlloc}, [allocator](BufferObject& bo) {
-		vmaDestroyBuffer(allocator, bo.buffer, bo.allocation);
-	});
+	auto stagingBuffer = context->createBuffer(image_data.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	void* bufferdata;
-	vmaMapMemory(allocator, stagingAlloc, &bufferdata);
+	vmaMapMemory(allocator, stagingBuffer.allocation, &bufferdata);
 	{
 		uint8_t* dest = static_cast<uint8_t*>(bufferdata);
 		for (int i = 0; i < 6; i++)
@@ -222,11 +206,10 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 			memcpy(dest + image_data.layerSize * i, image_data.data[i], image_data.layerSize);
 		}
 	}
-	vmaUnmapMemory(allocator, stagingAlloc);
+	vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
-	image = Managed(context->createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
-											VMA_MEMORY_USAGE_GPU_ONLY),
-					[allocator](ImageObject& bo) { vmaDestroyImage(allocator, bo.image, bo.allocation); });
+	image = context->createImageCube(width, height, miplevels, format, VK_IMAGE_TILING_OPTIMAL, usage,
+									 VMA_MEMORY_USAGE_GPU_ONLY);
 
 	try
 	{
@@ -242,7 +225,7 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		barrier.image = image.get().image;
+		barrier.image = image.get();
 		barrier.subresourceRange.aspectMask = aspect;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = miplevels;
@@ -268,7 +251,7 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 			region.imageOffset = {0, 0};
 			region.imageExtent = {width, height, 1};
 
-			vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image.get().image,
+			vkCmdCopyBufferToImage(commandBuffer, stagingBuffer.handle, image.get(),
 								   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -312,8 +295,8 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 				blit.dstSubresource.baseArrayLayer = face;
 				blit.dstSubresource.layerCount = 1;
 
-				vkCmdBlitImage(commandBuffer, image.get().image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-							   image.get().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+				vkCmdBlitImage(commandBuffer, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							   image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 				barrier.newLayout = layout;
@@ -344,12 +327,12 @@ TextureCube::TextureCube(const Context* context, const ImageDataCube& image_data
 		std::cerr << e.what() << std::endl;
 	}
 
-	imageView = Managed(
+	imageView = vkw::ImageView(
 		createImageView(context->get_device(), get_image(), VK_IMAGE_VIEW_TYPE_CUBE, format, aspect, miplevels, 6),
-		[dev = context->get_device()](VkImageView& iv) { vkDestroyImageView(dev, iv, nullptr); });
+		context->get_device());
 	imageSampler =
-		Managed(createSampler(context->get_device(), miplevels, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_TRUE),
-				[dev = context->get_device()](VkSampler& sampler) { vkDestroySampler(dev, sampler, nullptr); });
+		vkw::Sampler(createSampler(context->get_device(), miplevels, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_TRUE),
+					 context->get_device());
 
 	imageInfo.imageView = imageView.get();
 	imageInfo.sampler = imageSampler.get();
@@ -400,7 +383,7 @@ void TextureCube::transferLayout(VkCommandBuffer cmdbuffer, VkImageLayout newIma
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-	barrier.image = image.get().image;
+	barrier.image = image.get();
 	barrier.subresourceRange.aspectMask = aspect;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = miplevels;

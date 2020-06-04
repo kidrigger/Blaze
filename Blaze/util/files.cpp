@@ -7,10 +7,10 @@
 
 namespace blaze::util
 {
-std::vector<uint32_t> loadBinaryFile(const std::string& filename)
+std::vector<uint32_t> loadBinaryFile(const std::string_view& filename)
 {
 	using namespace std;
-	ifstream file(filename, ios::ate | ios::binary);
+	ifstream file(filename.data(), ios::ate | ios::binary);
 	if (file.is_open())
 	{
 		size_t filesize = file.tellg();
@@ -20,12 +20,12 @@ std::vector<uint32_t> loadBinaryFile(const std::string& filename)
 		file.close();
 		return filedata;
 	}
-	throw std::runtime_error("File (" + filename + ") could not be opened.");
+	throw std::runtime_error("File ("s + filename.data() + ") could not be opened.");
 }
 
-bool fileExists(const std::string& filename)
+bool fileExists(const std::string_view& filename)
 {
 	struct stat s;
-	return stat(filename.c_str(), &s) == 0;
+	return stat(filename.data(), &s) == 0;
 }
 } // namespace blaze::util

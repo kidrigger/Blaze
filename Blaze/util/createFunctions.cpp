@@ -5,8 +5,9 @@
 #include <string>
 
 #include <Datatypes.hpp>
-#include <util/Managed.hpp>
 #include <util/files.hpp>
+
+#include <vkwrap/VkWrap.hpp>
 
 namespace blaze::util
 {
@@ -359,12 +360,8 @@ VkPipeline createGraphicsPipeline(VkDevice device, VkPipelineLayout pipelineLayo
 	auto vertexShaderCode = util::loadBinaryFile(vShader);
 	auto fragmentShaderCode = util::loadBinaryFile(fShader);
 
-	auto vertexShaderModule =
-		util::Managed(util::createShaderModule(device, vertexShaderCode),
-					  [device](VkShaderModule& sm) { vkDestroyShaderModule(device, sm, nullptr); });
-	auto fragmentShaderModule =
-		util::Managed(util::createShaderModule(device, fragmentShaderCode),
-					  [device](VkShaderModule& sm) { vkDestroyShaderModule(device, sm, nullptr); });
+	auto vertexShaderModule = vkw::ShaderModule(util::createShaderModule(device, vertexShaderCode), device);
+	auto fragmentShaderModule = vkw::ShaderModule(util::createShaderModule(device, fragmentShaderCode), device);
 
 	vertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertexShaderStageCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;

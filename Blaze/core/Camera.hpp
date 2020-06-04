@@ -17,7 +17,35 @@ namespace blaze
  */
 class Camera
 {
-	CameraUBlock ubo;
+public:
+	/**
+	 * @struct CameraUBlock
+	 *
+	 * @brief Holds camera data to be sent to GPU.
+	 *
+	 * @note Needs Restructuring.
+	 *
+	 * @addtogroup UniformBufferObjects
+	 * @{
+	 */
+	struct UBlock
+	{
+		/// The View matrix of the camera.
+		alignas(16) glm::mat4 view;
+
+		/// The Projection matrix of the camera.
+		alignas(16) glm::mat4 projection;
+
+		/// The position of the camera.
+		alignas(16) glm::vec3 viewPos;
+
+		/// The distance of the Far Plane of the frustum from the camera.
+		alignas(4) float farPlane;
+	};
+	/// @}
+
+private:
+	UBlock ubo;
 	bool uboDirty;
 
 	glm::vec3 position;
@@ -86,7 +114,7 @@ public:
 	 * If the data has been changed, recalculate the UBO.
 	 * Else only return a reference.
 	 */
-	const CameraUBlock& getUbo()
+	const UBlock& getUbo()
 	{
 		if (uboDirty)
 		{

@@ -165,11 +165,11 @@ spirv::Shader FwdRenderer::createShader()
 
 	spirv::ShaderStageData* stage;
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/vPBR.vert.spv");
+	stage->spirv = util::loadBinaryFile(vertShaderFileName);
 	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
 
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/fPBR.frag.spv");
+	stage->spirv = util::loadBinaryFile(fragShaderFileName);
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	return context->get_pipelineFactory()->createShader(stages);
@@ -247,11 +247,11 @@ spirv::Shader FwdRenderer::createSkyboxShader()
 
 	spirv::ShaderStageData* stage;
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/vSkybox.vert.spv");
+	stage->spirv = util::loadBinaryFile(vertSkyboxShaderFileName);
 	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
 
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile("shaders/PBR/fSkybox.frag.spv");
+	stage->spirv = util::loadBinaryFile(fragSkyboxShaderFileName);
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	return context->get_pipelineFactory()->createShader(stages);
@@ -453,8 +453,8 @@ FwdLightCaster* FwdRenderer::get_lightCaster()
 	return lightCaster.get();
 }
 
-const spirv::Shader& FwdRenderer::get_shader() const
+const spirv::Shader* FwdRenderer::get_shader() const
 {
-	return shader;
+	return &shader;
 }
 } // namespace blaze
