@@ -16,6 +16,12 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	float farPlane;
 } camera;
 
+layout(set = 0, binding = 1) uniform SettingsUBO {
+	float exposure;
+	float gamma;
+	int enableIBL;
+} settings;
+
 layout(set = 1, binding = 0) uniform samplerCube skybox;
 layout(set = 1, binding = 1) uniform samplerCube irradianceMap;
 layout(set = 1, binding = 2) uniform samplerCube prefilteredMap;

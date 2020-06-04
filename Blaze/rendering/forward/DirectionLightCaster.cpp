@@ -222,9 +222,11 @@ bool DirectionLightCaster::setShadow(uint16_t idx, bool enableShadow)
 
 	assert(pLight->brightness > 0);
 
-	if ((pLight->shadowIdx < 0) != enableShadow)
+	bool hasShadow = pLight->shadowIdx >= 0;
+
+	if (hasShadow == enableShadow)
 	{
-		return pLight->shadowIdx >= 0;
+		return hasShadow;
 	}
 	else if (enableShadow)
 	{

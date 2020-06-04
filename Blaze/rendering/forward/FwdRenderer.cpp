@@ -23,6 +23,7 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// All uniform buffer stuff
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
+	settingsUBOs = createSettingsUBOs();
 
 	// Skybox mesh
 	skyboxCube = getUVCube(context.get());
@@ -60,6 +61,7 @@ void FwdRenderer::update(uint32_t frame)
 {
 	lightCaster->update(camera, frame);
 	cameraUBOs[frame].write(camera->getUbo());
+	settingsUBOs[frame].write(settings);
 }
 
 void FwdRenderer::recordCommands(uint32_t frame)
@@ -403,6 +405,42 @@ FwdRenderer::CameraUBOV FwdRenderer::createCameraUBOs()
 	}
 
 	return ubos;
+}
+
+FwdRenderer::SettingsUBOV FwdRenderer::createSettingsUBOs()
+{
+	auto unif = shader.getUniform("settings");
+
+	auto ubos = SettingsUBOV(context.get(), {}, maxFrameInFlight);
+
+	for (uint32_t i = 0; i < maxFrameInFlight; i++)
+	{
+		VkDescriptorBufferInfo info = ubos[i].get_descriptorInfo();
+
+		VkWriteDescriptorSet write = {};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.descriptorType = unif->type;
+		write.descriptorCount = unif->arrayLength;
+		write.dstSet = cameraSets[i];
+		write.dstBinding = unif->binding;
+		write.dstArrayElement = 0;
+		write.pBufferInfo = &info;
+
+		vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
+	}
+
+	return ubos;
+}
+
+void FwdRenderer::drawSettings()
+{
+	if (ImGui::Begin("Settings"))
+	{
+		ImGui::InputFloat("Exposure##FwdSettings", &settings.exposure);
+		ImGui::InputFloat("Gamma##FwdSettings", &settings.gamma);
+		ImGui::Checkbox("Enable IBL##FwdSettings", (bool*)&settings.enableIBL);
+	}
+	ImGui::End();
 }
 
 void FwdRenderer::setEnvironment(const Bindable* env)

@@ -24,7 +24,20 @@ namespace blaze
 class FwdRenderer final : public ARenderer
 {
 private:
+	struct SettingsUBlock
+	{
+		alignas(4) float exposure;
+		alignas(4) float gamma;
+		alignas(4) int enableIBL;
+	} settings{
+		4.5f,
+		2.2f,
+		1,
+	};
+
 	using CameraUBOV = UBOVector<CameraUBlock>;
+	using SettingsUBOV = UBOVector<SettingsUBlock>;
+
 	Texture2D depthBuffer;
 	spirv::RenderPass renderPass;
 	vkw::FramebufferVector renderFramebuffers;
@@ -35,6 +48,7 @@ private:
 	spirv::Pipeline skyboxPipeline;
 
 	CameraUBOV cameraUBOs;
+	SettingsUBOV settingsUBOs;
 	spirv::SetVector cameraSets;
 
 	const Bindable* environment{nullptr};
@@ -80,6 +94,7 @@ public:
 	virtual const spirv::Shader& get_shader() const override;
 	virtual FwdLightCaster* get_lightCaster() override;
 	virtual void setEnvironment(const Bindable* env) override;
+	virtual void drawSettings() override;
 
 	~FwdRenderer()
 	{
@@ -101,5 +116,6 @@ private:
     spirv::Pipeline createSkyboxPipeline();
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
+	SettingsUBOV createSettingsUBOs();
 };
 } // namespace blaze

@@ -24,6 +24,12 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	float farPlane;
 } camera;
 
+layout(set = 0, binding = 1) uniform SettingsUBO {
+	float exposure;
+	float gamma;
+	int enableIBL;
+} settings;
+
 layout(set = 1, binding = 0) uniform samplerCube skybox;
 layout(set = 1, binding = 1) uniform samplerCube irradianceMap;
 layout(set = 1, binding = 2) uniform samplerCube prefilteredMap;
@@ -91,9 +97,9 @@ vec3 Uncharted2Tonemap(vec3 color)
 
 vec4 tonemap(vec4 color)
 {
-	vec3 outcol = Uncharted2Tonemap(color.rgb * 4.5f/*debugSettings.exposure*/);
+	vec3 outcol = Uncharted2Tonemap(color.rgb * settings.exposure);
 	outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
-	return vec4(pow(outcol, vec3(1.0f / 2.2f/*debugSettings.gamma*/)), color.a);
+	return vec4(pow(outcol, vec3(1.0f / settings.gamma)), color.a);
 }
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -326,7 +332,7 @@ void main()
 		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
 
-	if (false) {
+	if (settings.enableIBL > 0) {
 		vec3 R = reflect(-V, N);
 
 		const float MAX_REFLECTION_LOD = 4.0f;

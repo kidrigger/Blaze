@@ -74,6 +74,11 @@ public:
      */
 	virtual const spirv::Shader& get_shader() const = 0;
 
+	/**
+	 * @brief Manages all settings for the renderer
+	 */
+	virtual void drawSettings() = 0;
+
     /**
      * @brief Sets the pointer to the camera in use.
      */

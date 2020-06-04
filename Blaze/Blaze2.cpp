@@ -71,12 +71,6 @@ void glfwErrorCallback(int error, const char* desc)
 	std::cerr << "GLFW_ERROR: " << desc << std::endl;
 }
 
-struct SettingsOverlay
-{
-	bool rotate;
-	float rotSpeed;
-};
-
 void runRefactored()
 {
 	// Usings
@@ -254,7 +248,7 @@ void runRefactored()
 					auto& l = dirLights[toUpdate];
 					renderer->get_lightCaster()->setDirection(h, l.dir);
 					renderer->get_lightCaster()->setBrightness(h, l.brightness);
-					l.numCascades = renderer->get_lightCaster()->setShadow(h, l.numCascades) ? l.numCascades : 0;
+					l.hasShadow = renderer->get_lightCaster()->setShadow(h, l.hasShadow);
 				}
 			}
 			toDelete = -1;
@@ -295,10 +289,6 @@ void runRefactored()
 	double elapsed = 0.0;
 	double delay = 0.0f;
 
-	SettingsOverlay settings;
-	settings.rotate = false;
-	settings.rotSpeed = 1.0f;
-
 	while (!glfwWindowShouldClose(window))
 	{
 		prevTime = glfwGetTime();
@@ -316,11 +306,6 @@ void runRefactored()
 
 		for (auto& [k, model] : modelHolder)
 		{
-			if (settings.rotate)
-			{
-				model->get_root()->rotation = glm::rotate(
-					model->get_root()->rotation, settings.rotSpeed * static_cast<float>(deltaTime), glm::vec3(0, 1, 0));
-			}
 			model->update();
 		}
 
@@ -335,15 +320,9 @@ void runRefactored()
 
 			GUI::startFrame();
 			{
-				if (ImGui::Begin("Settings"))
+				if (ImGui::Begin("Main Panel"))
 				{
 					ImGui::Text("Delta: %.3lf", deltaTime);
-
-					ImGui::Checkbox("Rotate##Model", &settings.rotate);
-					ImGui::SameLine();
-					ImGui::PushItemWidth(100);
-					ImGui::InputFloat("Speed##Rotation", &settings.rotSpeed, 0.1f, 0.3f, 2);
-					ImGui::PopItemWidth();
 
 					bool quit = ImGui::Button("Exit");
 					if (quit)
@@ -491,6 +470,8 @@ void runRefactored()
 					lightInfo.update(renderer.get());
 				}
 				ImGui::End();
+
+				renderer->drawSettings();
 			}
 			GUI::endFrame();
 
