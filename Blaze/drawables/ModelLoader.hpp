@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "Model2.hpp"
+#include "Model.hpp"
 
 namespace blaze
 {
@@ -32,9 +32,9 @@ public:
 		return modelFileNames;
 	}
 
-	std::shared_ptr<Model2> loadModel(const Context* context, const spirv::Shader* set, uint32_t idx);
+	std::shared_ptr<Model> loadModel(const Context* context, const spirv::Shader* set, uint32_t idx);
 
 private:
-	void setupMaterialSet(const Context* context, Model2::Material& mat);
+	void setupMaterialSet(const Context* context, Model::Material& mat);
 };
 } // namespace blaze

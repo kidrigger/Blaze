@@ -1,69 +1,74 @@
 
 #pragma once
 
-#include "Datatypes.hpp"
+#include "Node.hpp"
 #include <core/Drawable.hpp>
 #include <core/Texture2D.hpp>
 #include <core/VertexBuffer.hpp>
-#include <rendering/Renderer.hpp>
 #include <vector>
+#include <vkwrap/VkWrap.hpp>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#include <glm/gtx/matrix_decompose.hpp>
-#include <glm/gtx/quaternion.hpp>
-
-#include "Node.hpp"
-#include "Material.hpp"
+#include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
-/**
- * @class Model
- *
- * @brief Holds data from an entire glTF 2.0 model.
- *
- * Contains the entire set of Material, Primitive, and Node as well the actual
- * IndexedVertexBuffer and the root of the Node tree.
- */
 class Model : public Drawable
 {
+public:
+	struct Material
+	{
+		struct PCB
+		{
+			glm::vec4 baseColorFactor{1.0f, 0, 1.0f, 1.0f};		// 16	| 16
+			glm::vec4 emissiveColorFactor{1.0f, 0, 1.0f, 1.0f}; // 16	| 32
+			float metallicFactor{1.0f};							// 4	| 36
+			float roughnessFactor{1.0f};						// 4	| 40
+			int baseColorTextureSet{-1};						// 4	| 44
+			int physicalDescriptorTextureSet{-1};				// 4	| 48
+			int normalTextureSet{-1};							// 4	| 52
+			int occlusionTextureSet{-1};						// 4	| 56
+			int emissiveTextureSet{-1};							// 4	| 60
+			int textureArrIdx{0};								// 4	| 64
+		};
+
+		std::vector<Texture2D> diffuse;
+		std::vector<Texture2D> metalRough;
+		std::vector<Texture2D> normal;
+		std::vector<Texture2D> occlusion;
+		std::vector<Texture2D> emission;
+
+		std::vector<PCB> pushConstantBlocks;
+
+		spirv::SetSingleton dset;
+	};
+
 private:
 	Node root;
-	vkw::DescriptorPool descriptorPool;
 	std::vector<int> prime_nodes;
 	std::vector<Node> nodes;
 	std::vector<Primitive> primitives;
-	std::vector<Material> materials;
+	Material material;
 	IndexedVertexBuffer<Vertex> vbo;
 
 public:
 	/**
-	 * @fn Model()
-	 *
 	 * @brief Default constructor.
-	 *
 	 */
 	Model() noexcept
 	{
 	}
 
 	/**
-	 * @fn Model(const Renderer& renderer, const std::vector<int>& top_level_nodes, std::vector<Node>& nodes,
-	 * std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb)
-	 *
 	 * @brief Full constructor.
 	 *
-	 * @param renderer The renderer used for the material.
 	 * @param top_level_nodes The indices of nodes that are at the top level and have no parents.
 	 * @param nodes The list of nodes in the model.
 	 * @param prims The list of primitives in the model.
-	 * @param mats The list of materials in the model.
 	 * @param ivb The IndexedVertexBuffer that contains \b all the vertices and indices.
+	 * @param mat The material used in the model.
 	 */
-	Model(const Renderer& renderer, const std::vector<int>& top_level_nodes, std::vector<Node>& nodes,
-		  std::vector<Primitive>& prims, std::vector<Material>& mats, IndexedVertexBuffer<Vertex>&& ivb) noexcept;
+	Model(const std::vector<int>& top_level_nodes, std::vector<Node>&& nodes, std::vector<Primitive>&& prims,
+		   IndexedVertexBuffer<Vertex>&& ivb, Material&& mat) noexcept;
 
 	/**
 	 * @name Move Constructors.
@@ -74,8 +79,8 @@ public:
 	 *
 	 * @{
 	 */
-	Model(Model&& other) noexcept;
-	Model& operator=(Model&& other) noexcept;
+	Model(Model&& other) = delete;
+	Model& operator=(Model&& other) = delete;
 	Model(const Model& other) = delete;
 	Model& operator=(const Model& other) = delete;
 	/**
@@ -96,8 +101,8 @@ public:
 	 *
 	 * @{
 	 */
-	void draw(VkCommandBuffer buf, VkPipelineLayout layout);
-	void drawGeometry(VkCommandBuffer buf, VkPipelineLayout layout);
+	void draw(VkCommandBuffer buf, VkPipelineLayout layout) override;
+	void drawGeometry(VkCommandBuffer buf, VkPipelineLayout layout) override;
 	/**
 	 * @}
 	 */
@@ -128,16 +133,4 @@ public:
 private:
 	void update_nodes(int node, int parent = -1);
 };
-
-/**
- * @fn loadModel
- *
- * @brief Loads a glTF 2.0 model from the path provided.
- *
- * The model is not cached and additional loads will create additional copies.
- *
- * @param renderer The renderer used for the model.
- * @param name The path of the file from the working directory.
- */
-[[nodiscard]] Model loadModel(const Renderer& renderer, const std::string& name);
 } // namespace blaze

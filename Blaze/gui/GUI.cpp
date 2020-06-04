@@ -1,7 +1,7 @@
 
 #include "GUI.hpp"
 
-#include <rendering/Renderer.hpp>
+#include <rendering/ARenderer.hpp>
 #include <core/Swapchain.hpp>
 
 namespace blaze

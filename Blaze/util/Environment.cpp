@@ -10,8 +10,8 @@ TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout e
 {
 	struct PCB
 	{
-		float deltaPhi{(2.0f * PI) / 180.0f};
-		float deltaTheta{(0.5f * PI) / 64.0f};
+		float deltaPhi{(2.0f * glm::pi<float>()) / 180.0f};
+		float deltaTheta{(0.5f * glm::pi<float>()) / 64.0f};
 	} pcb = {};
 
 	util::Texture2CubemapInfo<PCB> info = {

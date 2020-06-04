@@ -485,4 +485,34 @@ VkPipeline createGraphicsPipeline(VkDevice device, VkPipelineLayout pipelineLayo
 	}
 	return graphicsPipeline;
 }
+
+VkSampler createSampler(VkDevice device, uint32_t miplevels, VkSamplerAddressMode addressMode, VkBool32 anisotropy)
+{
+	VkSamplerCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	createInfo.magFilter = VK_FILTER_LINEAR;
+	createInfo.minFilter = VK_FILTER_LINEAR;
+	createInfo.addressModeU = addressMode;
+	createInfo.addressModeV = addressMode;
+	createInfo.addressModeW = addressMode;
+	createInfo.anisotropyEnable = anisotropy;
+	createInfo.maxAnisotropy = 16;
+	createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	createInfo.unnormalizedCoordinates = VK_FALSE;
+	createInfo.compareEnable = VK_FALSE;
+	createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	createInfo.mipLodBias = 0.0f;
+	createInfo.minLod = 0.0f;
+	createInfo.maxLod = static_cast<float>(miplevels);
+
+	VkSampler sampler;
+	auto result = vkCreateSampler(device, &createInfo, nullptr, &sampler);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Sampler creation failed with " + std::to_string(result));
+	}
+
+	return sampler;
+}
 } // namespace blaze::util

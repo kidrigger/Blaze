@@ -8,14 +8,11 @@ find_package( Vulkan REQUIRED )
 configure_file("Version.src" "Version.hpp")
 
 set( SOURCE_FILES
-        "Blaze2.cpp"
         "Source.cpp"
-        "Primitives.cpp"
-        "LightSystem.cpp")
+        "Primitives.cpp")
 
 set( HEADER_FILES
         "Datatypes.hpp"
-        "LightSystem.hpp"
         "Primitives.hpp")
 
 include_directories( "." )

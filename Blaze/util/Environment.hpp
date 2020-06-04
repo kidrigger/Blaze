@@ -4,6 +4,8 @@
 #include <core/Context.hpp>
 #include <rendering/ARenderer.hpp>
 #include <core/Bindable.hpp>
+#include <core/Texture2D.hpp>
+#include <core/TextureCube.hpp>
 
 namespace blaze::util
 {

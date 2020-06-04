@@ -192,9 +192,6 @@ public:
 	 * @param dstAccess The access flag to set to.
 	 */
 	void implicitTransferLayout(VkImageLayout newImageLayout, VkAccessFlags dstAccess);
-
-private:
-	VkSampler createSampler(VkDevice device, uint32_t miplevels) const;
 };
 
 [[nodiscard]] TextureCube loadImageCube(const Context* context, const std::vector<std::string>& names_fbudrl,

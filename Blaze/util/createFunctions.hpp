@@ -152,4 +152,7 @@ namespace blaze::util
 	VkVertexInputBindingDescription vertBindingDescription = Vertex::getBindingDescription(),
 	const std::vector<VkVertexInputAttributeDescription>& vertAttributeDescription =
 		Vertex::getAttributeDescriptions());
+
+[[nodiscard]] VkSampler createSampler(VkDevice device, uint32_t miplevels, VkSamplerAddressMode addressMode,
+									  VkBool32 anisotropy);
 } // namespace blaze::util

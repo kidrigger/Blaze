@@ -234,9 +234,6 @@ public:
 	 * @param dstAccess The access flag of the final image.
 	 */
 	void implicitTransferLayout(VkImageLayout newImageLayout, VkAccessFlags dstAccess);
-
-private:
-	VkSampler createSampler(VkDevice device, uint32_t miplevels, VkSamplerAddressMode addressMode) const;
 };
 
 [[nodiscard]] Texture2D loadImage(const Context* context, const std::string& name);

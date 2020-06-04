@@ -50,7 +50,7 @@ void ModelLoader::scan()
 	}
 }
 
-std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spirv::Shader* shader, uint32_t index)
+std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spirv::Shader* shader, uint32_t index)
 {
 	fs::path filePath = modelFilePaths[index];
 
@@ -103,7 +103,7 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 	vector<uint32_t> indexBuffer;
 	vector<Node> nodes;
 	vector<Primitive> primitives;
-	Model2::Material materialPack;
+	Model::Material materialPack;
 
 	materialPack.diffuse.reserve(model.materials.size());
 	materialPack.normal.reserve(model.materials.size());
@@ -124,7 +124,7 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 		imgData.size = 256 * 256 * 4;
 		imgData.numChannels = 4;
 
-		Model2::Material::PCB pushConstantBlock = {};
+		Model::Material::PCB pushConstantBlock = {};
 		ImageData2D diffuseImageData = imgData;
 		ImageData2D normalImageData = imgData;
 		ImageData2D metallicRoughnessImageData = imgData;
@@ -297,7 +297,7 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 		imgData.size = 256 * 256 * 4;
 		imgData.numChannels = 4;
 
-		Model2::Material::PCB pushConstantBlock = {};
+		Model::Material::PCB pushConstantBlock = {};
 		pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
 
 		materialPack.pushConstantBlocks.push_back(pushConstantBlock);
@@ -476,11 +476,11 @@ std::shared_ptr<Model2> ModelLoader::loadModel(const Context* context, const spi
 
 	auto ivb = IndexedVertexBuffer(context, indexBuffer, vertexBuffer);
 
-	return std::make_shared<Model2>(scene.nodes, std::move(nodes), std::move(primitives), std::move(ivb),
+	return std::make_shared<Model>(scene.nodes, std::move(nodes), std::move(primitives), std::move(ivb),
 									std::move(materialPack));
 }
 
-void ModelLoader::setupMaterialSet(const Context* context, Model2::Material& mat)
+void ModelLoader::setupMaterialSet(const Context* context, Model::Material& mat)
 {
 	std::array<VkWriteDescriptorSet, 5> writes;
 	auto& uniforms = mat.dset.info;

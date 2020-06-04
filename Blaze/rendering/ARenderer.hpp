@@ -1,7 +1,11 @@
 
 #pragma once
 
-#include "Renderer.hpp"
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
+#include <core/Context.hpp>
+#include <core/Drawable.hpp>
 #include <core/Bindable.hpp>
 #include <core/Camera.hpp>
 #include <core/Context.hpp>
