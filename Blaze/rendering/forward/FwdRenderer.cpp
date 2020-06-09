@@ -42,14 +42,10 @@ void FwdRenderer::recreateSwapchainDependents()
 	depthBuffer = createDepthBuffer();
 	renderPass = createRenderpass();
 
-	// Pipeline layouts
-	// Pipeline
-	shader = createShader();
-	pipeline = createPipeline();
-
 	// All uniform buffer stuff
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
+	settingsUBOs = createSettingsUBOs();
 
 	lightCaster->recreate(context.get(), &shader, maxFrameInFlight);
 
@@ -108,7 +104,11 @@ void FwdRenderer::recordCommands(uint32_t frame)
 							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 	for (Drawable* drawable : drawables)
 	{
-		drawable->draw(commandBuffers[frame], shader.pipelineLayout.get());
+		drawable->drawOpaque(commandBuffers[frame], shader.pipelineLayout.get());
+	}
+	for (Drawable* drawable : drawables)
+	{
+		drawable->drawAlphaBlended(commandBuffers[frame], shader.pipelineLayout.get());
 	}
 
 	skyboxPipeline.bind(commandBuffers[frame]);
@@ -156,7 +156,7 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
 	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::DONT_CARE;
 
-	return context->get_pipelineFactory()->createRenderPass(attachments, {subpassDesc}, loadStore);
+	return context->get_pipelineFactory()->createRenderPass(attachments, loadStore, {subpassDesc});
 }
 
 spirv::Shader FwdRenderer::createShader()

@@ -269,12 +269,25 @@ public:
 	 * @brief Creates a renderpass given the attachments and subpasses.
 	 *
 	 * @param formats The collection of all the attachments that the renderpass will use.
-	 * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
 	 * @param config Describes the load/store behaviour on all the attachments.
+	 * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
 	 * @param multiview If the renderpass uses multiview, this struct must be provided.
 	 */
-	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
-								const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
+	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+								const std::vector<VkSubpassDescription>& subpasses,
+								const std::vector<VkSubpassDependency>& dependencies,
+								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
+
+	/**
+	 * @brief Creates a renderpass given the attachments and subpasses.
+	 *
+	 * @param formats The collection of all the attachments that the renderpass will use.
+	 * @param config Describes the load/store behaviour on all the attachments.
+	 * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
+	 * @param multiview If the renderpass uses multiview, this struct must be provided.
+	 */
+	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+								const std::vector<VkSubpassDescription>& subpasses,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
 
 	/**

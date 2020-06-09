@@ -17,6 +17,13 @@ class Model : public Drawable
 public:
 	struct Material
 	{
+		enum AlphaMode : int
+		{
+			ALPHA_OPAQUE = 0,
+			ALPHA_MASK = 1,
+			ALPHA_BLEND = 2,
+		};
+
 		struct PCB
 		{
 			glm::vec4 baseColorFactor{1.0f, 0, 1.0f, 1.0f};		// 16	| 16
@@ -29,6 +36,8 @@ public:
 			int occlusionTextureSet{-1};						// 4	| 56
 			int emissiveTextureSet{-1};							// 4	| 60
 			int textureArrIdx{0};								// 4	| 64
+			int alphaMode{ALPHA_OPAQUE};						// 4	| 68
+			float alphaCutoff{0.5f};							// 4	| 72
 		};
 
 		std::vector<Texture2D> diffuse;
@@ -101,8 +110,10 @@ public:
 	 *
 	 * @{
 	 */
-	void draw(VkCommandBuffer buf, VkPipelineLayout layout) override;
-	void drawGeometry(VkCommandBuffer buf, VkPipelineLayout layout) override;
+	virtual void draw(VkCommandBuffer buf, VkPipelineLayout layout) override;
+	virtual void drawGeometry(VkCommandBuffer buf, VkPipelineLayout layout) override;
+	virtual void drawOpaque(VkCommandBuffer cb, VkPipelineLayout lay) override;
+	virtual void drawAlphaBlended(VkCommandBuffer cb, VkPipelineLayout lay) override;
 	/**
 	 * @}
 	 */

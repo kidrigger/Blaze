@@ -382,7 +382,7 @@ spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
 	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
 	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::READ;
 
-	return context->get_pipelineFactory()->createRenderPass(format, subpass, loadStore);
+	return context->get_pipelineFactory()->createRenderPass(format, loadStore, subpass);
 }
 
 spirv::Shader DirectionLightCaster::createShader(const Context* context)

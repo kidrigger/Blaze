@@ -33,6 +33,22 @@ void toRGBA(uint8_t* data, tinygltf::Image& image, uint64_t texelCount)
 	}
 };
 
+Model::Material::AlphaMode getAlphaModeFromString(const std::string_view& str)
+{
+	if (str == "OPAQUE")
+	{
+		return Model::Material::AlphaMode::ALPHA_OPAQUE;
+	}
+	if (str == "BLEND")
+	{
+		return Model::Material::AlphaMode::ALPHA_BLEND;
+	}
+	if (str == "MASK")
+	{
+		return Model::Material::AlphaMode::ALPHA_MASK;
+	}
+}
+
 void ModelLoader::scan()
 {
 	auto rdi = fs::recursive_directory_iterator(fs::current_path().append("assets"));
@@ -255,6 +271,9 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 			}
 		}
 
+		pushConstantBlock.alphaMode = getAlphaModeFromString(material.alphaMode);
+		pushConstantBlock.alphaCutoff = static_cast<float>(material.alphaCutoff);
+
 		pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
 
 		materialPack.pushConstantBlocks.push_back(pushConstantBlock);
@@ -311,16 +330,16 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 
 	for (const auto& node : model.nodes)
 	{
-		std::pair<int, int> node_range;
+		std::pair<int, int> primitive_range;
 		if (node.mesh < 0)
 		{
-			node_range = std::make_pair(0, 0);
+			primitive_range = std::make_pair(0, 0);
 		}
 		else
 		{
 			const auto& mesh = model.meshes[node.mesh];
-			node_range = std::make_pair(static_cast<int>(primitives.size()),
-										static_cast<int>(primitives.size() + mesh.primitives.size()));
+			primitive_range = std::make_pair(static_cast<int>(primitives.size()),
+											 static_cast<int>(primitives.size() + mesh.primitives.size()));
 
 			for (auto& primitive : mesh.primitives)
 			{
@@ -425,7 +444,9 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 					static_cast<uint32_t>(indexBuffer.size()), static_cast<uint32_t>(vertexCount),
 					static_cast<uint32_t>(indexCount),
 					static_cast<uint32_t>(
-						(primitive.material >= 0 ? primitive.material : materialPack.diffuse.size() - 1))};
+						(primitive.material >= 0 ? primitive.material : materialPack.diffuse.size() - 1)),
+					materialPack.pushConstantBlocks[primitive.material].alphaMode ==
+						blaze::Model::Material::AlphaMode::ALPHA_BLEND};
 				primitives.push_back(newPrimitive);
 
 				uint32_t startIndex = static_cast<uint32_t>(vertexBuffer.size());
@@ -444,6 +465,12 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 				}
 			}
 		}
+
+		std::sort(primitives.begin() + primitive_range.first, primitives.begin() + primitive_range.second,
+				  [](const Primitive& a, const Primitive& b) { return a.isAlphaBlending < b.isAlphaBlending; });
+
+		int numOpaque = std::lower_bound(primitives.begin() + primitive_range.first, primitives.begin() + primitive_range.second, true,
+						 [](const Primitive& a, const bool& b) { return a.isAlphaBlending < b; }) - (primitives.begin() + primitive_range.first);
 
 		glm::vec3 T(0.0f);
 		glm::quat R(1.0f, 0.0f, 0.0f, 0.0f);
@@ -466,7 +493,7 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 			M = glm::make_mat4(node.matrix.data());
 		}
 		nodes.emplace_back(glm::translate(glm::mat4(1.0f), T) * glm::mat4_cast(R) * glm::scale(glm::mat4(1.0f), S) * M,
-						   node.children, node_range);
+						   node.children, primitive_range, numOpaque);
 	}
 
 	materialPack.dset = context->get_pipelineFactory()->createSet(*shader->getSetWithUniform("diffuseMap"));
@@ -477,7 +504,7 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 	auto ivb = IndexedVertexBuffer(context, indexBuffer, vertexBuffer);
 
 	return std::make_shared<Model>(scene.nodes, std::move(nodes), std::move(primitives), std::move(ivb),
-									std::move(materialPack));
+								   std::move(materialPack));
 }
 
 void ModelLoader::setupMaterialSet(const Context* context, Model::Material& mat)
