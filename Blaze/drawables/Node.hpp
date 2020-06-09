@@ -27,13 +27,14 @@ struct Primitive
 	uint32_t indexCount;
 	uint32_t material;
 	bool hasIndex;
+	bool isAlphaBlending;
 
 	/**
 	 * @brief Constructor
 	 */
-	Primitive(uint32_t firstIndex, uint32_t vertexCount, uint32_t indexCount, uint32_t material)
+	Primitive(uint32_t firstIndex, uint32_t vertexCount, uint32_t indexCount, uint32_t material, bool blendAlpha)
 		: firstIndex(firstIndex), vertexCount(vertexCount), indexCount(indexCount), material(material),
-		  hasIndex(indexCount > 0)
+		  hasIndex(indexCount > 0), isAlphaBlending(blendAlpha)
 	{
 	}
 };
@@ -54,10 +55,11 @@ struct Node
 	glm::quat rotation;
 	glm::vec3 scale;
 	glm::mat4 localTRS;
-	ModelPushConstantBlock pcb;
+	glm::mat4 pcb;
 	std::vector<int> children;
 
 	std::pair<int, int> primitive_range;
+	int numOpaque;
 
 	/**
 	 * @fn Node()
@@ -81,7 +83,7 @@ struct Node
 	 * @param primitive_range The range of indices of primitives under this Node.
 	 */
 	Node(const glm::vec3& trans, const glm::quat& rot, const glm::vec3& sc, const std::vector<int>& children,
-		 const std::pair<int, int> primitive_range) noexcept;
+		 const std::pair<int, int> primitive_range, int numOpaque) noexcept;
 
 	/**
 	 * @fn 	Node(const glm::mat4& TRS, const std::vector<int>& children, const std::pair<int, int> primitive_range)
@@ -92,7 +94,8 @@ struct Node
 	 * @param children Indices of the children of the node in the Model.
 	 * @param primitive_range The range of indices of primitives under this Node.
 	 */
-	Node(const glm::mat4& TRS, const std::vector<int>& children, const std::pair<int, int> primitive_range) noexcept;
+	Node(const glm::mat4& TRS, const std::vector<int>& children, const std::pair<int, int> primitive_range,
+		 int numOpaque) noexcept;
 
 	/**
 	 * @name Move Constructors

@@ -145,8 +145,9 @@ Shader PipelineFactory::createShader(const std::vector<ShaderStageData>& stages)
 					{
 						if (input_vars[j] && input_vars[j]->decoration_flags == 0)
 						{ // regular input
-							vertexInput.A_POSITION =
-								strcmp(input_vars[j]->name, "A_POSITION") ? vertexInput.A_POSITION : input_vars[j]->location;
+							vertexInput.A_POSITION = strcmp(input_vars[j]->name, "A_POSITION")
+														 ? vertexInput.A_POSITION
+														 : input_vars[j]->location;
 							vertexInput.A_NORMAL = strcmp(input_vars[j]->name, "A_NORMAL") ? vertexInput.A_NORMAL
 																						   : input_vars[j]->location;
 							vertexInput.A_UV0 =
@@ -418,8 +419,9 @@ PipelineFactory::FBFormatID PipelineFactory::getFormatKey(const std::vector<Atta
 	}
 }
 
-RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats,
-											 const std::vector<VkSubpassDescription>& subpasses, LoadStoreConfig config,
+RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+											 const std::vector<VkSubpassDescription>& subpasses,
+											 const std::vector<VkSubpassDependency>& dependencies,
 											 const VkRenderPassMultiviewCreateInfo* multiview)
 {
 	std::vector<VkAttachmentDescription> attachmentDescriptions;
@@ -466,7 +468,8 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				description.initialLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				description.initialLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+													   : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 			else
 			{
@@ -568,8 +571,8 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 	createInfo.pAttachments = attachmentDescriptions.data();
 	createInfo.subpassCount = static_cast<uint32_t>(subpasses.size());
 	createInfo.pSubpasses = subpasses.data();
-	createInfo.dependencyCount;
-	createInfo.pDependencies;
+	createInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+	createInfo.pDependencies = dependencies.data();
 
 	VkRenderPass renderPass;
 	auto result = vkCreateRenderPass(device, &createInfo, nullptr, &renderPass);
@@ -611,8 +614,14 @@ vkw::DescriptorPool PipelineFactory::createDescriptorPool(const Shader::Set& set
 		ps.descriptorCount *= maxSets;
 	}
 
-	return vkw::DescriptorPool(
-		util::createDescriptorPool(device, poolSizes, static_cast<uint32_t>(maxSets)), device);
+	return vkw::DescriptorPool(util::createDescriptorPool(device, poolSizes, static_cast<uint32_t>(maxSets)), device);
+}
+
+RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+											 const std::vector<VkSubpassDescription>& subpasses,
+											 const VkRenderPassMultiviewCreateInfo* multiview)
+{
+	return createRenderPass(formats, config, subpasses, {}, multiview);
 }
 
 SetVector PipelineFactory::createSets(const Shader::Set& set, uint32_t count)

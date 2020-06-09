@@ -344,7 +344,7 @@ spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 	multiview.dependencyCount = 0;
 	multiview.pViewOffsets = nullptr;
 
-	return context->get_pipelineFactory()->createRenderPass(format, subpass, loadStore, &multiview);
+	return context->get_pipelineFactory()->createRenderPass(format, loadStore, subpass, &multiview);
 }
 
 spirv::Shader PointLightCaster::createShader(const Context* context)

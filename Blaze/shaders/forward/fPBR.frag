@@ -57,6 +57,11 @@ struct DirLightData {
 	int shadowIndex;
 };
 
+// AlphaMode
+const uint ALPHA_OPAQUE = 0x00000000u;
+const uint ALPHA_MASK   = 0x00000001u;
+const uint ALPHA_BLEND  = 0x00000002u;
+
 layout(set = 3, binding = 0) uniform PointLightUBO {
 	PointLightData data[MAX_POINT_LIGHTS];
 } lights;
@@ -79,6 +84,8 @@ layout(push_constant) uniform ModelBlock {
 	int occlusionTextureSet;
 	int emissiveTextureSet;
 	int textureArrIdx;
+	int alphaMode;
+	float alphaCutoff;
 } pcb;
 
 const float PI = 3.1415926535897932384626433832795f;
@@ -230,6 +237,7 @@ void main()
 	vec3 V = normalize(camera.viewPos - V_POSITION.xyz);
 
 	vec3 albedo;
+	float alpha;
 	float metallic;
 	float roughness;
 	float ao;
@@ -237,10 +245,21 @@ void main()
 
 	if (pcb.baseColorTextureSet < 0) {
 		albedo = pcb.baseColorFactor.rgb;
+		alpha = pcb.baseColorFactor.a;
 	} else {
 		vec4 texRGBA = texture(diffuseMap[pcb.textureArrIdx], V_UV0);
-		if (texRGBA.a < 0.5f) discard;
 		albedo = SRGBtoLINEAR(texRGBA).rgb * pcb.baseColorFactor.rgb;
+		alpha = texRGBA.a;
+	}
+
+	if (pcb.alphaMode == ALPHA_MASK) {
+		if (alpha < pcb.alphaCutoff) {
+			discard;
+		} else {
+			alpha = 1.0f;
+		}
+	} else if (pcb.alphaMode == ALPHA_OPAQUE) {
+		alpha = 1.0f;
 	}
 
 	if (pcb.physicalDescriptorTextureSet < 0) {
@@ -352,5 +371,5 @@ void main()
 	}
 
 	vec3 color	 = ambient + L0 + emission;
-	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, 1.0f)));
+	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, alpha)));
 }

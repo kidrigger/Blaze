@@ -40,7 +40,7 @@ layout(set = 3, binding = 1) uniform DirLightUBO {
 
 layout(push_constant) uniform ModelBlock {
 	mat4 model;
-	float opaque_[16];
+	float opaque_[18];
 } pcb;
 
 const mat4 biasMat = mat4( 
