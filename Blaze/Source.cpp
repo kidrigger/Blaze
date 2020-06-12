@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		blaze::run();
+		blaze::runDeferred();
 	}
 	catch (std::exception& e)
 	{

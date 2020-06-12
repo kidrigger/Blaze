@@ -663,7 +663,7 @@ void runDeferred()
 	lightInfo.maxDirLights = renderer->get_lightCaster()->getMaxDirectionLights();
 
 	SceneInfo sceneInfo;
-	sceneInfo.modelName = "Sponza";
+	sceneInfo.modelName = "DamagedHelmet";
 	sceneInfo.modelIndex = 0;
 	{
 		auto& ms = modelLoader->getFileNames();
@@ -680,9 +680,9 @@ void runDeferred()
 	int holderKey = 0;
 	std::map<int, std::shared_ptr<Model>> modelHolder;
 
-	//auto mod = modelHolder[holderKey++] =
-	//	modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), sceneInfo.modelIndex);
-	//auto handle = renderer->submit(mod.get());
+	auto mod = modelHolder[holderKey++] =
+		modelLoader->loadModel(renderer->get_context(), renderer->get_shader(), sceneInfo.modelIndex);
+	auto handle = renderer->submit(mod.get());
 
 	// Run
 	bool onetime = true;
@@ -698,10 +698,10 @@ void runDeferred()
 		glfwPollEvents();
 		elapsed += deltaTime;
 
-		//for (auto& [k, model] : modelHolder)
-		//{
-		//	model->update();
-		//}
+		for (auto& [k, model] : modelHolder)
+		{
+			model->update();
+		}
 
 		{
 			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -743,39 +743,39 @@ void runDeferred()
 				}
 				ImGui::End();
 
-				//if (ImGui::Begin("Scene"))
-				//{
-				//	if (ImGui::CollapsingHeader("Models##InTheScene"))
-				//	{
-				//		auto& modelNames = modelLoader->getFileNames();
-				//		if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
-				//		{
-				//			int i = 0;
-				//			for (const auto& label : modelNames)
-				//			{
-				//				bool selected = (sceneInfo.modelIndex == i);
-				//				if (ImGui::Selectable(label.c_str(), selected))
-				//				{
-				//					sceneInfo.modelIndex = i;
-				//					sceneInfo.modelName = label;
-				//					handle.destroy();
-				//					auto mod = modelHolder[holderKey++] =
-				//						modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
-				//											   sceneInfo.modelIndex); // TODO
-				//					handle = renderer->submit(mod.get());
-				//					renderer->waitIdle();
-				//					modelHolder.erase(holderKey - 2);
-				//					// TODO(Improvement) Make this smoother
-				//				}
-				//				if (selected)
-				//				{
-				//					ImGui::SetItemDefaultFocus();
-				//				}
-				//				++i;
-				//			}
-				//			ImGui::EndCombo();
-				//		}
-				//	}
+				if (ImGui::Begin("Scene"))
+				{
+					if (ImGui::CollapsingHeader("Models##InTheScene"))
+					{
+						auto& modelNames = modelLoader->getFileNames();
+						if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
+						{
+							int i = 0;
+							for (const auto& label : modelNames)
+							{
+								bool selected = (sceneInfo.modelIndex == i);
+								if (ImGui::Selectable(label.c_str(), selected))
+								{
+									sceneInfo.modelIndex = i;
+									sceneInfo.modelName = label;
+									handle.destroy();
+									auto mod = modelHolder[holderKey++] =
+										modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
+															   sceneInfo.modelIndex); // TODO
+									handle = renderer->submit(mod.get());
+									renderer->waitIdle();
+									modelHolder.erase(holderKey - 2);
+									// TODO(Improvement) Make this smoother
+								}
+								if (selected)
+								{
+									ImGui::SetItemDefaultFocus();
+								}
+								++i;
+							}
+							ImGui::EndCombo();
+						}
+					}
 
 				//	if (ImGui::CollapsingHeader("Lights"))
 				//	{
@@ -862,8 +862,8 @@ void runDeferred()
 				//		}
 				//	}
 				//	lightInfo.update(renderer.get());
-				//}
-				//ImGui::End();
+				}
+				ImGui::End();
 
 				renderer->drawSettings();
 			}
