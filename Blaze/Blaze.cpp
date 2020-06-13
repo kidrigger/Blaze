@@ -84,7 +84,7 @@ void run()
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
-	Camera cam({0.0f, 1.0f, 5.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
+	Camera cam({0.0f, 0.0f, 3.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);
 
 	// GLFW Setup
@@ -260,7 +260,7 @@ void run()
 	lightInfo.maxDirLights = renderer->get_lightCaster()->getMaxDirectionLights();
 
 	SceneInfo sceneInfo;
-	sceneInfo.modelName = "AlphaBlendModeTest";
+	sceneInfo.modelName = "DamagedHelmet";
 	sceneInfo.modelIndex = 0;
 	{
 		auto& ms = modelLoader->getFileNames();
@@ -486,7 +486,7 @@ void runDeferred()
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
-	Camera cam({0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
+	Camera cam({0.0f, 0.0f, 3.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   (float)WIDTH / (float)HEIGHT, 1.0f, 30.0f);
 
 	// GLFW Setup
@@ -700,6 +700,7 @@ void runDeferred()
 
 		for (auto& [k, model] : modelHolder)
 		{
+			model->get_root()->rotation *= glm::quat(glm::vec3(0, deltaTime, 0));
 			model->update();
 		}
 

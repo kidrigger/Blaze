@@ -7,6 +7,7 @@
 #include <core/Texture2D.hpp>
 #include <rendering/ARenderer.hpp>
 #include <rendering/deferred/DfrLightCaster.hpp>
+#include <core/VertexBuffer.hpp>
 
 namespace blaze
 {
@@ -18,22 +19,27 @@ namespace blaze
 class DfrRenderer final : public ARenderer
 {
 private:
-	constexpr static std::string_view vertShaderFileName = "shaders/deferred/vMRT.vert.spv";
-	constexpr static std::string_view fragShaderFileName = "shaders/deferred/fMRT.frag.spv";
+	constexpr static std::string_view vMRTShaderFileName = "shaders/deferred/vMRT.vert.spv";
+	constexpr static std::string_view fMRTShaderFileName = "shaders/deferred/fMRT.frag.spv";
+
+	constexpr static std::string_view vLightingShaderFileName = "shaders/deferred/vLighting.vert.spv";
+	constexpr static std::string_view fLightingShaderFileName = "shaders/deferred/fLighting.frag.spv";
+
+	struct Settings
+	{
+		enum : int
+		{
+			POSITION = 0x0,
+			NORMAL = 0x1,
+			ALBEDO = 0x2,
+			OMR = 0x3,
+			EMISSION = 0x4,
+			RENDER = 0x5,
+		} viewRT{RENDER};
+	} settings;
 
 	using CameraUBOV = UBOVector<Camera::UBlock>;
-
-	struct DeferredSettings
-	{
-		enum
-		{
-			POSITION,
-			NORMAL,
-			ALBEDO,
-			OMR,
-			EMISSION,
-		} viewRT{POSITION};
-	} dsettings;
+	using SettingsUBOV = UBOVector<Settings>;
 
 	Texture2D depthBuffer;
 	spirv::RenderPass renderPass;
@@ -53,13 +59,20 @@ private:
 			return position.valid() && normal.valid() && albedo.valid() && omr.valid() && emission.valid();
 		}
 	} mrtAttachment;
+	spirv::SetSingleton inputAttachmentSet;
 
 	spirv::Shader mrtShader;
 	spirv::Pipeline mrtPipeline;
+
+	spirv::Shader lightingShader;
+	spirv::Pipeline lightingPipeline;        
+
 	vkw::FramebufferVector framebuffers;
 
 	CameraUBOV cameraUBOs;
+	SettingsUBOV settingsUBOs;
 	spirv::SetVector cameraSets;
+	IndexedVertexBuffer<Vertex> screenQuad;
 
 	std::unique_ptr<DfrLightCaster> lightCaster;
 
@@ -109,12 +122,19 @@ protected:
 private:
 	spirv::RenderPass createRenderpass();
 	Texture2D createDepthBuffer() const;
+
 	spirv::Shader createMRTShader();
 	spirv::Pipeline createMRTPipeline();
 	MRTAttachment createMRTAttachment();
+	spirv::SetSingleton createInputAttachmentSet();
+
+	spirv::Shader createLightingShader();
+	spirv::Pipeline createLightingPipeline();
+
 	vkw::FramebufferVector createFramebuffers();
 
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
+	SettingsUBOV createSettingsUBOs();
 };
 } // namespace blaze

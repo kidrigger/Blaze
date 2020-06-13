@@ -75,6 +75,7 @@ struct GraphicsPipelineCreateInfo
 	VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo;
 	VkPipelineColorBlendStateCreateInfo colorblendCreateInfo;
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo;
+	uint32_t subpass{0};
 };
 
 /**

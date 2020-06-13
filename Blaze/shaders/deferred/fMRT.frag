@@ -14,8 +14,8 @@ layout(location = 2, component = 0) in vec2 V_UV0;
 layout(location = 2, component = 2) in vec2 V_UV1;
 
 layout(location = 0) out vec4 O_POSITION;
-layout(location = 1) out vec4 O_ALBEDO;
-layout(location = 2) out vec4 O_NORMAL;
+layout(location = 1) out vec4 O_NORMAL;
+layout(location = 2) out vec4 O_ALBEDO;
 layout(location = 3) out vec4 O_OMR;
 layout(location = 4) out vec4 O_EMISSION;
 
@@ -25,6 +25,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	vec3 viewPos;
 	float farPlane;
 } camera;
+
+layout(set = 0, binding = 1) uniform SettingsUBO {
+	int viewRT;
+} settings;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseMap[MAX_TEX_IN_MAT];
 layout(set = 1, binding = 1) uniform sampler2D normalMap[MAX_TEX_IN_MAT];
