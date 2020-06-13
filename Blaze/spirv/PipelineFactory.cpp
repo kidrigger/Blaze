@@ -361,7 +361,7 @@ Pipeline PipelineFactory::createGraphicsPipeline(const Shader& shader, const Ren
 	pipelineCreateInfo.pDynamicState = &createInfo.dynamicStateCreateInfo;
 	pipelineCreateInfo.layout = shader.pipelineLayout.get();
 	pipelineCreateInfo.renderPass = renderPass.renderPass.get();
-	pipelineCreateInfo.subpass = 0;
+	pipelineCreateInfo.subpass = createInfo.subpass;
 	pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineCreateInfo.basePipelineIndex = -1;
 
