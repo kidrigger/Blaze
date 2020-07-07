@@ -8,7 +8,7 @@
 #include <spirv/PipelineFactory.hpp>
 #include <core/Camera.hpp>
 
-namespace blaze
+namespace blaze::fwd
 {
 /**
  * @class DirectionShadow

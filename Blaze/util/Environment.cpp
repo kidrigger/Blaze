@@ -283,7 +283,7 @@ Texture2D createBrdfLut(const Context* context)
 	{
 		auto tPipeline = util::createGraphicsPipeline(context->get_device(), irPipelineLayout.get(), irRenderPass.get(),
 													  {dim, dim}, "shaders/env/vBrdfLut.vert.spv",
-													  "shaders/env/fBrdfLut.frag.spv", {}, VK_CULL_MODE_FRONT_BIT);
+													  "shaders/env/fBrdfLut.frag.spv", {}, VK_CULL_MODE_BACK_BIT);
 		irPipeline = vkw::Pipeline(tPipeline, device);
 	}
 

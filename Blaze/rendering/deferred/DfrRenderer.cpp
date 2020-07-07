@@ -34,10 +34,10 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 
 	// Skybox mesh
 	// Deferred Quad
-	screenQuad = getUVRect(context.get());
+	lightVolume = getIcoSphere(context.get());
 
 	// Lights
-	lightCaster = std::make_unique<DfrLightCaster>();
+	lightCaster = std::make_unique<DfrLightCaster>(context.get(), &lightingShader, maxFrameInFlight);
 
 	// G-buffer
 	mrtAttachment = createMRTAttachment();
@@ -61,7 +61,7 @@ void DfrRenderer::recreateSwapchainDependents()
 	settingsUBOs = createSettingsUBOs();
 
 	// Lights
-	lightCaster->recreate();
+	lightCaster->recreate(context.get(), &lightingShader, maxFrameInFlight);
 
 	// G-buffer
 	mrtAttachment = createMRTAttachment();
@@ -227,6 +227,7 @@ void DfrRenderer::update(uint32_t frame)
 {
 	cameraUBOs[frame].write(camera->getUbo());
 	settingsUBOs[frame].write(settings);
+	lightCaster->update(camera, frame);
 }
 
 void DfrRenderer::recordCommands(uint32_t frame)
@@ -277,12 +278,20 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 	vkCmdNextSubpass(commandBuffers[frame], VK_SUBPASS_CONTENTS_INLINE);
 	lightingPipeline.bind(commandBuffers[frame]);
+	lightCaster->bind(commandBuffers[frame], lightingShader.pipelineLayout.get(), frame);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, lightingShader.pipelineLayout.get(),
 							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, lightingShader.pipelineLayout.get(),
 							inputAttachmentSet.setIdx, 1, &inputAttachmentSet.get(), 0, nullptr);
-	screenQuad.bind(commandBuffers[frame]);
-	vkCmdDrawIndexed(commandBuffers[frame], screenQuad.get_indexCount(), 1, 0, 0, 0);
+	lightVolume.bind(commandBuffers[frame]);
+	for (auto it = lightCaster->getPointLightIterator(); it.valid(); ++it)
+	{
+		glm::ivec4 idx(it.index);
+		vkCmdPushConstants(commandBuffers[frame], lightingShader.pipelineLayout.get(),
+						   lightingShader.pushConstant.stage, 0, lightingShader.pushConstant.size, &idx[0]);
+
+		vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+	}
 	vkCmdEndRenderPass(commandBuffers[frame]);
 }
 
@@ -299,18 +308,23 @@ void DfrRenderer::drawSettings()
 {
 	if (ImGui::Begin("Deferred Settings"))
 	{
-		settings.viewRT =
-			ImGui::RadioButton("Full Render", settings.viewRT == settings.RENDER) ? settings.RENDER : settings.viewRT;
-		settings.viewRT = ImGui::RadioButton("MRT Position", settings.viewRT == settings.POSITION) ? settings.POSITION
-																								   : settings.viewRT;
-		settings.viewRT =
-			ImGui::RadioButton("MRT Normal", settings.viewRT == settings.NORMAL) ? settings.NORMAL : settings.viewRT;
-		settings.viewRT =
-			ImGui::RadioButton("MRT Albedo", settings.viewRT == settings.ALBEDO) ? settings.ALBEDO : settings.viewRT;
-		settings.viewRT =
-			ImGui::RadioButton("MRT OMR", settings.viewRT == settings.OMR) ? settings.OMR : settings.viewRT;
-		settings.viewRT = ImGui::RadioButton("MRT EMISSION", settings.viewRT == settings.EMISSION) ? settings.EMISSION
-																								   : settings.viewRT;
+		ImGui::SliderFloat("Exposure", &settings.exposure, 1.0f, 10.0f);
+		ImGui::SliderFloat("Gamma", &settings.gamma, 1.0f, 4.0f);
+		if (ImGui::CollapsingHeader("MRT Debug Output"))
+		{
+			settings.viewRT =
+				ImGui::RadioButton("Full Render", settings.viewRT == settings.RENDER) ? settings.RENDER : settings.viewRT;
+			settings.viewRT = ImGui::RadioButton("MRT Position", settings.viewRT == settings.POSITION) ? settings.POSITION
+																									   : settings.viewRT;
+			settings.viewRT =
+				ImGui::RadioButton("MRT Normal", settings.viewRT == settings.NORMAL) ? settings.NORMAL : settings.viewRT;
+			settings.viewRT =
+				ImGui::RadioButton("MRT Albedo", settings.viewRT == settings.ALBEDO) ? settings.ALBEDO : settings.viewRT;
+			settings.viewRT =
+				ImGui::RadioButton("MRT OMR", settings.viewRT == settings.OMR) ? settings.OMR : settings.viewRT;
+			settings.viewRT = ImGui::RadioButton("MRT EMISSION", settings.viewRT == settings.EMISSION) ? settings.EMISSION
+																									   : settings.viewRT;
+		}
 	}
 	ImGui::End();
 }
@@ -507,7 +521,7 @@ spirv::Pipeline DfrRenderer::createLightingPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
@@ -520,14 +534,14 @@ spirv::Pipeline DfrRenderer::createLightingPipeline()
 
 	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
 	colorblendAttachment.colorWriteMask = 0;
-	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.blendEnable = VK_TRUE;
 	colorblendAttachment.colorWriteMask =
 		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
 	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -536,7 +550,7 @@ spirv::Pipeline DfrRenderer::createLightingPipeline()
 	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
 
 	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	info.depthStencilCreateInfo.depthTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
 	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
 	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;

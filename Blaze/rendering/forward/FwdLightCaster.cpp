@@ -17,8 +17,8 @@ FwdLightCaster::FwdLightCaster(const Context* context, const spirv::Shader* shad
 
 	dataSet = context->get_pipelineFactory()->createSets(*set, frames);
 	textureSet = context->get_pipelineFactory()->createSet(*texSet);
-	pointLights = std::make_unique<PointLightCaster>(context, dataSet, textureSet);
-	directionLights = std::make_unique<DirectionLightCaster>(context, dataSet, textureSet);
+	pointLights = std::make_unique<fwd::PointLightCaster>(context, dataSet, textureSet);
+	directionLights = std::make_unique<fwd::DirectionLightCaster>(context, dataSet, textureSet);
 }
 
 void FwdLightCaster::recreate(const Context* context, const spirv::Shader* shader, uint32_t frames)
