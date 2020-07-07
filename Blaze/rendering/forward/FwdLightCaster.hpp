@@ -26,8 +26,8 @@ private:
 	spirv::SetVector dataSet;
 	spirv::SetSingleton textureSet;
 
-	std::unique_ptr<PointLightCaster> pointLights;
-	std::unique_ptr<DirectionLightCaster> directionLights;
+	std::unique_ptr<fwd::PointLightCaster> pointLights;
+	std::unique_ptr<fwd::DirectionLightCaster> directionLights;
 	uint8_t pointGeneration;
 	uint8_t directionGeneration;
 	std::set<Handle> validHandles;

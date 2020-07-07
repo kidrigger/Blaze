@@ -2,7 +2,7 @@
 // or project specific include files.
 
 #pragma once
-#define VALIDATION_LAYERS_ENABLED
+// #define VALIDATION_LAYERS_ENABLED
 #include <Version.hpp>
 
 #include <string_view>

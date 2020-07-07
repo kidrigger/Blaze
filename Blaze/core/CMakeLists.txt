@@ -9,7 +9,8 @@ set( HEADER_FILES
 	"VertexBuffer.hpp"
     "Texture2D.hpp"
     "TextureCube.hpp"
-	"Drawable.hpp" )
+	"Drawable.hpp"
+	"StorageBuffer.hpp" )
 
 set( SOURCE_FILES
 	"Context.cpp"
@@ -17,6 +18,7 @@ set( SOURCE_FILES
 	"UniformBuffer.cpp"
 	"VertexBuffer.cpp"
     "TextureCube.cpp"
-    "Texture2D.cpp" )
+    "Texture2D.cpp"
+	"StorageBuffer.cpp" )
 
 target_sources( Blaze PRIVATE ${HEADER_FILES} ${SOURCE_FILES} )

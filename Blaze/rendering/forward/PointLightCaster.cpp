@@ -11,7 +11,7 @@
 #undef min
 #undef max
 
-namespace blaze
+namespace blaze::fwd
 {
 PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVector& sets,
 								   const spirv::SetSingleton& texSet) noexcept

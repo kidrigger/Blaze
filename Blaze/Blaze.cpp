@@ -663,7 +663,7 @@ void runDeferred()
 	lightInfo.maxDirLights = renderer->get_lightCaster()->getMaxDirectionLights();
 
 	SceneInfo sceneInfo;
-	sceneInfo.modelName = "DamagedHelmet";
+	sceneInfo.modelName = "Sponza";
 	sceneInfo.modelIndex = 0;
 	{
 		auto& ms = modelLoader->getFileNames();
@@ -700,7 +700,7 @@ void runDeferred()
 
 		for (auto& [k, model] : modelHolder)
 		{
-			model->get_root()->rotation *= glm::quat(glm::vec3(0, deltaTime, 0));
+			// model->get_root()->rotation *= glm::quat(glm::vec3(0, deltaTime, 0));
 			model->update();
 		}
 
@@ -778,91 +778,91 @@ void runDeferred()
 						}
 					}
 
-				//	if (ImGui::CollapsingHeader("Lights"))
-				//	{
-				//		int idx = 0;
-				//		for (auto& light : lightInfo.lights)
-				//		{
-				//			ImGui::PushID(idx);
-				//			if (ImGui::TreeNode("Light##POINT", "light %d", idx))
-				//			{
-				//				bool edited = light.draw();
-				//				if (edited)
-				//				{
-				//					lightInfo.toUpdate = idx;
-				//					lightInfo.type = ALightCaster::Type::POINT;
-				//				}
-				//				if (ImGui::Button("Remove##POINT"))
-				//				{
-				//					lightInfo.toDelete = idx;
-				//					lightInfo.type = ALightCaster::Type::POINT;
-				//				}
-				//				ImGui::TreePop();
-				//			}
-				//			ImGui::PopID();
-				//			ImGui::Separator();
-				//			idx++;
-				//		}
-				//		if (lightInfo.lights.size() < lightInfo.maxLights)
-				//		{
-				//			ImGui::Text("New Light");
-				//			ImGui::TreePush("new light");
-				//			{
-				//				ImGui::PushID("LightEditable");
-				//				lightInfo.editable.draw();
-				//				ImGui::PopID();
-				//				if (ImGui::Button("Add##POINT"))
-				//				{
-				//					lightInfo.toAdd = 1;
-				//					lightInfo.type = ALightCaster::Type::POINT;
-				//				}
-				//			}
-				//			ImGui::TreePop();
-				//		}
-				//	}
-				//	if (ImGui::CollapsingHeader("DirLights"))
-				//	{
-				//		int idx = 0;
-				//		for (auto& light : lightInfo.dirLights)
-				//		{
-				//			ImGui::PushID(idx);
-				//			if (ImGui::TreeNode("Light##DIR", "light %d", idx))
-				//			{
-				//				bool edited = light.draw();
-				//				if (edited)
-				//				{
-				//					lightInfo.toUpdate = idx;
-				//					lightInfo.type = ALightCaster::Type::DIRECTIONAL;
-				//				}
-				//				if (ImGui::Button("Remove##DIR"))
-				//				{
-				//					lightInfo.toDelete = idx;
-				//					lightInfo.type = ALightCaster::Type::DIRECTIONAL;
-				//				}
-				//				ImGui::TreePop();
-				//			}
-				//			ImGui::PopID();
-				//			ImGui::Separator();
-				//			idx++;
-				//		}
-				//		if (lightInfo.lights.size() < lightInfo.maxDirLights)
-				//		{
-				//			ImGui::Text("New Directional Light");
-				//			ImGui::TreePush("new dir light");
-				//			{
-				//				ImGui::PushID("LightEditable");
-				//				lightInfo.dirEditable.draw(true);
-				//				ImGui::PopID();
-				//				if (ImGui::Button("Add##DIR"))
-				//				{
-				//					lightInfo.toAdd = 1;
-				//					lightInfo.type = ALightCaster::Type::DIRECTIONAL;
-				//				}
-				//			}
-				//			ImGui::TreePop();
-				//		}
-				//	}
-				//	lightInfo.update(renderer.get());
+					if (ImGui::CollapsingHeader("Lights"))
+					{
+						int idx = 0;
+						for (auto& light : lightInfo.lights)
+						{
+							ImGui::PushID(idx);
+							if (ImGui::TreeNode("Light##POINT", "light %d", idx))
+							{
+								bool edited = light.draw();
+								if (edited)
+								{
+									lightInfo.toUpdate = idx;
+									lightInfo.type = ALightCaster::Type::POINT;
+								}
+								if (ImGui::Button("Remove##POINT"))
+								{
+									lightInfo.toDelete = idx;
+									lightInfo.type = ALightCaster::Type::POINT;
+								}
+								ImGui::TreePop();
+							}
+							ImGui::PopID();
+							ImGui::Separator();
+							idx++;
+						}
+						if (lightInfo.lights.size() < lightInfo.maxLights)
+						{
+							ImGui::Text("New Light");
+							ImGui::TreePush("new light");
+							{
+								ImGui::PushID("LightEditable");
+								lightInfo.editable.draw();
+								ImGui::PopID();
+								if (ImGui::Button("Add##POINT"))
+								{
+									lightInfo.toAdd = 1;
+									lightInfo.type = ALightCaster::Type::POINT;
+								}
+							}
+							ImGui::TreePop();
+						}
+					}
+					/*if (ImGui::CollapsingHeader("DirLights"))
+					{
+						int idx = 0;
+						for (auto& light : lightInfo.dirLights)
+						{
+							ImGui::PushID(idx);
+							if (ImGui::TreeNode("Light##DIR", "light %d", idx))
+							{
+								bool edited = light.draw();
+								if (edited)
+								{
+									lightInfo.toUpdate = idx;
+									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
+								}
+								if (ImGui::Button("Remove##DIR"))
+								{
+									lightInfo.toDelete = idx;
+									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
+								}
+								ImGui::TreePop();
+							}
+							ImGui::PopID();
+							ImGui::Separator();
+							idx++;
+						}
+						if (lightInfo.lights.size() < lightInfo.maxDirLights)
+						{
+							ImGui::Text("New Directional Light");
+							ImGui::TreePush("new dir light");
+							{
+								ImGui::PushID("LightEditable");
+								lightInfo.dirEditable.draw(true);
+								ImGui::PopID();
+								if (ImGui::Button("Add##DIR"))
+								{
+									lightInfo.toAdd = 1;
+									lightInfo.type = ALightCaster::Type::DIRECTIONAL;
+								}
+							}
+							ImGui::TreePop();
+						}
+					}*/
+					lightInfo.update(renderer.get());
 				}
 				ImGui::End();
 

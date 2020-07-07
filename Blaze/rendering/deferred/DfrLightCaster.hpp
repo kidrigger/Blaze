@@ -15,16 +15,37 @@
 
 #include <set>
 
+#include "PointLightCaster.hpp"
+
 namespace blaze
 {
 class DfrLightCaster : public ALightCaster
 {
-public:
-	DfrLightCaster() noexcept;
+private:
+	spirv::SetVector dataSet;
+	spirv::SetSingleton textureSet;
 
-	void recreate();
+	std::unique_ptr<dfr::PointLightCaster> pointLights;
+	// std::unique_ptr<dfr::DirectionLightCaster> directionLights;
+	uint8_t pointGeneration;
+	// uint8_t directionGeneration;
+	std::set<Handle> validHandles;
+
+	struct HandleExposed
+	{
+		uint8_t type;
+		uint8_t gen;
+		uint16_t idx;
+	};
+
+public:
+	DfrLightCaster(const Context* context, const spirv::Shader* shader, uint32_t frames) noexcept;
+
+	void recreate(const Context* context, const spirv::Shader* shader, uint32_t frames);
 
 	void bind(VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frame) const;
+
+	dfr::PointLightCaster::LightIterator getPointLightIterator();
 
 	// Inherited via ALightCaster
 	virtual Handle createPointLight(const glm::vec3& position, float brightness, float radius,

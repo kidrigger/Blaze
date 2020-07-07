@@ -36,6 +36,8 @@ private:
 			EMISSION = 0x4,
 			RENDER = 0x5,
 		} viewRT{RENDER};
+		float exposure = 4.5f;
+		float gamma = 2.2f;
 	} settings;
 
 	using CameraUBOV = UBOVector<Camera::UBlock>;
@@ -72,7 +74,7 @@ private:
 	CameraUBOV cameraUBOs;
 	SettingsUBOV settingsUBOs;
 	spirv::SetVector cameraSets;
-	IndexedVertexBuffer<Vertex> screenQuad;
+	IndexedVertexBuffer<Vertex> lightVolume;
 
 	std::unique_ptr<DfrLightCaster> lightCaster;
 

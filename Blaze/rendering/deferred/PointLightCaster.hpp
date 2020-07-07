@@ -7,7 +7,7 @@
 #include <core/UniformBuffer.hpp>
 #include <spirv/PipelineFactory.hpp>
 
-namespace blaze::fwd
+namespace blaze::dfr
 {
 /**
  * @class PointShadow
@@ -27,7 +27,7 @@ struct PointShadow
 	vkw::Framebuffer framebuffer;
 	VkViewport viewport;
 	uint16_t next;
-	
+
 	struct PCB
 	{
 		alignas(16) glm::vec3 position;
@@ -76,13 +76,13 @@ private:
 	UBO<CubemapUBlock> viewUBO;
 
 	UBODataVector ubos;
-	
+
 	uint32_t shadowCount;
 	int freeShadow;
 	std::vector<PointShadow> shadows;
 
 public:
-	PointLightCaster(const Context* context, const spirv::SetVector& sets, const spirv::SetSingleton& texSet) noexcept;
+	PointLightCaster(const Context* context, uint32_t numLights, const spirv::SetVector& sets, const spirv::SetSingleton& texSet) noexcept;
 	void recreate(const Context* context, const spirv::SetVector& sets);
 	void update(uint32_t frame);
 
@@ -114,6 +114,53 @@ public:
 	}
 
 	void cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables);
+
+	struct LightIterator
+	{
+		int index;
+		LightData* data;
+		int end;
+
+		LightIterator& operator++()
+		{
+			do
+			{
+				data++;
+				index++;
+			} while (data->brightness < 0 && index < end);
+			return *this;
+		}
+
+		bool valid()
+		{
+			return index < end;
+		}
+
+	private:
+		LightIterator(std::vector<LightData>& lights)
+		{
+			end = static_cast<int>(lights.size());
+			data = lights.data();
+			index = end;
+			int i = 0;
+			for (auto& light : lights)
+			{
+				if (light.brightness > 0)
+				{
+					index = i;
+					break;
+				}
+				i++;
+			}
+		}
+
+		friend class PointLightCaster;
+	};
+
+	LightIterator getLightIterator()
+	{
+		return LightIterator(lights);
+	}
 
 private:
 	void bindDataSet(const Context* context, const spirv::SetVector& sets);
