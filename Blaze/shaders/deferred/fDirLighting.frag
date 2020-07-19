@@ -54,7 +54,7 @@ layout(set = 1, binding = 0) buffer Lights {
 	PointLightData data[];
 } lights;
 
-layout(set = 1, binding = 1) buffer DirLights {
+layout(set = 1, binding = 0) buffer DirLights {
 	DirLightData data[];
 } dirLights;
 
@@ -124,43 +124,72 @@ void main() {
 	float metallic = OMR.g;
 	float roughness = OMR.b;
 	vec3 albedo = subpassLoad(I_ALBEDO).rgb;
+	vec3 emission = subpassLoad(I_EMISSION).rgb;
 	vec3 V = normalize(camera.viewPos - position.xyz);
 
-	int i = pcb.idx;
-	float d = distance(position, lights.data[i].position);
+	// Lighting setup
 
-	
 	vec3 F0 = vec3(0.04);
 	F0		= mix(F0, albedo, metallic);
 
 	vec3 L0 = vec3(0.0f);
 
-	if (d >= lights.data[i].radius) discard;
+	vec3 ambient = vec3(0.03f) * ao;
+
+	// Direction Lighting
+	for (int i = 0; i < dirLights.data.length(); i++) {
+		if (dirLights.data[i].brightness < 0.0f) continue;
 		
-	vec3 L		 = normalize(lights.data[i].position.xyz - position.xyz);
-	vec3 H		 = normalize(V + L);
-	float cosine = max(dot(L, N), 0.0f);
+		vec3 L		 = normalize(-dirLights.data[i].direction.xyz);
+		vec3 H		 = normalize(V + L);
+		float cosine = max(dot(L, N), 0.0f);
 
-	float dist		  = length(lights.data[i].position.xyz - position.xyz);
-	float attenuation = 1.0 / (dist * dist);
-	vec3 radiance	  = lightColor * attenuation * lights.data[i].brightness;
+		vec3 radiance = lightColor * 0.25f * dirLights.data[i].brightness;
 		
-	float NDF = DistributionGGX(N, H, roughness);
-	float G	  = GeometrySmith(N, V, L, roughness);
-	vec3 F	  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
+		float NDF = DistributionGGX(N, H, roughness);
+		float G	  = GeometrySmith(N, V, L, roughness);
+		vec3 F	  = fresnelSchlickRoughness(max(dot(H, V), 0.0f), F0, roughness);
 
-	vec3 ks = F;
-	vec3 kd = vec3(1.0f) - ks;
-	kd *= 1.0f - metallic;
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
 
-	vec3 numerator	  = NDF * G * F;
-	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-	vec3 specular	  = numerator / max(denominator, 0.001);
+		vec3 numerator	  = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+		vec3 specular	  = numerator / max(denominator, 0.001);
 
-	float NdotL = max(dot(N, L), 0.0f);
-	float shade = 0.0f;// getPointShadow(i, N);
+		float NdotL = max(dot(N, L), 0.0f);
+		float shade = 0.0f; // getDirectionShadow(i, N);
 
-	L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
+		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
+	}
 
-	O_COLOR = vec4(L0, 1.0f);
+//	if (settings.enableIBL > 0) {
+//		vec3 R = reflect(-V, N);
+//
+//		const float MAX_REFLECTION_LOD = 4.0f;
+//		vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+//
+//		vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+//		vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+//		vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+//	
+//		vec3 ks = F;
+//		vec3 kd = vec3(1.0f) - ks;
+//		kd *= 1.0f - metallic;
+//
+//		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
+//
+//		ambient = (kd * diffuse + specular) * ao;
+//	}
+
+	O_COLOR	= vec4(ambient + L0 + emission, 1.0f);
+
+	switch (settings.viewRT) {
+		case RT_POSITION: O_COLOR = vec4(position, 1.0f); break;
+		case RT_NORMAL: O_COLOR = vec4(N, 1.0f); break;
+		case RT_ALBEDO: O_COLOR = vec4(albedo, 1.0f); break;
+		case RT_OMR: O_COLOR = vec4(OMR, 1.0f); break;
+		case RT_EMISSION: O_COLOR = vec4(emission, 1.0f); break;
+	}
 }

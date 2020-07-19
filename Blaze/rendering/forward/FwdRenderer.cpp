@@ -122,14 +122,19 @@ void FwdRenderer::recordCommands(uint32_t frame)
 spirv::RenderPass FwdRenderer::createRenderpass()
 {
 	assert(depthBuffer.valid());
-	std::vector<spirv::AttachmentFormat> attachments;
 
-	spirv::AttachmentFormat* attachment;
+	using namespace spirv;
+
+	std::vector<AttachmentFormat> attachments;
+
+	AttachmentFormat* attachment;
 
 	attachment = &attachments.emplace_back();
 	attachment->format = swapchain->get_format();
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 
 	VkAttachmentReference colorRef = {};
 	colorRef.attachment = 0;
@@ -139,6 +144,8 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 	attachment->format = depthBuffer.get_format();
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::DONT_CARE);
 
 	VkAttachmentReference depthRef = {};
 	depthRef.attachment = 1;
@@ -150,13 +157,7 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 	subpassDesc.pColorAttachments = &colorRef;
 	subpassDesc.pDepthStencilAttachment = &depthRef;
 
-	spirv::LoadStoreConfig loadStore = {};
-	loadStore.colorLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
-	loadStore.colorStore = spirv::LoadStoreConfig::StoreAction::CONTINUE;
-	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
-	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::DONT_CARE;
-
-	return context->get_pipelineFactory()->createRenderPass(attachments, loadStore, {subpassDesc});
+	return context->get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
 }
 
 spirv::Shader FwdRenderer::createShader()

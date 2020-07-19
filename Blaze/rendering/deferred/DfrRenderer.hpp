@@ -25,6 +25,9 @@ private:
 	constexpr static std::string_view vLightingShaderFileName = "shaders/deferred/vLighting.vert.spv";
 	constexpr static std::string_view fLightingShaderFileName = "shaders/deferred/fLighting.frag.spv";
 
+	constexpr static std::string_view vDirLightingShaderFileName = "shaders/deferred/vDirLighting.vert.spv";
+	constexpr static std::string_view fDirLightingShaderFileName = "shaders/deferred/fDirLighting.frag.spv";
+
 	struct Settings
 	{
 		enum : int
@@ -66,15 +69,20 @@ private:
 	spirv::Shader mrtShader;
 	spirv::Pipeline mrtPipeline;
 
-	spirv::Shader lightingShader;
-	spirv::Pipeline lightingPipeline;        
+	spirv::Shader pointLightShader;
+	spirv::Pipeline pointLightPipeline;
+
+	spirv::Shader dirLightShader;
+	spirv::Pipeline dirLightPipeline;
 
 	vkw::FramebufferVector framebuffers;
 
 	CameraUBOV cameraUBOs;
 	SettingsUBOV settingsUBOs;
+
 	spirv::SetVector cameraSets;
 	IndexedVertexBuffer<Vertex> lightVolume;
+	IndexedVertexBuffer<Vertex> lightQuad;
 
 	std::unique_ptr<DfrLightCaster> lightCaster;
 
@@ -130,8 +138,11 @@ private:
 	MRTAttachment createMRTAttachment();
 	spirv::SetSingleton createInputAttachmentSet();
 
-	spirv::Shader createLightingShader();
-	spirv::Pipeline createLightingPipeline();
+	spirv::Shader createPointLightingShader();
+	spirv::Pipeline createPointLightingPipeline();
+
+	spirv::Shader createDirLightingShader();
+	spirv::Pipeline createDirLightingPipeline();
 
 	vkw::FramebufferVector createFramebuffers();
 
