@@ -23,7 +23,7 @@ PointLightCaster::PointLightCaster(const Context* context, uint32_t maxLights, c
 
 	auto uniform = sets.getUniform(dataUniformName);
 	lights = std::vector<LightData>(maxLights);
-	ubos = UBODataVector(context, maxLights * sizeof(LightData), sets.size());
+	ubos = SSBODataVector(context, maxLights * sizeof(LightData), sets.size());
 	count = 0;
 
 	int i = -1;
@@ -92,7 +92,7 @@ PointLightCaster::PointLightCaster(const Context* context, uint32_t maxLights, c
 
 void PointLightCaster::recreate(const Context* context, const spirv::SetVector& sets)
 {
-	ubos = UBODataVector(context, maxLights * sizeof(LightData), sets.size());
+	ubos = SSBODataVector(context, maxLights * sizeof(LightData), sets.size());
 
 	for (uint32_t i = 0; i < sets.size(); ++i)
 	{
@@ -163,7 +163,7 @@ bool PointLightCaster::setShadow(uint16_t idx, bool enableShadow)
 
 	LightData* pLight = &lights[idx];
 
-	assert(pLight->brightness > 0);
+	assert(pLight->brightness >= 0);
 
 	if ((pLight->shadowIdx < 0) != enableShadow)
 	{
@@ -305,10 +305,12 @@ void PointLightCaster::bindTextureSet(const Context* context, const spirv::SetSi
 
 spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 {
-	std::vector<spirv::AttachmentFormat> format(1);
+	using namespace spirv;
+	std::vector<AttachmentFormat> format(1);
 	format[0].usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	format[0].format = VK_FORMAT_D32_SFLOAT;
 	format[0].sampleCount = VK_SAMPLE_COUNT_1_BIT;
+	format[0].loadStoreConfig = LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 
 	VkAttachmentReference depthRef = {};
 	depthRef.attachment = 0;
@@ -326,12 +328,6 @@ spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 	subpass[0].pResolveAttachments = nullptr;
 	subpass[0].flags = 0;
 
-	spirv::LoadStoreConfig loadStore = {};
-	loadStore.colorLoad = spirv::LoadStoreConfig::LoadAction::DONT_CARE;
-	loadStore.colorStore = spirv::LoadStoreConfig::StoreAction::DONT_CARE;
-	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
-	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::READ;
-
 	uint32_t viewmask = 0b111111;
 
 	VkRenderPassMultiviewCreateInfo multiview = {};
@@ -344,7 +340,7 @@ spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 	multiview.dependencyCount = 0;
 	multiview.pViewOffsets = nullptr;
 
-	return context->get_pipelineFactory()->createRenderPass(format, loadStore, subpass, &multiview);
+	return context->get_pipelineFactory()->createRenderPass(format, subpass, &multiview);
 }
 
 spirv::Shader PointLightCaster::createShader(const Context* context)

@@ -419,7 +419,7 @@ PipelineFactory::FBFormatID PipelineFactory::getFormatKey(const std::vector<Atta
 	}
 }
 
-RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats,
 											 const std::vector<VkSubpassDescription>& subpasses,
 											 const std::vector<VkSubpassDependency>& dependencies,
 											 const VkRenderPassMultiviewCreateInfo* multiview)
@@ -440,7 +440,7 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 		description.format = format.format;
 		description.samples = format.sampleCount;
 
-		switch (isDepthStencil ? config.depthLoad : config.colorLoad)
+		switch (format.loadStoreConfig.loadAction)
 		{
 		case LoadStoreConfig::LoadAction::CLEAR: {
 			description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -501,7 +501,7 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 		break;
 		}
 
-		switch (isDepthStencil ? config.depthStore : config.colorStore)
+		switch (format.loadStoreConfig.storeAction)
 		{
 		case LoadStoreConfig::StoreAction::CONTINUE: {
 			if (isDepthStencil)
@@ -617,11 +617,11 @@ vkw::DescriptorPool PipelineFactory::createDescriptorPool(const Shader::Set& set
 	return vkw::DescriptorPool(util::createDescriptorPool(device, poolSizes, static_cast<uint32_t>(maxSets)), device);
 }
 
-RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>& formats,
 											 const std::vector<VkSubpassDescription>& subpasses,
 											 const VkRenderPassMultiviewCreateInfo* multiview)
 {
-	return createRenderPass(formats, config, subpasses, {}, multiview);
+	return createRenderPass(formats, subpasses, {}, multiview);
 }
 
 SetVector PipelineFactory::createSets(const Shader::Set& set, uint32_t count)

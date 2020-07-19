@@ -23,9 +23,13 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 
 	// XXX: Lightpass
 	// Pipeline layouts
-	lightingShader = createLightingShader();
+	pointLightShader = createPointLightingShader();
 	// Pipeline
-	lightingPipeline = createLightingPipeline();
+	pointLightPipeline = createPointLightingPipeline();
+	// Pipeline layouts
+	dirLightShader = createDirLightingShader();
+	// Pipeline
+	dirLightPipeline = createDirLightingPipeline();
 
 	// All uniform buffer stuff
 	cameraSets = createCameraSets();
@@ -35,9 +39,10 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// Skybox mesh
 	// Deferred Quad
 	lightVolume = getIcoSphere(context.get());
+	lightQuad = getUVRect(context.get());
 
 	// Lights
-	lightCaster = std::make_unique<DfrLightCaster>(context.get(), &lightingShader, maxFrameInFlight);
+	lightCaster = std::make_unique<DfrLightCaster>(context.get(), &pointLightShader, maxFrameInFlight);
 
 	// G-buffer
 	mrtAttachment = createMRTAttachment();
@@ -61,7 +66,7 @@ void DfrRenderer::recreateSwapchainDependents()
 	settingsUBOs = createSettingsUBOs();
 
 	// Lights
-	lightCaster->recreate(context.get(), &lightingShader, maxFrameInFlight);
+	lightCaster->recreate(context.get(), &pointLightShader, maxFrameInFlight);
 
 	// G-buffer
 	mrtAttachment = createMRTAttachment();
@@ -73,9 +78,11 @@ void DfrRenderer::recreateSwapchainDependents()
 spirv::RenderPass DfrRenderer::createRenderpass()
 {
 	assert(depthBuffer.valid());
-	std::vector<spirv::AttachmentFormat> attachments;
 
-	spirv::AttachmentFormat* attachment;
+	using namespace spirv;
+	std::vector<AttachmentFormat> attachments;
+
+	AttachmentFormat* attachment;
 
 	std::vector<VkAttachmentReference> colorRefs;
 	VkAttachmentReference swapchainColorRef = {};
@@ -90,6 +97,7 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = swapchain->get_format();
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig = LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	swapchainColorRef = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// G-buffer attachments
@@ -98,6 +106,8 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// NORMAL
@@ -105,6 +115,8 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// ALBEDO
@@ -112,6 +124,8 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// OCCLUSION METAL ROUGH
@@ -119,6 +133,8 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// EMISSION
@@ -126,6 +142,8 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// Depth Attachment
@@ -133,6 +151,8 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	attachment->format = depthBuffer.get_format();
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	depthRef = {attachmentRefIdx++, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
 
 	// Input Attachments
@@ -159,12 +179,6 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 		subpassDesc->pColorAttachments = &swapchainColorRef;
 		subpassDesc->pDepthStencilAttachment = &depthRef;
 	}
-
-	spirv::LoadStoreConfig loadStore = {};
-	loadStore.colorLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
-	loadStore.colorStore = spirv::LoadStoreConfig::StoreAction::CONTINUE;
-	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
-	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::CONTINUE;
 
 	std::vector<VkSubpassDependency> deps;
 	{
@@ -198,7 +212,7 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 		dependency->dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 	}
 
-	return context->get_pipelineFactory()->createRenderPass(attachments, loadStore, subpassDescs, deps);
+	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs, deps);
 }
 
 Texture2D DfrRenderer::createDepthBuffer() const
@@ -277,21 +291,36 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	}
 
 	vkCmdNextSubpass(commandBuffers[frame], VK_SUBPASS_CONTENTS_INLINE);
-	lightingPipeline.bind(commandBuffers[frame]);
-	lightCaster->bind(commandBuffers[frame], lightingShader.pipelineLayout.get(), frame);
-	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, lightingShader.pipelineLayout.get(),
+
+	// Point lights first
+	pointLightPipeline.bind(commandBuffers[frame]);
+	lightCaster->bind(commandBuffers[frame], pointLightShader.pipelineLayout.get(), frame);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, pointLightShader.pipelineLayout.get(),
 							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
-	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, lightingShader.pipelineLayout.get(),
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, pointLightShader.pipelineLayout.get(),
 							inputAttachmentSet.setIdx, 1, &inputAttachmentSet.get(), 0, nullptr);
 	lightVolume.bind(commandBuffers[frame]);
 	for (auto it = lightCaster->getPointLightIterator(); it.valid(); ++it)
 	{
 		glm::ivec4 idx(it.index);
-		vkCmdPushConstants(commandBuffers[frame], lightingShader.pipelineLayout.get(),
-						   lightingShader.pushConstant.stage, 0, lightingShader.pushConstant.size, &idx[0]);
+		vkCmdPushConstants(commandBuffers[frame], pointLightShader.pipelineLayout.get(),
+						   pointLightShader.pushConstant.stage, 0, pointLightShader.pushConstant.size, &idx[0]);
 
 		vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
 	}
+
+	// Direction lights, environment and ambient
+	dirLightPipeline.bind(commandBuffers[frame]);
+	lightCaster->bind(commandBuffers[frame], dirLightShader.pipelineLayout.get(), frame);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+							dirLightShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
+							nullptr);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
+							inputAttachmentSet.setIdx, 1,
+							&inputAttachmentSet.get(), 0, nullptr);
+	lightQuad.bind(commandBuffers[frame]);
+	vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
+
 	vkCmdEndRenderPass(commandBuffers[frame]);
 }
 
@@ -452,9 +481,10 @@ DfrRenderer::MRTAttachment DfrRenderer::createMRTAttachment()
 spirv::SetSingleton DfrRenderer::createInputAttachmentSet()
 {
 	assert(mrtAttachment.valid());
-	assert(lightingShader.valid());
+	assert(pointLightShader.valid());
+	assert(dirLightShader.valid());
 
-	auto set = context->get_pipelineFactory()->createSet(*lightingShader.getSetWithUniform("I_POSITION"));
+	auto set = context->get_pipelineFactory()->createSet(*pointLightShader.getSetWithUniform("I_POSITION"));
 
 	std::vector<const spirv::UniformInfo*> unifs = {
 		set.getUniform("I_POSITION"), set.getUniform("I_NORMAL"),	set.getUniform("I_ALBEDO"),
@@ -489,7 +519,7 @@ spirv::SetSingleton DfrRenderer::createInputAttachmentSet()
 	return std::move(set);
 }
 
-spirv::Shader DfrRenderer::createLightingShader()
+spirv::Shader DfrRenderer::createPointLightingShader()
 {
 	std::vector<spirv::ShaderStageData> stages;
 
@@ -505,9 +535,9 @@ spirv::Shader DfrRenderer::createLightingShader()
 	return context->get_pipelineFactory()->createShader(stages);
 }
 
-spirv::Pipeline DfrRenderer::createLightingPipeline()
+spirv::Pipeline DfrRenderer::createPointLightingPipeline()
 {
-	assert(lightingShader.valid());
+	assert(pointLightShader.valid());
 
 	spirv::GraphicsPipelineCreateInfo info = {};
 
@@ -571,7 +601,92 @@ spirv::Pipeline DfrRenderer::createLightingPipeline()
 
 	info.subpass = 1;
 
-	return context->get_pipelineFactory()->createGraphicsPipeline(lightingShader, renderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(pointLightShader, renderPass, info);
+}
+
+spirv::Shader DfrRenderer::createDirLightingShader()
+{
+	std::vector<spirv::ShaderStageData> stages;
+
+	spirv::ShaderStageData* stage;
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile(vDirLightingShaderFileName);
+	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile(fDirLightingShaderFileName);
+	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	return context->get_pipelineFactory()->createShader(stages);
+}
+
+spirv::Pipeline DfrRenderer::createDirLightingPipeline()
+{
+	assert(dirLightShader.valid());
+
+	spirv::GraphicsPipelineCreateInfo info = {};
+
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.colorWriteMask = 0;
+	colorblendAttachment.blendEnable = VK_TRUE;
+	colorblendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.front = {}; // Don't Care
+	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	info.subpass = 1;
+
+	return context->get_pipelineFactory()->createGraphicsPipeline(dirLightShader, renderPass, info);
 }
 
 vkw::FramebufferVector DfrRenderer::createFramebuffers()
@@ -644,8 +759,8 @@ DfrRenderer::CameraUBOV DfrRenderer::createCameraUBOs()
 
 DfrRenderer::SettingsUBOV DfrRenderer::createSettingsUBOs()
 {
-	assert(lightingShader.valid());
-	auto unif = lightingShader.getUniform("settings");
+	assert(pointLightShader.valid());
+	auto unif = pointLightShader.getUniform("settings");
 
 	auto ubos = SettingsUBOV(context.get(), {}, maxFrameInFlight);
 

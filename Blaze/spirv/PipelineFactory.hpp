@@ -36,10 +36,16 @@ struct LoadStoreConfig
 		CONTINUE,  ///< Will be continued to use as attachment.
 	};
 
-	LoadAction colorLoad;
-	StoreAction colorStore;
-	LoadAction depthLoad;
-	StoreAction depthStore;
+	LoadAction loadAction;
+	StoreAction storeAction;
+
+	LoadStoreConfig() : LoadStoreConfig(LoadAction::CLEAR, StoreAction::CONTINUE)
+	{
+	}
+
+	LoadStoreConfig(LoadAction loadAction, StoreAction storeAction) : loadAction(loadAction), storeAction(storeAction)
+	{
+	}
 };
 
 /**
@@ -86,6 +92,7 @@ struct AttachmentFormat
 	VkImageUsageFlags usage;
 	VkFormat format;
 	VkSampleCountFlagBits sampleCount;
+	LoadStoreConfig loadStoreConfig;
 
 	bool operator!=(const AttachmentFormat& other) const
 	{
@@ -274,7 +281,7 @@ public:
 	 * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
 	 * @param multiview If the renderpass uses multiview, this struct must be provided.
 	 */
-	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
 								const std::vector<VkSubpassDescription>& subpasses,
 								const std::vector<VkSubpassDependency>& dependencies,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
@@ -287,7 +294,7 @@ public:
 	 * @param subpasses The VkSubpassDescriptor of all the subpasses that the renderpass will contain.
 	 * @param multiview If the renderpass uses multiview, this struct must be provided.
 	 */
-	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats, LoadStoreConfig config,
+	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
 								const std::vector<VkSubpassDescription>& subpasses,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
 

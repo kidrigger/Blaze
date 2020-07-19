@@ -354,11 +354,12 @@ void DirectionLightCaster::bindTextureSet(const Context* context, const spirv::S
 
 spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
 {
-
-	std::vector<spirv::AttachmentFormat> format(1);
+	using namespace spirv;
+	std::vector<AttachmentFormat> format(1);
 	format[0].usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	format[0].format = VK_FORMAT_D32_SFLOAT;
 	format[0].sampleCount = VK_SAMPLE_COUNT_1_BIT;
+	format[0].loadStoreConfig = LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 
 	VkAttachmentReference depthRef = {};
 	depthRef.attachment = 0;
@@ -376,13 +377,7 @@ spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
 	subpass[0].pResolveAttachments = nullptr;
 	subpass[0].flags = 0;
 
-	spirv::LoadStoreConfig loadStore = {};
-	loadStore.colorLoad = spirv::LoadStoreConfig::LoadAction::DONT_CARE;
-	loadStore.colorStore = spirv::LoadStoreConfig::StoreAction::DONT_CARE;
-	loadStore.depthLoad = spirv::LoadStoreConfig::LoadAction::CLEAR;
-	loadStore.depthStore = spirv::LoadStoreConfig::StoreAction::READ;
-
-	return context->get_pipelineFactory()->createRenderPass(format, loadStore, subpass);
+	return context->get_pipelineFactory()->createRenderPass(format, subpass);
 }
 
 spirv::Shader DirectionLightCaster::createShader(const Context* context)

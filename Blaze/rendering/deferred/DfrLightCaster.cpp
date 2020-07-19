@@ -17,8 +17,8 @@ DfrLightCaster::DfrLightCaster(const Context* context, const spirv::Shader* shad
 
 	dataSet = context->get_pipelineFactory()->createSets(*set, frames);
 	textureSet = context->get_pipelineFactory()->createSet(*texSet);
-	pointLights = std::make_unique<dfr::PointLightCaster>(context, 16u, dataSet, textureSet);
-	// directionLights = std::make_unique<fwd::DirectionLightCaster>(context, dataSet, textureSet);
+	pointLights = std::make_unique<dfr::PointLightCaster>(context, 1024u, dataSet, textureSet);
+	directionLights = std::make_unique<dfr::DirectionLightCaster>(context, 4u, dataSet, textureSet);
 }
 
 void DfrLightCaster::recreate(const Context* context, const spirv::Shader* shader, uint32_t frames)
@@ -26,7 +26,7 @@ void DfrLightCaster::recreate(const Context* context, const spirv::Shader* shade
 	auto set = shader->getSetWithUniform("lights");
 	dataSet = context->get_pipelineFactory()->createSets(*set, frames);
 	pointLights->recreate(context, dataSet);
-	// directionLights->recreate(context, dataSet);
+	directionLights->recreate(context, dataSet);
 }
 
 void DfrLightCaster::bind(VkCommandBuffer buf, VkPipelineLayout lay, uint32_t frame) const
@@ -94,7 +94,7 @@ void DfrLightCaster::setDirection(Handle handle, const glm::vec3& direction)
 	};
 	break;
 	case Type::DIRECTIONAL: {
-		// directionLights->getLight(exposed.idx)->direction = glm::normalize(direction);
+		directionLights->getLight(exposed.idx)->direction = glm::normalize(direction);
 	}
 	break;
 	default:
@@ -115,7 +115,7 @@ void DfrLightCaster::setBrightness(Handle handle, float brightness)
 	};
 	break;
 	case Type::DIRECTIONAL: {
-		// directionLights->getLight(exposed.idx)->brightness = brightness;
+		directionLights->getLight(exposed.idx)->brightness = brightness;
 	}
 	break;
 	default:
@@ -134,7 +134,7 @@ bool DfrLightCaster::setShadow(Handle handle, bool hasShadow)
 	};
 	break;
 	case Type::DIRECTIONAL: {
-		// return directionLights->setShadow(exposed.idx, hasShadow);
+		return directionLights->setShadow(exposed.idx, hasShadow);
 	}
 	break;
 	default:
@@ -177,7 +177,7 @@ void DfrLightCaster::removeLight(Handle handle)
 		pointLights->removeLight(idx);
 		break;
 	case Type::DIRECTIONAL:
-		// directionLights->removeLight(idx);
+		directionLights->removeLight(idx);
 		break;
 	default:
 		throw std::invalid_argument("Only point lights are supported so far");
@@ -189,7 +189,7 @@ void DfrLightCaster::removeLight(Handle handle)
 void DfrLightCaster::update(const Camera* camera, uint32_t frame)
 {
 	pointLights->update(frame);
-	// directionLights->update(camera, frame);
+	directionLights->update(camera, frame);
 }
 
 uint32_t DfrLightCaster::getMaxPointLights()
@@ -205,23 +205,39 @@ uint32_t DfrLightCaster::getMaxPointShadows()
 void DfrLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
 {
 	pointLights->cast(cmd, drawables);
-	// directionLights->cast(cmd, drawables);
+	directionLights->cast(cmd, drawables);
 }
-
 
 DfrLightCaster::Handle DfrLightCaster::createDirectionLight(const glm::vec3& direction, float brightness,
 															uint32_t numCascades)
 {
-	return 0;
+	uint16_t idx = directionLights->createLight(direction, brightness, numCascades);
+	if (idx == UINT16_MAX)
+	{
+		return 0;
+	}
+
+	HandleExposed exposed = {
+		static_cast<uint8_t>(Type::DIRECTIONAL),
+		directionGeneration,
+		idx,
+	};
+
+	directionGeneration = directionGeneration + 1;
+
+	Handle handle = reinterpret_cast<Handle&>(exposed);
+	validHandles.insert(handle);
+
+	return handle;
 }
 
 uint32_t DfrLightCaster::getMaxDirectionLights()
 {
-	return 0;
+	return directionLights->getMaxLights();
 }
 
 uint32_t DfrLightCaster::getMaxDirectionShadows()
 {
-	return 0;
+	return directionLights->getMaxShadows();
 }
 } // namespace blaze

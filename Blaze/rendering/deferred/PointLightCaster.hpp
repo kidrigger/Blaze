@@ -4,6 +4,7 @@
 #include <core/Context.hpp>
 #include <core/Drawable.hpp>
 #include <core/TextureCube.hpp>
+#include <core/StorageBuffer.hpp>
 #include <core/UniformBuffer.hpp>
 #include <spirv/PipelineFactory.hpp>
 
@@ -75,7 +76,7 @@ private:
 	spirv::SetSingleton viewSet;
 	UBO<CubemapUBlock> viewUBO;
 
-	UBODataVector ubos;
+	SSBODataVector ubos;
 
 	uint32_t shadowCount;
 	int freeShadow;

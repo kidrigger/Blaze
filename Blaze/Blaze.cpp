@@ -630,7 +630,8 @@ void runDeferred()
 				if (toDelete >= 0)
 				{
 					dirLights.erase(dirLights.begin() + toDelete);
-					renderer->get_lightCaster()->removeLight(dirHandles[toDelete]);
+					uint32_t handle = dirHandles[toDelete];
+					renderer->get_lightCaster()->removeLight(handle);
 					dirHandles.erase(dirHandles.begin() + toDelete);
 				}
 				if (toAdd >= 0)
@@ -820,7 +821,7 @@ void runDeferred()
 							ImGui::TreePop();
 						}
 					}
-					/*if (ImGui::CollapsingHeader("DirLights"))
+					if (ImGui::CollapsingHeader("DirLights"))
 					{
 						int idx = 0;
 						for (auto& light : lightInfo.dirLights)
@@ -861,7 +862,7 @@ void runDeferred()
 							}
 							ImGui::TreePop();
 						}
-					}*/
+					}
 					lightInfo.update(renderer.get());
 				}
 				ImGui::End();

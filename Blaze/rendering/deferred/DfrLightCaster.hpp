@@ -16,6 +16,7 @@
 #include <set>
 
 #include "PointLightCaster.hpp"
+#include "DirectionLightCaster.hpp"
 
 namespace blaze
 {
@@ -26,9 +27,9 @@ private:
 	spirv::SetSingleton textureSet;
 
 	std::unique_ptr<dfr::PointLightCaster> pointLights;
-	// std::unique_ptr<dfr::DirectionLightCaster> directionLights;
+	std::unique_ptr<dfr::DirectionLightCaster> directionLights;
 	uint8_t pointGeneration;
-	// uint8_t directionGeneration;
+	uint8_t directionGeneration;
 	std::set<Handle> validHandles;
 
 	struct HandleExposed
