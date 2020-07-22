@@ -29,8 +29,6 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
 	int viewRT;
-	float exposure;
-	float gamma;
 } settings;
 
 
@@ -50,11 +48,11 @@ struct DirLightData {
 	int shadowIndex;
 };
 
-layout(set = 1, binding = 0) buffer Lights {
+layout(set = 1, binding = 0) readonly buffer Lights {
 	PointLightData data[];
 } lights;
 
-layout(set = 1, binding = 0) buffer DirLights {
+layout(set = 1, binding = 1) readonly buffer DirLights {
 	DirLightData data[];
 } dirLights;
 
