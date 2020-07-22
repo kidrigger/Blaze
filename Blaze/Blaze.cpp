@@ -11,6 +11,8 @@
 #include <util/Environment.hpp>
 #include <util/files.hpp>
 
+#define VALIDATION_LAYERS_ENABLED
+
 namespace blaze
 {
 // Constants

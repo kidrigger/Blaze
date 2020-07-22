@@ -14,33 +14,9 @@ layout(location = 3) in vec2 A_UV1;
 layout(location = 0) out vec4 O_POSITION;
 layout(location = 1, component = 0) out vec2 O_UV0;
 
-layout(set = 0, binding = 0) uniform CameraUBO {
-	mat4 view;
-	mat4 projection;
-	vec3 viewPos;
-	float farPlane;
-} camera;
-
-struct PointLightData {
-	vec3 position;
-	float brightness;
-	float radius;
-	int shadowIndex;
-};
-
-layout(push_constant) uniform LightIdx {
-	int idx;
-	int pad0_;
-	int pad1_;
-	int pad2_;
-} pcb;
-
-layout(set = 1, binding = 0) readonly buffer Lights {
-	PointLightData data[];
-} lights;
-
 void main() {
 	O_POSITION = vec4(A_POSITION, 1.0f);
 	gl_Position = O_POSITION;
 	O_UV0 = A_UV0;
+	O_UV0.y = 1.0f - O_UV0.y;
 }

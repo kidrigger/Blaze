@@ -27,6 +27,42 @@ private:
 
 	constexpr static std::string_view vDirLightingShaderFileName = "shaders/deferred/vDirLighting.vert.spv";
 	constexpr static std::string_view fDirLightingShaderFileName = "shaders/deferred/fDirLighting.frag.spv";
+	
+	struct HDRTonemapPostProcess
+	{
+		constexpr static std::string_view vShaderFile = "shaders/postprocess/vHDRTonemap.vert.spv";
+		constexpr static std::string_view fShaderFile = "shaders/postprocess/fHDRTonemap.frag.spv";
+
+		spirv::Shader shader;
+		spirv::Pipeline pipeline;
+
+		struct PushConstant
+		{
+			float exposure{4.5f};
+			float gamma{2.2f};
+			float pad_[2];
+		} pushConstant;
+
+		spirv::SetSingleton colorSampler;
+
+		HDRTonemapPostProcess()
+		{
+		}
+
+		HDRTonemapPostProcess(Context* context, spirv::RenderPass* renderPass, Texture2D* colorOutput);
+
+		void recreate(Context* context, spirv::RenderPass* renderPass, Texture2D* colorOutput);
+
+		void process(VkCommandBuffer cmdBuf, IndexedVertexBuffer<Vertex>& screenRect)
+		{
+			pipeline.bind(cmdBuf);
+			vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(),
+									colorSampler.setIdx, 1, &colorSampler.set.get(), 0, nullptr);
+			vkCmdPushConstants(cmdBuf, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
+							   shader.pushConstant.size, &pushConstant);
+			vkCmdDrawIndexed(cmdBuf, screenRect.get_indexCount(), 1, 0, 0, 0);
+		}
+	};
 
 	struct Settings
 	{
@@ -39,8 +75,6 @@ private:
 			EMISSION = 0x4,
 			RENDER = 0x5,
 		} viewRT{RENDER};
-		float exposure = 4.5f;
-		float gamma = 2.2f;
 	} settings;
 
 	using CameraUBOV = UBOVector<Camera::UBlock>;
@@ -51,6 +85,8 @@ private:
 
 	struct MRTAttachment
 	{
+		Texture2D output;
+
 		Texture2D position;
 		Texture2D normal;
 		Texture2D albedo;
@@ -61,7 +97,7 @@ private:
 
 		bool valid() const
 		{
-			return position.valid() && normal.valid() && albedo.valid() && omr.valid() && emission.valid();
+			return output.valid() && position.valid() && normal.valid() && albedo.valid() && omr.valid() && emission.valid();
 		}
 	} mrtAttachment;
 	spirv::SetSingleton inputAttachmentSet;
@@ -75,16 +111,23 @@ private:
 	spirv::Shader dirLightShader;
 	spirv::Pipeline dirLightPipeline;
 
-	vkw::FramebufferVector framebuffers;
+	vkw::Framebuffer renderFramebuffer;
 
 	CameraUBOV cameraUBOs;
 	SettingsUBOV settingsUBOs;
-
 	spirv::SetVector cameraSets;
+
 	IndexedVertexBuffer<Vertex> lightVolume;
 	IndexedVertexBuffer<Vertex> lightQuad;
 
 	std::unique_ptr<DfrLightCaster> lightCaster;
+
+	// Post processing
+
+	spirv::RenderPass postProcessRenderPass;
+	vkw::FramebufferVector postProcessFramebuffers;
+
+	HDRTonemapPostProcess hdrTonemap;
 
 public:
 	/**
@@ -121,7 +164,7 @@ public:
 	// Inherited via ARenderer
 	virtual const spirv::Shader* get_shader() const override;
 	virtual ALightCaster* get_lightCaster() override;
-	virtual void setEnvironment(const Bindable* env) override;
+	virtual void setEnvironment(const Bindable* env) override;	// TODO
 	virtual void drawSettings() override;
 
 protected:
@@ -144,10 +187,14 @@ private:
 	spirv::Shader createDirLightingShader();
 	spirv::Pipeline createDirLightingPipeline();
 
-	vkw::FramebufferVector createFramebuffers();
+	vkw::Framebuffer createRenderFramebuffer();
 
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
 	SettingsUBOV createSettingsUBOs();
+
+	// Post process
+	spirv::RenderPass createPostProcessRenderPass();
+	vkw::FramebufferVector createPostProcessFramebuffers();
 };
 } // namespace blaze

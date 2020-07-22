@@ -35,7 +35,7 @@ layout(push_constant) uniform LightIdx {
 	int pad2_;
 } pcb;
 
-layout(set = 1, binding = 0) buffer Lights {
+layout(set = 1, binding = 0) readonly buffer Lights {
 	PointLightData data[];
 } lights;
 
