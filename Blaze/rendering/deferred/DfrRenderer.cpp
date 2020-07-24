@@ -232,13 +232,13 @@ Texture2D DfrRenderer::createDepthBuffer() const
 	assert(swapchain);
 	VkFormat format =
 		util::findSupportedFormat(context->get_physicalDevice(),
-								  {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+								  { VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT},
 								  VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 	ImageData2D imageData = {};
 	imageData.format = format;
 	imageData.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	imageData.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+	imageData.aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 	imageData.height = swapchain->get_extent().height;
 	imageData.width = swapchain->get_extent().width;
 	imageData.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -349,6 +349,8 @@ void DfrRenderer::update(uint32_t frame)
 
 void DfrRenderer::recordCommands(uint32_t frame)
 {
+	lightCaster->cast(commandBuffers[frame], drawables.get_data());
+
 	VkRenderPassBeginInfo renderpassBeginInfo = {};
 	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderpassBeginInfo.renderPass = renderPass.renderPass.get();
@@ -685,7 +687,7 @@ spirv::Pipeline DfrRenderer::createPointLightingPipeline()
 	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
-	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_TRUE;	// TODO: Verify working
 	info.rasterizerCreateInfo.pNext = nullptr;
 	info.rasterizerCreateInfo.flags = 0;
 
@@ -718,8 +720,9 @@ spirv::Pipeline DfrRenderer::createPointLightingPipeline()
 	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
 	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
 	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
-	info.depthStencilCreateInfo.front = {}; // Don't Care
-	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	info.depthStencilCreateInfo.front = {};
+	info.depthStencilCreateInfo.back = {};
 
 	std::vector<VkDynamicState> dynamicStates = {
 		VK_DYNAMIC_STATE_VIEWPORT,

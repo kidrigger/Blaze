@@ -113,6 +113,20 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
+float getPointShadow(int lightIdx, vec3 N, vec3 position) {
+	int shadowIdx = lights.data[lightIdx].shadowIndex;
+	if (shadowIdx < 0) {
+		return 0.0f;
+	}
+	vec3 dir = position - lights.data[lightIdx].position;
+	dir.x *= -1;
+	float current_depth = length(dir);
+	dir = normalize(dir);
+	float closest_depth = texture(shadows[shadowIdx], dir).r * lights.data[lightIdx].radius;
+	float shadow_bias = max(0.05f * (1.0f - dot(N, dir)), 0.005f);
+	return ((current_depth - shadow_bias) > closest_depth ? 1.0f: 0.0f);
+}
+
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
 	vec3 position = subpassLoad(I_POSITION).rgb;
@@ -156,7 +170,7 @@ void main() {
 	vec3 specular	  = numerator / max(denominator, 0.001);
 
 	float NdotL = max(dot(N, L), 0.0f);
-	float shade = 0.0f;// getPointShadow(i, N);
+	float shade = getPointShadow(i, N, position);
 
 	L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 
