@@ -208,11 +208,13 @@ void PointLightCaster::removeShadow(int idx)
 
 void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
 {
-	for (auto& light : lights)
+	for (auto it = getLightIterator(); it.valid(); ++it)
 	{
-		if (light.shadowIdx < 0)
+		LightData* light = it.data;
+
+		if (light->shadowIdx < 0)
 			continue;
-		PointShadow* shadow = &shadows[light.shadowIdx];
+		PointShadow* shadow = &shadows[light->shadowIdx];
 
 		VkRenderPassBeginInfo renderpassBeginInfo = {};
 		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -228,13 +230,13 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 
 		vkCmdBeginRenderPass(cmd, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		float denom = (0.3f - light.radius);
-		float p22 = light.radius / denom;
-		float p32 = (0.3f * light.radius) / denom;
+		float denom = (0.3f - light->radius);
+		float p22 = light->radius / denom;
+		float p32 = (0.3f * light->radius) / denom;
 
 		PointShadow::PCB pcb = {
-			light.position,
-			light.radius,
+			light->position,
+			light->radius,
 			p22,
 			p32,
 		};

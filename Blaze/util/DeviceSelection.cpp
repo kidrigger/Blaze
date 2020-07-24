@@ -96,7 +96,8 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface, const std::
 	vkGetPhysicalDeviceFeatures(device, &physicalDeviceFeatures);
 
 	return queueFamilyIndices.complete() && extensionsSupported && swapchainAdequate &&
-		   physicalDeviceFeatures.samplerAnisotropy && physicalDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
+		   physicalDeviceFeatures.samplerAnisotropy && physicalDeviceFeatures.shaderSampledImageArrayDynamicIndexing &&
+		   physicalDeviceFeatures.depthClamp;
 }
 
 bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers)

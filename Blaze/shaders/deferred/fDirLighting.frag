@@ -74,6 +74,12 @@ layout(push_constant) uniform LightIdx {
 
 const float PI = 3.1415926535897932384626433832795f;
 
+const mat4 biasMat = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0 );
+
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
 	float a		 = roughness*roughness;
@@ -113,6 +119,44 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
+float getDirectionShadow(int lightIdx, vec3 N, vec3 position) {
+	int shadowIdx = dirLights.data[lightIdx].shadowIndex;
+	if (shadowIdx < 0) {
+		return 0.0f;
+	}
+
+	vec4 viewpos = camera.view * vec4(position, 1.0f);
+
+	int cascade = 0;
+	for (int i = 0; i < dirLights.data[lightIdx].numCascades; i++) {
+		if (-viewpos.z > dirLights.data[lightIdx].cascadeSplits[i]) {
+			cascade = i+1;
+		}
+	}
+
+	vec4 shadowCoord = biasMat * dirLights.data[shadowIdx].cascadeViewProj[cascade] * vec4(position, 1.0f);// V_LIGHTCOORD[shadowIdx][cascade];
+	shadowCoord.y = 1.0f - shadowCoord.y;
+	float shade = 0.0f;
+
+	vec2 texelSize = vec2(1.0f) / textureSize(dirShadows[shadowIdx], 0).xy;
+	for (int i = -1; i <= 1; i++)
+	{
+		for (int j = -1; j <= 1; j++)
+		{
+			if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 ) 
+			{
+				float dist = texture( dirShadows[shadowIdx], vec3(shadowCoord.st + vec2(i,j) * texelSize, cascade)).r;
+				if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
+				{
+					shade += 1.0f;
+				}
+			}
+		}
+	}
+	shade /= 9.0f;
+	return shade;
+}
+
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
 	vec3 position = subpassLoad(I_POSITION).rgb;
@@ -132,7 +176,7 @@ void main() {
 
 	vec3 L0 = vec3(0.0f);
 
-	vec3 ambient = vec3(0.03f) * ao;
+	vec3 ambient = vec3(0.03f) * albedo * ao;
 
 	// Direction Lighting
 	for (int i = 0; i < dirLights.data.length(); i++) {
@@ -157,7 +201,7 @@ void main() {
 		vec3 specular	  = numerator / max(denominator, 0.001);
 
 		float NdotL = max(dot(N, L), 0.0f);
-		float shade = 0.0f; // getDirectionShadow(i, N);
+		float shade = getDirectionShadow(i, N, position);
 
 		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
