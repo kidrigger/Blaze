@@ -5,11 +5,15 @@ layout(location = 0) in vec3 inPosition;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 0) uniform samplerCube environment;
+layout(set = 1, binding = 0) uniform samplerCube skybox;
+layout(set = 1, binding = 1) uniform samplerCube irradianceMap;
+layout(set = 1, binding = 2) uniform samplerCube prefilteredMap;
+layout(set = 1, binding = 3) uniform sampler2D brdfLUT;
 
 layout(push_constant) uniform PushConsts {
-	layout (offset = 64) float deltaPhi;
-	layout (offset = 68) float deltaTheta;
+	mat4 mvp;
+	float deltaPhi;
+	float deltaTheta;
 } consts;
 
 const float PI = 3.1415926535897932384626433832795f;
@@ -30,7 +34,7 @@ void main() {
 		for (float theta = 0.0f; theta < HALF_PI; theta += consts.deltaTheta) {
 			vec3 radial = sin(phi) * up + cos(phi) * right;
 			vec3 sampleDir = cos(theta) * N + sin(theta) * radial;
-			color += texture(environment, sampleDir).rgb * cos(theta) * sin(theta);
+			color += texture(skybox, sampleDir).rgb * cos(theta) * sin(theta);
 			sampleCount++;
 		}
 	}

@@ -468,16 +468,13 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				description.initialLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-													   : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			}
 			else
 			{
 				description.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				description.initialLayout =
-					(isSampled ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-							   : (isStorage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+				description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			}
 		};
 		break;
@@ -530,7 +527,7 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			{
 				description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				description.initialLayout =
+				description.finalLayout =
 					(isSampled ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 							   : (isStorage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 			}

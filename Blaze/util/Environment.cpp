@@ -3,46 +3,273 @@
 
 #include <util/processing.hpp>
 #include <rendering/ARenderer.hpp>
+#include <util/files.hpp>
+#include <vector>
 
 namespace blaze::util
 {
-TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
+TextureCube Environment::createIrradianceCube(const Context* context, spirv::SetSingleton* environment)
 {
+	auto timer = AutoTimer("Irradiance Cube Generation took (us)");
+
+	spirv::RenderPass renderpass;
+	spirv::Shader shader;
+	spirv::Pipeline pipeline;
+	vkw::Framebuffer framebuffer;
+	TextureCube irradianceMap;
+	spirv::SetSingleton descriptorSet;
+
 	struct PCB
 	{
 		float deltaPhi{(2.0f * glm::pi<float>()) / 180.0f};
 		float deltaTheta{(0.5f * glm::pi<float>()) / 64.0f};
 	} pcb = {};
 
-	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/env/vIrradiance.vert.spv", "shaders/env/fIrradiance.frag.spv", environment, envLayout, 64u, pcb,
+	uint32_t dim = 64u;
+	
+	ImageDataCube idc{};
+	idc.height = dim;
+	idc.width = dim;
+	idc.numChannels = 4;
+	idc.size = 4 * 6 * dim * dim;
+	idc.layerSize = 4 * dim * dim;
+	idc.usage  = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	idc.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	idc.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	idc.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	irradianceMap = TextureCube(context, idc, false);
+
+	std::vector<spirv::ShaderStageData> shaderStages;
+	{
+		spirv::ShaderStageData* stage = &shaderStages.emplace_back();
+		stage->spirv = loadBinaryFile("shaders/env/vIrradiance.vert.spv");
+		stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+		stage = &shaderStages.emplace_back();
+		stage->spirv = loadBinaryFile("shaders/env/fIrradiance.frag.spv");
+		stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	}
+
+	spirv::AttachmentFormat format = {
+		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		irradianceMap.get_format(),
+		VK_SAMPLE_COUNT_1_BIT,
+		spirv::LoadStoreConfig(spirv::LoadStoreConfig::LoadAction::DONT_CARE,
+							   spirv::LoadStoreConfig::StoreAction::READ),
 	};
 
-	return util::Process<PCB>::convertDescriptorToCubemap(context, info);
+	VkAttachmentReference colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+	VkSubpassDescription subpass = {};
+	subpass.flags = 0;
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorRef;
+	subpass.inputAttachmentCount = 0;
+	subpass.preserveAttachmentCount = 0;
+	subpass.pDepthStencilAttachment = nullptr;
+
+	uint32_t viewmask = 0b111111;
+
+	VkRenderPassMultiviewCreateInfo multiview = {};
+	multiview.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+	multiview.pNext = nullptr;
+	multiview.subpassCount = 1;
+	multiview.pViewMasks = &viewmask;
+	multiview.correlationMaskCount = 0;
+	multiview.pCorrelationMasks = nullptr;
+	multiview.dependencyCount = 0;
+	multiview.pViewOffsets = nullptr;
+
+	renderpass = context->get_pipelineFactory()->createRenderPass({format}, {subpass}, &multiview);
+	shader = context->get_pipelineFactory()->createShader(shaderStages);
+
+	spirv::GraphicsPipelineCreateInfo info = {};
+
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.front = {}; // Don't Care
+	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, renderpass, info);
+
+	{
+		VkFramebuffer fbo = VK_NULL_HANDLE;
+		VkFramebufferCreateInfo fbCreateInfo = {};
+		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		fbCreateInfo.width = dim;
+		fbCreateInfo.height = dim;
+		fbCreateInfo.layers = 6;
+		fbCreateInfo.renderPass = renderpass.get();
+		fbCreateInfo.attachmentCount = 1;
+		fbCreateInfo.pAttachments = &irradianceMap.get_imageView();
+		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
+		framebuffer = vkw::Framebuffer(fbo, context->get_device());
+	}
+
+	auto cube = getUVCube(context);
+
+	CubemapUBlock uboData = {
+		glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f),
+		{
+			// POSITIVE_X (Outside in - so NEG_X face)
+			glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+			// NEGATIVE_X (Outside in - so POS_X face)
+			glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+			// POSITIVE_Y
+			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+			// NEGATIVE_Y
+			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+			// POSITIVE_Z
+			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+			// NEGATIVE_Z
+			glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		}};
+
+	UBO<CubemapUBlock> ubo(context, uboData);
+
+	descriptorSet = context->get_pipelineFactory()->createSet(*shader.getSetWithUniform("pv"));
+
+	{
+		VkDescriptorBufferInfo info = ubo.get_descriptorInfo();
+
+		VkWriteDescriptorSet write = {};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.descriptorCount = 1;
+		write.dstSet = descriptorSet.get();
+		write.dstBinding = 0;
+		write.dstArrayElement = 0;
+		write.pBufferInfo = &info;
+
+		vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
+	}
+
+	glm::mat4 mvppcb{};
+
+	{
+		auto cmdBuffer = context->startCommandBufferRecord();
+
+		// RENDERPASSES
+
+		VkRenderPassBeginInfo renderpassBeginInfo = {};
+		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderpassBeginInfo.renderPass = renderpass.get();
+		renderpassBeginInfo.framebuffer = framebuffer.get();
+		renderpassBeginInfo.renderArea.offset = {0, 0};
+		renderpassBeginInfo.renderArea.extent = {dim, dim};
+
+		std::array<VkClearValue, 1> clearColor;
+		clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+		renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
+		renderpassBeginInfo.pClearValues = clearColor.data();
+
+		vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = static_cast<float>(dim);
+		viewport.width = (float)dim;
+		viewport.height = -(float)dim;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		VkRect2D scissor = {};
+		scissor.offset = {0, 0};
+		scissor.extent = {dim, dim};
+
+		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+
+		pipeline.bind(cmdBuffer);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
+								&descriptorSet.get(), 0, nullptr);
+		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 1, 1,
+								&environment->get(), 0, nullptr);
+
+		mvppcb = glm::mat4(1.0f);
+		vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
+						   sizeof(glm::mat4), &mvppcb);
+		vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage,
+							sizeof(glm::mat4), sizeof(PCB), &pcb);
+
+		VkDeviceSize offsets = {0};
+
+		cube.bind(cmdBuffer);
+		vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
+
+		vkCmdEndRenderPass(cmdBuffer);
+		context->flushCommandBuffer(cmdBuffer);
+	}
+	irradianceMap.implicitTransferLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+
+	return irradianceMap;
 }
 
-TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment)
+TextureCube Environment::createPrefilteredCube(const Context* context, spirv::SetSingleton* environment)
 {
 	struct PCB
 	{
-		float roughness;
-		float miplevel;
-	};
+		float roughness = 0;
+		float miplevel = 0;
+	} pcb;
 
-	util::Texture2CubemapInfo<PCB> info = {
-		"shaders/env/vPrefilter.vert.spv", "shaders/env/fPrefilter.frag.spv", environment, envLayout, 128u, {0, 0},
-	};
-	auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
+	auto timer = AutoTimer("Prefilter generation took (us)");
 
-	const uint32_t dim = info.cube_side;
+	const uint32_t dim = 128u;
 
-	vkw::PipelineLayout irPipelineLayout;
-	vkw::Pipeline irPipeline;
-	vkw::RenderPass irRenderPass;
-	vkw::Framebuffer irFramebuffer;
+	spirv::Shader shader;
+	spirv::Pipeline pipeline;
+	spirv::RenderPass renderpass;
+	vkw::Framebuffer framebuffer;
 
-	VkDevice device = context->get_device();
-	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	VkFormat imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 	// Setup the TextureCube
 	ImageDataCube idc{};
@@ -52,56 +279,108 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 	idc.size = 4 * 6 * dim * dim;
 	idc.layerSize = 4 * dim * dim;
 	idc.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	idc.format = format;
+	idc.format = imageFormat;
 	idc.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	TextureCube irradianceMap(context, idc, true);
+	TextureCube prefilterMap(context, idc, true);
 
 	ImageData2D id2d{};
 	id2d.height = dim;
 	id2d.width = dim;
 	id2d.numChannels = 4;
 	id2d.size = 4 * dim * dim;
-	id2d.format = format;
-	id2d.usage = id2d.usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	id2d.format = imageFormat;
+	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	id2d.access = VK_ACCESS_SHADER_WRITE_BIT;
+	id2d.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	Texture2D fbColorAttachment(context, id2d, false);
-
-	struct CubePushConstantBlock
+	
+	std::vector<spirv::ShaderStageData> shaderStages;
 	{
-		glm::mat4 mvp;
+		spirv::ShaderStageData* stage = &shaderStages.emplace_back();
+		stage->spirv = loadBinaryFile("shaders/env/vPrefilter.vert.spv");
+		stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+		stage = &shaderStages.emplace_back();
+		stage->spirv = loadBinaryFile("shaders/env/fPrefilter.frag.spv");
+		stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	}
+
+	spirv::AttachmentFormat format = {
+		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		fbColorAttachment.get_format(),
+		VK_SAMPLE_COUNT_1_BIT,
+		spirv::LoadStoreConfig(spirv::LoadStoreConfig::LoadAction::DONT_CARE,
+							   spirv::LoadStoreConfig::StoreAction::CONTINUE),
 	};
 
-	{
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts = {info.layout};
+	VkAttachmentReference colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
-		std::vector<VkPushConstantRange> pushConstantRanges;
-		{
-			VkPushConstantRange pushConstantRange = {};
-			pushConstantRange.offset = 0;
-			pushConstantRange.size = sizeof(CubePushConstantBlock);
-			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstantRanges.push_back(pushConstantRange);
-			pushConstantRange.offset = sizeof(CubePushConstantBlock);
-			pushConstantRange.size = sizeof(PCB);
-			pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			pushConstantRanges.push_back(pushConstantRange);
-		}
+	VkSubpassDescription subpass = {};
+	subpass.flags = 0;
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorRef;
+	subpass.inputAttachmentCount = 0;
+	subpass.preserveAttachmentCount = 0;
+	subpass.pDepthStencilAttachment = nullptr;
 
-		irPipelineLayout = vkw::PipelineLayout(
-			util::createPipelineLayout(context->get_device(), descriptorSetLayouts, pushConstantRanges), device);
-	}
+	renderpass = context->get_pipelineFactory()->createRenderPass({format}, {subpass});
+	shader = context->get_pipelineFactory()->createShader(shaderStages);
 
-	irRenderPass = vkw::RenderPass(util::createRenderPass(context->get_device(), format), device);
+	spirv::GraphicsPipelineCreateInfo info = {};
 
-	{
-		std::vector<VkDynamicState> dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT};
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
 
-		VkPipeline tPipeline = util::createGraphicsPipeline(
-			context->get_device(), irPipelineLayout.get(), irRenderPass.get(), {dim, dim}, info.vert_shader,
-			info.frag_shader, dynamicStateEnables, VK_CULL_MODE_FRONT_BIT);
-		irPipeline = vkw::Pipeline(tPipeline, device);
-	}
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.front = {}; // Don't Care
+	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, renderpass, info);
 
 	{
 		VkFramebuffer fbo = VK_NULL_HANDLE;
@@ -110,11 +389,11 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 		fbCreateInfo.width = dim;
 		fbCreateInfo.height = dim;
 		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = irRenderPass.get();
+		fbCreateInfo.renderPass = renderpass.get();
 		fbCreateInfo.attachmentCount = 1;
 		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
 		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		irFramebuffer = vkw::Framebuffer(fbo, device);
+		framebuffer = vkw::Framebuffer(fbo, context->get_device());
 	}
 
 	auto cube = getUVCube(context);
@@ -136,31 +415,34 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 		glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 	};
 
-	CubePushConstantBlock pcb{};
+	glm::mat4 mvppcb{};
 
-	uint32_t totalMips = irradianceMap.get_miplevels();
+	uint32_t totalMips = prefilterMap.get_miplevels();
 	uint32_t mipsize = dim;
 	auto cmdBuffer = context->startCommandBufferRecord();
 	for (uint32_t miplevel = 0; miplevel < totalMips; miplevel++)
 	{
+		// RENDERPASSES
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = static_cast<float>(mipsize);
+		viewport.width = static_cast<float>(mipsize);
+		viewport.height = -static_cast<float>(mipsize);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		VkRect2D scissor = {};
+		scissor.offset = {0, 0};
+		scissor.extent = {mipsize, mipsize};
+
 		for (int face = 0; face < 6; face++)
 		{
 
-			// RENDERPASSES
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = static_cast<float>(mipsize);
-			viewport.width = static_cast<float>(mipsize);
-			viewport.height = -static_cast<float>(mipsize);
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
-
 			VkRenderPassBeginInfo renderpassBeginInfo = {};
 			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = irRenderPass.get();
-			renderpassBeginInfo.framebuffer = irFramebuffer.get();
-			renderpassBeginInfo.renderArea.offset = {0, 0};
-			renderpassBeginInfo.renderArea.extent = {mipsize, mipsize};
+			renderpassBeginInfo.renderPass = renderpass.get();
+			renderpassBeginInfo.framebuffer = framebuffer.get();
+			renderpassBeginInfo.renderArea = scissor;
 
 			std::vector<VkClearValue> clearColor(1);
 			clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -168,29 +450,31 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 			renderpassBeginInfo.pClearValues = clearColor.data();
 
 			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
 			vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipelineLayout.get(), 0, 1,
-									&info.descriptor, 0, nullptr);
+			vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-			pcb.mvp = proj * matrices[face];
-			info.pcb.roughness = (float)miplevel / (float)(totalMips - 1);
-			info.pcb.miplevel = static_cast<float>(miplevel);
-			vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0,
-							   sizeof(CubePushConstantBlock), &pcb);
-			vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_FRAGMENT_BIT,
-							   sizeof(CubePushConstantBlock), sizeof(PCB), &info.pcb);
+			pipeline.bind(cmdBuffer);
 
-			VkDeviceSize offsets = {0};
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
+									&environment->get(), 0, nullptr);
+
+			mvppcb = proj * matrices[face];
+			pcb.roughness = (float)miplevel / (float)(totalMips - 1);
+			pcb.miplevel = static_cast<float>(miplevel);
+			vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
+							   sizeof(glm::mat4), &mvppcb);
+			vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage,
+							   sizeof(glm::mat4), sizeof(PCB), &pcb);
 
 			cube.bind(cmdBuffer);
 			vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(cmdBuffer);
+			fbColorAttachment.implicitTransferLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+													 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
 			fbColorAttachment.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-											 VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+											 VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 											 VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 			VkImageCopy copyRegion = {};
@@ -212,36 +496,33 @@ TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout 
 			copyRegion.extent.depth = 1;
 
 			vkCmdCopyImage(cmdBuffer, fbColorAttachment.get_image(), fbColorAttachment.get_imageInfo().imageLayout,
-						   irradianceMap.get_image(), irradianceMap.get_imageInfo().imageLayout, 1, &copyRegion);
-
-			fbColorAttachment.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-											 VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-											 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+						   prefilterMap.get_image(), prefilterMap.get_imageInfo().imageLayout, 1, &copyRegion);
 		}
 
 		mipsize /= 2;
 	}
 
-	irradianceMap.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
+	prefilterMap.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT,
 								 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 	context->flushCommandBuffer(cmdBuffer);
 
-	return irradianceMap;
+	return prefilterMap;
 }
 
-Texture2D createBrdfLut(const Context* context)
+Texture2D Environment::createBrdfLut(const Context* context)
 {
 	const uint32_t dim = 512;
 
-	vkw::PipelineLayout irPipelineLayout;
-	vkw::Pipeline irPipeline;
-	vkw::RenderPass irRenderPass;
-	vkw::Framebuffer irFramebuffer;
+	spirv::Shader shader;
+	spirv::Pipeline pipeline;
+	spirv::RenderPass renderpass;
+	vkw::Framebuffer framebuffer;
+
+	auto rect = getUVRect(context);
 
 	VkDevice device = context->get_device();
 
-	VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	auto timer = AutoTimer("Process fBrdfLut.frag.spv took (us)");
 
 	ImageData2D id2d{};
@@ -249,43 +530,100 @@ Texture2D createBrdfLut(const Context* context)
 	id2d.width = dim;
 	id2d.numChannels = 4;
 	id2d.size = 4 * dim * dim;
-	id2d.format = format;
-	id2d.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	id2d.access = VK_ACCESS_TRANSFER_WRITE_BIT;
+	id2d.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	id2d.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	Texture2D lut(context, id2d, false);
 
-	id2d.usage = id2d.usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	id2d.access = VK_ACCESS_SHADER_WRITE_BIT;
-	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	Texture2D fbColorAttachment(context, id2d, false);
-
-	struct CubePushConstantBlock
+	std::vector<spirv::ShaderStageData> shaderStages;
 	{
-		glm::mat4 mvp;
+		spirv::ShaderStageData* stage = &shaderStages.emplace_back();
+		stage->spirv = loadBinaryFile("shaders/env/vBrdfLut.vert.spv");
+		stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+		stage = &shaderStages.emplace_back();
+		stage->spirv = loadBinaryFile("shaders/env/fBrdfLut.frag.spv");
+		stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	}
+
+	spirv::AttachmentFormat format = {
+		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		lut.get_format(),
+		VK_SAMPLE_COUNT_1_BIT,
+		spirv::LoadStoreConfig(spirv::LoadStoreConfig::LoadAction::DONT_CARE,
+							   spirv::LoadStoreConfig::StoreAction::READ),
 	};
 
-	{
-		VkPushConstantRange pcr = {};
-		pcr.offset = 0;
-		pcr.size = sizeof(CubePushConstantBlock);
-		pcr.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	VkAttachmentReference colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
-		irPipelineLayout = vkw::PipelineLayout(
-			util::createPipelineLayout(context->get_device(), std::vector<VkDescriptorSetLayout>(),
-														   std::vector<VkPushConstantRange>{pcr}),
-								device);
-	}
+	VkSubpassDescription subpass = {};
+	subpass.flags = 0;
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorRef;
+	subpass.inputAttachmentCount = 0;
+	subpass.preserveAttachmentCount = 0;
+	subpass.pDepthStencilAttachment = nullptr;
 
-	irRenderPass = vkw::RenderPass(util::createRenderPass(context->get_device(), format), device);
+	renderpass = context->get_pipelineFactory()->createRenderPass({format}, {subpass});
+	shader = context->get_pipelineFactory()->createShader(shaderStages);
 
-	{
-		auto tPipeline = util::createGraphicsPipeline(context->get_device(), irPipelineLayout.get(), irRenderPass.get(),
-													  {dim, dim}, "shaders/env/vBrdfLut.vert.spv",
-													  "shaders/env/fBrdfLut.frag.spv", {}, VK_CULL_MODE_BACK_BIT);
-		irPipeline = vkw::Pipeline(tPipeline, device);
-	}
+	spirv::GraphicsPipelineCreateInfo info = {};
+
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.front = {}; // Don't Care
+	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, renderpass, info);
 
 	{
 		VkFramebuffer fbo = VK_NULL_HANDLE;
@@ -294,18 +632,24 @@ Texture2D createBrdfLut(const Context* context)
 		fbCreateInfo.width = dim;
 		fbCreateInfo.height = dim;
 		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = irRenderPass.get();
+		fbCreateInfo.renderPass = renderpass.get();
 		fbCreateInfo.attachmentCount = 1;
-		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
+		fbCreateInfo.pAttachments = &lut.get_imageView();
 		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		irFramebuffer = vkw::Framebuffer(fbo, device);
+		framebuffer = vkw::Framebuffer(fbo, context->get_device());
 	}
 
-	auto rect = getUVRect(context);
+	VkViewport viewport = {};
+	viewport.x = 0.0f;
+	viewport.y = static_cast<float>(dim);
+	viewport.width = (float)dim;
+	viewport.height = -(float)dim;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
 
-	glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 512.0f);
-
-	CubePushConstantBlock pcb{glm::mat4(1.0f)};
+	VkRect2D scissor = {};
+	scissor.offset = {0, 0};
+	scissor.extent = {dim, dim};
 
 	auto cmdBuffer = context->startCommandBufferRecord();
 
@@ -313,8 +657,8 @@ Texture2D createBrdfLut(const Context* context)
 
 	VkRenderPassBeginInfo renderpassBeginInfo = {};
 	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderpassBeginInfo.renderPass = irRenderPass.get();
-	renderpassBeginInfo.framebuffer = irFramebuffer.get();
+	renderpassBeginInfo.renderPass = renderpass.get();
+	renderpassBeginInfo.framebuffer = framebuffer.get();
 	renderpassBeginInfo.renderArea.offset = {0, 0};
 	renderpassBeginInfo.renderArea.extent = {dim, dim};
 
@@ -325,63 +669,29 @@ Texture2D createBrdfLut(const Context* context)
 
 	vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, irPipeline.get());
+	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-	vkCmdPushConstants(cmdBuffer, irPipelineLayout.get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(CubePushConstantBlock),
-					   &pcb);
-
-	VkDeviceSize offsets = {0};
+	pipeline.bind(cmdBuffer);
 
 	rect.bind(cmdBuffer);
 	vkCmdDrawIndexed(cmdBuffer, rect.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(cmdBuffer);
-
-	fbColorAttachment.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_TRANSFER_READ_BIT,
-									 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-	VkImageCopy copyRegion = {};
-
-	copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copyRegion.srcSubresource.baseArrayLayer = 0;
-	copyRegion.srcSubresource.mipLevel = 0;
-	copyRegion.srcSubresource.layerCount = 1;
-	copyRegion.srcOffset = {0, 0, 0};
-
-	copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	copyRegion.dstSubresource.baseArrayLayer = 0;
-	copyRegion.dstSubresource.mipLevel = 0;
-	copyRegion.dstSubresource.layerCount = 1;
-	copyRegion.dstOffset = {0, 0, 0};
-
-	copyRegion.extent.width = static_cast<uint32_t>(dim);
-	copyRegion.extent.height = static_cast<uint32_t>(dim);
-	copyRegion.extent.depth = 1;
-
-	vkCmdCopyImage(cmdBuffer, fbColorAttachment.get_image(), fbColorAttachment.get_imageInfo().imageLayout,
-				   lut.get_image(), lut.get_imageInfo().imageLayout, 1, &copyRegion);
-
-	lut.transferLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
+	lut.implicitTransferLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
 	context->flushCommandBuffer(cmdBuffer);
 
 	return lut;
 }
 
-Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
+Environment::Environment(const Context* context, TextureCube&& skybox, spirv::SetSingleton* environment)
 {
-	auto found = renderer->get_shader()->uniformLocations.find("skybox");
-	assert(found != renderer->get_shader()->uniformLocations.end());
-
-	auto [setIdx, skyboxIdx] = found->second;
-	set = renderer->get_pipelineFactory()->createSet(renderer->get_shader()->sets[setIdx]);
-	auto lay = renderer->get_shader()->sets[setIdx].layout.get();
-
 	const spirv::UniformInfo* skyboxInfo = nullptr;
 	const spirv::UniformInfo* irradianceInfo = nullptr;
 	const spirv::UniformInfo* prefilteredInfo = nullptr;
 	const spirv::UniformInfo* brdfLutInfo = nullptr;
-	for (auto& uniform : renderer->get_shader()->sets[setIdx].uniforms)
+	for (auto& uniform : environment->info)
 	{
 		if (uniform.name == "skybox")
 		{
@@ -411,7 +721,7 @@ Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
 
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstSet = set.get();
+	write.dstSet = environment->get();
 	write.dstArrayElement = 0;
 	write.descriptorCount = 1;
 
@@ -420,27 +730,27 @@ Environment::Environment(ARenderer* renderer, TextureCube&& skybox)
 	write.dstBinding = skyboxInfo->binding;
 	write.descriptorType = skyboxInfo->type;
 	write.pImageInfo = &this->skybox.get_imageInfo();
-	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 
-	this->irradianceMap = createIrradianceCube(renderer->get_context(), lay, set.get());
+	this->irradianceMap = createIrradianceCube(context, environment);
 
 	write.dstBinding = irradianceInfo->binding;
 	write.descriptorType = irradianceInfo->type;
 	write.pImageInfo = &this->irradianceMap.get_imageInfo();
-	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 
-	this->prefilteredMap = createPrefilteredCube(renderer->get_context(), lay, set.get());
+	this->prefilteredMap = createPrefilteredCube(context, environment);
 
 	write.dstBinding = prefilteredInfo->binding;
 	write.descriptorType = prefilteredInfo->type;
 	write.pImageInfo = &this->prefilteredMap.get_imageInfo();
-	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 
-	this->brdfLut = createBrdfLut(renderer->get_context());
+	this->brdfLut = createBrdfLut(context);
 
 	write.dstBinding = brdfLutInfo->binding;
 	write.descriptorType = brdfLutInfo->type;
 	write.pImageInfo = &this->brdfLut.get_imageInfo();
-	vkUpdateDescriptorSets(renderer->get_context()->get_device(), 1, &write, 0, nullptr);
+	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
 }
 } // namespace blaze::util

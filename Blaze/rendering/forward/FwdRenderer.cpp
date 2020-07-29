@@ -27,6 +27,8 @@ FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 
 	// Skybox mesh
 	skyboxCube = getUVCube(context.get());
+	// Environment
+	environmentSet = context->get_pipelineFactory()->createSet(*shader.getSetWithUniform("skybox"));
 
 	// Lights
 	lightCaster = std::make_unique<FwdLightCaster>(context.get(), &shader, maxFrameInFlight);
@@ -51,6 +53,11 @@ void FwdRenderer::recreateSwapchainDependents()
 
 	// Framebuffers
 	renderFramebuffers = createFramebuffers();
+}
+
+spirv::SetSingleton* FwdRenderer::get_environmentSet()
+{
+	return &environmentSet;
 }
 
 void FwdRenderer::update(uint32_t frame)
@@ -98,8 +105,9 @@ void FwdRenderer::recordCommands(uint32_t frame)
 
 	// Do the systemic thing
 	pipeline.bind(commandBuffers[frame]);
-	environment->bind(commandBuffers[frame], shader.pipelineLayout.get());
 	lightCaster->bind(commandBuffers[frame], shader.pipelineLayout.get(), frame);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(),
+							environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(),
 							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 	for (Drawable* drawable : drawables)
@@ -192,7 +200,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
@@ -211,7 +219,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
 	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // TODO: Verify
 	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
 	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -442,11 +450,6 @@ void FwdRenderer::drawSettings()
 		ImGui::Checkbox("Enable IBL##FwdSettings", (bool*)&settings.enableIBL);
 	}
 	ImGui::End();
-}
-
-void FwdRenderer::setEnvironment(const Bindable* env)
-{
-	this->environment = env;
 }
 
 FwdLightCaster* FwdRenderer::get_lightCaster()

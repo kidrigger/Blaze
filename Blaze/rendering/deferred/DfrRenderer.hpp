@@ -40,7 +40,8 @@ private:
 		{
 			float exposure{4.5f};
 			float gamma{2.2f};
-			float pad_[2];
+			float enable{1};
+			float pad_;
 		} pushConstant;
 
 		spirv::SetSingleton colorSampler;
@@ -60,12 +61,14 @@ private:
 									colorSampler.setIdx, 1, &colorSampler.set.get(), 0, nullptr);
 			vkCmdPushConstants(cmdBuf, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
 							   shader.pushConstant.size, &pushConstant);
+			screenRect.bind(cmdBuf);
 			vkCmdDrawIndexed(cmdBuf, screenRect.get_indexCount(), 1, 0, 0, 0);
 		}
 	};
 
 	struct Settings
 	{
+		int enableIBL{1};
 		enum : int
 		{
 			POSITION = 0x0,
@@ -122,6 +125,8 @@ private:
 
 	std::unique_ptr<DfrLightCaster> lightCaster;
 
+	spirv::SetSingleton environmentSet;
+
 	// Post processing
 
 	spirv::RenderPass postProcessRenderPass;
@@ -164,7 +169,6 @@ public:
 	// Inherited via ARenderer
 	virtual const spirv::Shader* get_shader() const override;
 	virtual ALightCaster* get_lightCaster() override;
-	virtual void setEnvironment(const Bindable* env) override;	// TODO
 	virtual void drawSettings() override;
 
 protected:
@@ -196,5 +200,8 @@ private:
 	// Post process
 	spirv::RenderPass createPostProcessRenderPass();
 	vkw::FramebufferVector createPostProcessFramebuffers();
+
+	// Inherited via ARenderer
+	virtual spirv::SetSingleton* get_environmentSet() override;
 };
 } // namespace blaze

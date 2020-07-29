@@ -10,7 +10,9 @@ layout(location = 3) in vec2 A_UV1;
 layout(location = 0) out vec3 outPosition;
 
 layout(push_constant) uniform PushConsts {
-	layout (offset = 0) mat4 mvp;
+	mat4 mvp;
+	float roughness;
+	float miplevel;
 } trs;
 
 void main() {

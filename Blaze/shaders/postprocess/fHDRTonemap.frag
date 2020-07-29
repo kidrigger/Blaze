@@ -12,7 +12,8 @@ layout(set = 0, binding = 0) uniform sampler2D colorSampler;
 layout(push_constant) uniform LightIdx {
 	float exposure;
 	float gamma;
-	float pad_[2];
+	float enable;
+	float pad_;
 } pcb;
 
 const float PI = 3.1415926535897932384626433832795f;
@@ -54,5 +55,5 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 void main() {
 
 	vec4 color = vec4(texture(colorSampler, V_UV0).rgb, 1.0f);
-	O_COLOR = SRGBtoLINEAR(tonemap(color));
+	O_COLOR = pcb.enable > 0 ? SRGBtoLINEAR(tonemap(color)) : color;
 }

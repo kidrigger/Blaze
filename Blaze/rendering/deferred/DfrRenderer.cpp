@@ -31,6 +31,8 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// Pipeline
 	dirLightPipeline = createDirLightingPipeline();
 
+	environmentSet = context->get_pipelineFactory()->createSet(*dirLightShader.getSetWithUniform("skybox"));
+
 	// All uniform buffer stuff
 	cameraSets = createCameraSets();
 	cameraUBOs = createCameraUBOs();
@@ -340,6 +342,11 @@ vkw::FramebufferVector DfrRenderer::createPostProcessFramebuffers()
 	return vkw::FramebufferVector(std::move(frameBuffers), context->get_device());
 }
 
+spirv::SetSingleton* DfrRenderer::get_environmentSet()
+{
+	return &environmentSet;
+}
+
 void DfrRenderer::update(uint32_t frame)
 {
 	cameraUBOs[frame].write(camera->getUbo());
@@ -421,16 +428,18 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	// Direction lights, environment, ambient and debug
 	dirLightPipeline.bind(commandBuffers[frame]);
 	lightCaster->bind(commandBuffers[frame], dirLightShader.pipelineLayout.get(), frame);
-	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-							dirLightShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
-							nullptr);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
-							inputAttachmentSet.setIdx, 1,
-							&inputAttachmentSet.get(), 0, nullptr);
-	lightQuad.bind(commandBuffers[frame]);
-	vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
+							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
+							inputAttachmentSet.setIdx, 1, &inputAttachmentSet.get(), 0, nullptr);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
+							environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
+	lightVolume.bind(commandBuffers[frame]);
+	vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
+
+	// Post process
 
 	renderpassBeginInfo.renderPass = postProcessRenderPass.renderPass.get();
 	renderpassBeginInfo.framebuffer = postProcessFramebuffers[frame];
@@ -452,10 +461,6 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	vkCmdEndRenderPass(commandBuffers[frame]);
 }
 
-void DfrRenderer::setEnvironment(const Bindable* env)
-{
-}
-
 const spirv::Shader* DfrRenderer::get_shader() const
 {
 	return &mrtShader;
@@ -467,6 +472,7 @@ void DfrRenderer::drawSettings()
 	{
 		ImGui::SliderFloat("Exposure", &hdrTonemap.pushConstant.exposure, 1.0f, 10.0f);
 		ImGui::SliderFloat("Gamma", &hdrTonemap.pushConstant.gamma, 1.0f, 4.0f);
+		ImGui::Checkbox("Enable IBL", (bool*)&settings.enableIBL);
 		if (ImGui::CollapsingHeader("MRT Debug Output"))
 		{
 			settings.viewRT =
@@ -484,6 +490,10 @@ void DfrRenderer::drawSettings()
 		}
 	}
 	ImGui::End();
+	if (settings.viewRT != settings.RENDER)
+	{
+		hdrTonemap.pushConstant.enable = 0;
+	}
 }
 
 ALightCaster* DfrRenderer::get_lightCaster()
@@ -770,7 +780,7 @@ spirv::Pipeline DfrRenderer::createDirLightingPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;

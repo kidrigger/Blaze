@@ -290,7 +290,7 @@ void main()
 
 	vec3 L0 = vec3(0.0f);
 
-	vec3 ambient = vec3(0.03f) * ao;
+	vec3 ambient = vec3(0.03f) * ao * albedo;
 
 	// Point Lighting
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++) {

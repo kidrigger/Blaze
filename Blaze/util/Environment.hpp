@@ -2,40 +2,36 @@
 #pragma once
 
 #include <core/Context.hpp>
-#include <rendering/ARenderer.hpp>
+#include <spirv/PipelineFactory.hpp>
 #include <core/Bindable.hpp>
 #include <core/Texture2D.hpp>
 #include <core/TextureCube.hpp>
 
 namespace blaze::util
 {
-TextureCube createIrradianceCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
-TextureCube createPrefilteredCube(const Context* context, VkDescriptorSetLayout envLayout, VkDescriptorSet environment);
-Texture2D createBrdfLut(const Context* context);
 
 /**
  * @brief Holder for all the environment texture maps and descriptor set.
  *
  * The Environment textures for current renderers are the PBR/IBL maps.
  */
-class Environment : public Bindable
+class Environment
 {
 public:
 	TextureCube skybox;
 	TextureCube irradianceMap;
 	TextureCube prefilteredMap;
 	Texture2D brdfLut;
-	spirv::SetSingleton set;
 
 	Environment()
 	{
 	}
 
-	Environment(ARenderer* renderer, TextureCube&& skybox);
+	Environment(const Context* context, TextureCube&& skybox, spirv::SetSingleton* environment);
 
-	void bind(VkCommandBuffer cmdBuf, VkPipelineLayout lay) const
-	{
-		vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, lay, set.setIdx, 1, &set.get(), 0, nullptr);
-	}
+private:
+	TextureCube createIrradianceCube(const Context* context, spirv::SetSingleton* environment);
+	TextureCube createPrefilteredCube(const Context* context, spirv::SetSingleton* environment);
+	Texture2D createBrdfLut(const Context* context);
 };
 } // namespace blaze::util
