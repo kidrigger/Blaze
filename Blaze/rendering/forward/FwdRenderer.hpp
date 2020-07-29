@@ -57,7 +57,7 @@ private:
 	SettingsUBOV settingsUBOs;
 	spirv::SetVector cameraSets;
 
-	const Bindable* environment{nullptr};
+	spirv::SetSingleton environmentSet;
 	IndexedVertexBuffer<Vertex> skyboxCube;
 
 	std::unique_ptr<FwdLightCaster> lightCaster;
@@ -99,7 +99,6 @@ public:
 	// Inherited via ARenderer
 	virtual const spirv::Shader* get_shader() const override;
 	virtual FwdLightCaster* get_lightCaster() override;
-	virtual void setEnvironment(const Bindable* env) override;
 	virtual void drawSettings() override;
 
 	~FwdRenderer()
@@ -112,14 +111,16 @@ protected:
 	virtual void recordCommands(uint32_t frame) override;
 	virtual void recreateSwapchainDependents() override;
 
+	virtual spirv::SetSingleton* get_environmentSet() override;
+
 private:
 	spirv::RenderPass createRenderpass();
 	Texture2D createDepthBuffer() const;
 	vkw::FramebufferVector createFramebuffers() const;
 	spirv::Shader createShader();
 	spirv::Pipeline createPipeline();
-    spirv::Shader createSkyboxShader();
-    spirv::Pipeline createSkyboxPipeline();
+	spirv::Shader createSkyboxShader();
+	spirv::Pipeline createSkyboxPipeline();
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
 	SettingsUBOV createSettingsUBOs();

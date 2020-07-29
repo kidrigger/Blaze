@@ -111,9 +111,7 @@ void run()
 	renderer->set_camera(&cam);
 	assert(renderer->complete());
 
-	auto environment = make_unique<util::Environment>(
-		renderer.get(), loadImageCube(renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
-	renderer->setEnvironment(environment.get());
+	renderer->setSkybox(loadImageCube(renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
 
 	modelLoader = make_unique<ModelLoader>();
 	struct SceneInfo
@@ -344,36 +342,33 @@ void run()
 
 				if (ImGui::Begin("Scene"))
 				{
-					if (ImGui::CollapsingHeader("Models##InTheScene"))
+					auto& modelNames = modelLoader->getFileNames();
+					if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
 					{
-						auto& modelNames = modelLoader->getFileNames();
-						if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
+						int i = 0;
+						for (const auto& label : modelNames)
 						{
-							int i = 0;
-							for (const auto& label : modelNames)
+							bool selected = (sceneInfo.modelIndex == i);
+							if (ImGui::Selectable(label.c_str(), selected))
 							{
-								bool selected = (sceneInfo.modelIndex == i);
-								if (ImGui::Selectable(label.c_str(), selected))
-								{
-									sceneInfo.modelIndex = i;
-									sceneInfo.modelName = label;
-									handle.destroy();
-									auto mod = modelHolder[holderKey++] =
-										modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
-															   sceneInfo.modelIndex); // TODO
-									handle = renderer->submit(mod.get());
-									renderer->waitIdle();
-									modelHolder.erase(holderKey - 2);
-									// TODO(Improvement) Make this smoother
-								}
-								if (selected)
-								{
-									ImGui::SetItemDefaultFocus();
-								}
-								++i;
+								sceneInfo.modelIndex = i;
+								sceneInfo.modelName = label;
+								handle.destroy();
+								auto mod = modelHolder[holderKey++] =
+									modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
+															sceneInfo.modelIndex); // TODO
+								handle = renderer->submit(mod.get());
+								renderer->waitIdle();
+								modelHolder.erase(holderKey - 2);
+								// TODO(Improvement) Make this smoother
 							}
-							ImGui::EndCombo();
+							if (selected)
+							{
+								ImGui::SetItemDefaultFocus();
+							}
+							++i;
 						}
+						ImGui::EndCombo();
 					}
 
 					if (ImGui::CollapsingHeader("Lights"))
@@ -513,9 +508,7 @@ void runDeferred()
 	renderer->set_camera(&cam);
 	assert(renderer->complete());
 
-	//auto environment = make_unique<util::Environment>(
-	//	renderer.get(), loadImageCube(renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
-	//renderer->setEnvironment(environment.get());
+	renderer->setSkybox(loadImageCube(renderer->get_context(), "assets/PaperMill_Ruins_E/PaperMill_E_3k.hdr", false));
 
 	modelLoader = make_unique<ModelLoader>();
 	struct SceneInfo
@@ -749,36 +742,33 @@ void runDeferred()
 
 				if (ImGui::Begin("Scene"))
 				{
-					if (ImGui::CollapsingHeader("Models##InTheScene"))
+					auto& modelNames = modelLoader->getFileNames();
+					if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
 					{
-						auto& modelNames = modelLoader->getFileNames();
-						if (ImGui::BeginCombo("Model##Combo", modelNames[sceneInfo.modelIndex].c_str()))
+						int i = 0;
+						for (const auto& label : modelNames)
 						{
-							int i = 0;
-							for (const auto& label : modelNames)
+							bool selected = (sceneInfo.modelIndex == i);
+							if (ImGui::Selectable(label.c_str(), selected))
 							{
-								bool selected = (sceneInfo.modelIndex == i);
-								if (ImGui::Selectable(label.c_str(), selected))
-								{
-									sceneInfo.modelIndex = i;
-									sceneInfo.modelName = label;
-									handle.destroy();
-									auto mod = modelHolder[holderKey++] =
-										modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
-															   sceneInfo.modelIndex); // TODO
-									handle = renderer->submit(mod.get());
-									renderer->waitIdle();
-									modelHolder.erase(holderKey - 2);
-									// TODO(Improvement) Make this smoother
-								}
-								if (selected)
-								{
-									ImGui::SetItemDefaultFocus();
-								}
-								++i;
+								sceneInfo.modelIndex = i;
+								sceneInfo.modelName = label;
+								handle.destroy();
+								auto mod = modelHolder[holderKey++] =
+									modelLoader->loadModel(renderer->get_context(), renderer->get_shader(),
+															sceneInfo.modelIndex); // TODO
+								handle = renderer->submit(mod.get());
+								renderer->waitIdle();
+								modelHolder.erase(holderKey - 2);
+								// TODO(Improvement) Make this smoother
 							}
-							ImGui::EndCombo();
+							if (selected)
+							{
+								ImGui::SetItemDefaultFocus();
+							}
+							++i;
 						}
+						ImGui::EndCombo();
 					}
 
 					if (ImGui::CollapsingHeader("Lights"))

@@ -27,6 +27,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
+	int enableIBL;
 	int viewRT;
 } settings;
 

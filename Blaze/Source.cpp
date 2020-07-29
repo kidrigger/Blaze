@@ -2,7 +2,7 @@
 #include "Blaze.hpp"
 
 #include <iostream>
-
+#include <thirdparty/renderdoc/renderdoc.h>
 /**
  * @brief Entrypoint for the binary executable.
  */
@@ -10,6 +10,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
+		renderdoc::init();
 		blaze::runDeferred();
 	}
 	catch (std::exception& e)

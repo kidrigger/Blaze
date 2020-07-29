@@ -9,13 +9,15 @@ layout(location = 3) in vec2 A_UV1;
 
 layout(location = 0) out vec3 outPosition;
 
-layout(set = 1, binding = 0) uniform ProjView {
+layout(set = 0, binding = 0) uniform ProjView {
 	mat4 projection;
 	mat4 view[6];
 } pv;
 
 layout(push_constant) uniform PushConsts {
-	layout (offset = 0) mat4 mvp;
+	mat4 mvp;
+	float deltaPhi;
+	float deltaTheta;
 } trs;
 
 void main() {

@@ -12,7 +12,6 @@ layout(location = 2) in vec2 A_UV0;
 layout(location = 3) in vec2 A_UV1;
 
 layout(location = 0) out vec4 O_POSITION;
-layout(location = 1, component = 0) out vec2 O_UV0;
 
 layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
@@ -40,7 +39,8 @@ layout(set = 1, binding = 0) readonly buffer Lights {
 } lights;
 
 void main() {
+	vec4 pos = camera.projection * camera.view * vec4(A_POSITION + camera.viewPos, 1.0);
+	gl_Position = pos.xyww;
 	O_POSITION = vec4(A_POSITION, 1.0f);
-	gl_Position = O_POSITION;
-	O_UV0 = A_UV0;
+	O_POSITION.x *= -1.0f;
 }

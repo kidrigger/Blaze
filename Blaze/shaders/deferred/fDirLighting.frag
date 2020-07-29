@@ -16,7 +16,6 @@ const uint RT_EMISSION = 0x4;
 const uint RT_RENDER = 0x5;
 
 layout(location = 0) in vec4 V_POSITION;
-layout(location = 1, component = 0) in vec2 V_UV0;
 
 layout(location = 0) out vec4 O_COLOR;
 
@@ -28,6 +27,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
+	int enableIBL;
 	int viewRT;
 } settings;
 
@@ -64,6 +64,11 @@ layout(input_attachment_index = 5, set = 2, binding = 4) uniform subpassInput I_
 
 layout(set = 3, binding = 0) uniform samplerCube shadows[MAX_SHADOWS];
 layout(set = 3, binding = 1) uniform sampler2DArray dirShadows[MAX_SHADOWS];
+
+layout(set = 4, binding = 0) uniform samplerCube skybox;
+layout(set = 4, binding = 1) uniform samplerCube irradianceMap;
+layout(set = 4, binding = 2) uniform samplerCube prefilteredMap;
+layout(set = 4, binding = 3) uniform sampler2D brdfLUT;
 
 layout(push_constant) uniform LightIdx {
 	int idx;
@@ -157,9 +162,15 @@ float getDirectionShadow(int lightIdx, vec3 N, vec3 position) {
 	return shade;
 }
 
+vec4 sampleSkybox() {
+	return vec4(texture(skybox, normalize(V_POSITION.xyz)).rgb, 1.0f);
+}
+
 void main() {
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
-	vec3 position = subpassLoad(I_POSITION).rgb;
+	vec4 hCoord = subpassLoad(I_POSITION);
+	vec3 position = hCoord.xyz;
+	float pixelValid = hCoord.a;
 	vec3 N = subpassLoad(I_NORMAL).rgb;
 	vec3 OMR = subpassLoad(I_OMR).rgb;
 	float ao = OMR.r;
@@ -168,6 +179,12 @@ void main() {
 	vec3 albedo = subpassLoad(I_ALBEDO).rgb;
 	vec3 emission = subpassLoad(I_EMISSION).rgb;
 	vec3 V = normalize(camera.viewPos - position.xyz);
+
+	// Skybox out
+	if (pixelValid < 0.01f) {
+		O_COLOR = sampleSkybox();
+		return;
+	}
 
 	// Lighting setup
 
@@ -206,24 +223,24 @@ void main() {
 		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
 
-//	if (settings.enableIBL > 0) {
-//		vec3 R = reflect(-V, N);
-//
-//		const float MAX_REFLECTION_LOD = 4.0f;
-//		vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
-//
-//		vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-//		vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-//		vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
-//	
-//		vec3 ks = F;
-//		vec3 kd = vec3(1.0f) - ks;
-//		kd *= 1.0f - metallic;
-//
-//		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
-//
-//		ambient = (kd * diffuse + specular) * ao;
-//	}
+	if (settings.enableIBL > 0) {
+		vec3 R = reflect(-V, N);
+
+		const float MAX_REFLECTION_LOD = 4.0f;
+		vec3 prefilteredColor = textureLod(prefilteredMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+
+		vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+		vec2 envBRDF  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+	
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
+
+		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
+
+		ambient = (kd * diffuse + specular) * ao;
+	}
 
 	O_COLOR	= vec4(ambient + L0 + emission, 1.0f);
 

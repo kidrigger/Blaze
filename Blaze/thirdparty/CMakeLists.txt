@@ -6,4 +6,5 @@ add_subdirectory("imgui")
 add_subdirectory("spirv_reflect")
 add_subdirectory("vma")
 add_subdirectory("stbi")
+add_subdirectory("renderdoc")
 
