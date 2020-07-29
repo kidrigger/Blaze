@@ -1,4 +1,5 @@
 # Blaze
+#### Version 1.1
 
 A WIP rendering engine in Vulkan 1.1 using C++17
 Made by Anish Bhobe
@@ -21,9 +22,9 @@ Made by Anish Bhobe
   - [x] Directional Shadows
   - [x] Cascaded Shadows
   - [x] PCF
-- [ ] Smooth Descriptor Creation Pipeline
-- [ ] Deferred Rendering
-- [ ] Post Process Stack
+- [x] Smooth Descriptor Creation Pipeline
+- [x] Deferred Rendering
+- [x] Post Process Stack
 - [ ] Forward+ Rendering
 - [ ] Global Illumination
 - [ ] Shadows v2
@@ -41,8 +42,15 @@ Made by Anish Bhobe
 - [stb_image](https://github.com/nothings/stb)
 - [Dear ImGUI](https://github.com/ocornut/imgui)
 - [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
-- [SPRIV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)
+- [SPRIV-Reflect](https://github.com/KhronosGroup/SPIRV-Reflect)
+- [Renderdoc API](https://github.com/baldurk/renderdoc)
 
 ### Most Recent Work: Cascaded Shadow Maps implemented.
 
 ![Cascades in Sponza](presentation/csm-vis.png)
+
+### Deferred Shading Implemented.
+
+Blaze now has a deferred renderer with spherical volumes.
+
+### Next up: Forward+/Clustered Forward renderer
