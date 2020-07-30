@@ -154,7 +154,7 @@ void ARenderer::recreateSwapchain()
 
 		gui->recreate(context.get(), swapchain.get());
 
-		camera->set_aspect(width / static_cast<float>(height));
+		camera->set_screenSize(glm::vec2(static_cast<float>(width), static_cast<float>(height)));
 
 		// Recreate all number based
 		recreateSwapchainDependents();

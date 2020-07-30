@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		renderdoc::init();
-		blaze::runDeferred();
+		blaze::run();
 	}
 	catch (std::exception& e)
 	{

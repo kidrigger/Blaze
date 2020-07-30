@@ -41,6 +41,8 @@ public:
 
 		/// The distance of the Far Plane of the frustum from the camera.
 		alignas(4) float farPlane;
+
+		alignas(8) glm::vec2 screenSize;
 	};
 	/// @}
 
@@ -57,16 +59,19 @@ private:
 	float nearPlane;
 	float farPlane;
 
+	glm::vec2 screenSize;
+
 public:
-	Camera(const glm::vec3& pos, const glm::vec3& direction, const glm::vec3& up, float fov, float aspect,
+	Camera(const glm::vec3& pos, const glm::vec3& direction, const glm::vec3& up, float fov, const glm::vec2& screenSize,
 		   float nearPlane = 0.1f, float farPlane = 10.0f)
-		: position(pos), direction(glm::normalize(direction)), up(up), fov(fov), aspect(aspect), nearPlane(nearPlane),
+		: position(pos), direction(glm::normalize(direction)), up(up), fov(fov), aspect(screenSize.x / screenSize.y), screenSize(screenSize), nearPlane(nearPlane),
 		  farPlane(farPlane)
 	{
 		ubo.view = glm::lookAt(position, direction + position, up);
 		ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 		ubo.viewPos = position;
 		ubo.farPlane = farPlane;
+		ubo.screenSize = screenSize;
 		uboDirty = true;
 	}
 
@@ -122,6 +127,7 @@ public:
 			ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 			ubo.viewPos = position;
 			ubo.farPlane = farPlane;
+			ubo.screenSize = screenSize;
 			uboDirty = false;
 		}
 		return ubo;
@@ -141,10 +147,7 @@ public:
 	{
 		return position;
 	}
-	inline glm::vec3& get_position()
-	{
-		return position;
-	}
+
 	inline const glm::vec3& get_direction() const
 	{
 		return direction;
@@ -179,9 +182,10 @@ public:
 	{
 		return aspect;
 	}
-	inline void set_aspect(float newAspect)
+	inline void set_screenSize(const glm::vec2& screen_size)
 	{
-		aspect = newAspect;
+		aspect = screen_size.x / screen_size.y;
+		screenSize = screen_size;
 		uboDirty = true;
 	}
 	/**

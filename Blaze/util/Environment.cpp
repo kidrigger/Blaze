@@ -523,7 +523,7 @@ Texture2D Environment::createBrdfLut(const Context* context)
 
 	VkDevice device = context->get_device();
 
-	auto timer = AutoTimer("Process fBrdfLut.frag.spv took (us)");
+	auto timer = AutoTimer("BRDF LUT generation took (us)");
 
 	ImageData2D id2d{};
 	id2d.height = dim;

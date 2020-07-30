@@ -55,5 +55,5 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 void main() {
 
 	vec4 color = vec4(texture(colorSampler, V_UV0).rgb, 1.0f);
-	O_COLOR = pcb.enable > 0 ? SRGBtoLINEAR(tonemap(color)) : color;
+	O_COLOR = pcb.enable > 0.5f ? SRGBtoLINEAR(tonemap(color)) : color;
 }

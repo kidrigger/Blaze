@@ -18,6 +18,13 @@ layout(location = 2, component = 2) out vec2 O_UV1;
 layout(location = 3) out vec4 O_VIEWPOS;
 layout(location = 4) out vec4 O_LIGHTCOORD[MAX_DIRECTION_LIGHTS][MAX_CASCADES];
 
+struct PointLightData {
+	vec3 position;
+	float brightness;
+	float radius;
+	int shadowIndex;
+};
+
 layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
@@ -35,13 +42,33 @@ struct DirLightData {
 	int shadowIndex;
 };
 
-layout(set = 3, binding = 1) uniform DirLightUBO {
-	DirLightData data[MAX_DIRECTION_LIGHTS];
+layout(set = 2, binding = 0) readonly buffer Lights {
+	PointLightData data[];
+} lights;
+
+layout(set = 2, binding = 1) readonly buffer DirLights {
+	DirLightData data[];
 } dirLights;
+
+// AlphaMode
+const uint ALPHA_OPAQUE = 0x00000000u;
+const uint ALPHA_MASK   = 0x00000001u;
+const uint ALPHA_BLEND  = 0x00000002u;
 
 layout(push_constant) uniform ModelBlock {
 	mat4 model;
-	float opaque_[18];
+	vec4 baseColorFactor;
+	vec4 emissiveColorFactor;
+	float metallicFactor;
+	float roughnessFactor;
+	int baseColorTextureSet;
+	int physicalDescriptorTextureSet;
+	int normalTextureSet;
+	int occlusionTextureSet;
+	int emissiveTextureSet;
+	int textureArrIdx;
+	int alphaMode;
+	float alphaCutoff;
 } pcb;
 
 const mat4 biasMat = mat4( 

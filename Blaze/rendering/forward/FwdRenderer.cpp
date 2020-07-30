@@ -4,11 +4,14 @@
 #include <Primitives.hpp>
 #include <util/files.hpp>
 
+#include <Version.hpp>
+
 namespace blaze
 {
 FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 	: ARenderer(window, enableValidationLayers)
 {
+	glfwSetWindowTitle(window, (std::string(VERSION.FULL_NAME) + " (Forward)").c_str());
 	// Depthbuffer
 	depthBuffer = createDepthBuffer();
 	renderPass = createRenderpass();
@@ -200,7 +203,7 @@ spirv::Pipeline FwdRenderer::createPipeline()
 	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
 	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
 	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;

@@ -19,14 +19,8 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 projection;
 	vec3 viewPos;
 	float farPlane;
+	vec2 screenSize;
 } camera;
-
-struct PointLightData {
-	vec3 position;
-	float brightness;
-	float radius;
-	int shadowIndex;
-};
 
 layout(push_constant) uniform LightIdx {
 	int idx;
@@ -35,9 +29,29 @@ layout(push_constant) uniform LightIdx {
 	int pad2_;
 } pcb;
 
-layout(set = 1, binding = 0) readonly buffer Lights {
+struct PointLightData {
+	vec3 position;
+	float brightness;
+	float radius;
+	int shadowIndex;
+};
+
+struct DirLightData {
+	vec3 direction;
+	float brightness;
+	vec4 cascadeSplits;
+	mat4 cascadeViewProj[MAX_CASCADES];
+	int numCascades;
+	int shadowIndex;
+};
+
+layout(set = 2, binding = 0) readonly buffer Lights {
 	PointLightData data[];
 } lights;
+
+layout(set = 2, binding = 1) readonly buffer DirLights {
+	DirLightData data[];
+} dirLights;
 
 void main() {
 	O_POSITION = vec4(lights.data[pcb.idx].position + (A_POSITION * lights.data[pcb.idx].radius), 1.0f);

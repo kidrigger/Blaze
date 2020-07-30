@@ -8,6 +8,7 @@
 #include <rendering/ARenderer.hpp>
 #include <rendering/deferred/DfrLightCaster.hpp>
 #include <core/VertexBuffer.hpp>
+#include <rendering/postprocess/HdrTonemap.hpp>
 
 namespace blaze
 {
@@ -27,44 +28,9 @@ private:
 
 	constexpr static std::string_view vDirLightingShaderFileName = "shaders/deferred/vDirLighting.vert.spv";
 	constexpr static std::string_view fDirLightingShaderFileName = "shaders/deferred/fDirLighting.frag.spv";
-	
-	struct HDRTonemapPostProcess
-	{
-		constexpr static std::string_view vShaderFile = "shaders/postprocess/vHDRTonemap.vert.spv";
-		constexpr static std::string_view fShaderFile = "shaders/postprocess/fHDRTonemap.frag.spv";
 
-		spirv::Shader shader;
-		spirv::Pipeline pipeline;
-
-		struct PushConstant
-		{
-			float exposure{4.5f};
-			float gamma{2.2f};
-			float enable{1};
-			float pad_;
-		} pushConstant;
-
-		spirv::SetSingleton colorSampler;
-
-		HDRTonemapPostProcess()
-		{
-		}
-
-		HDRTonemapPostProcess(Context* context, spirv::RenderPass* renderPass, Texture2D* colorOutput);
-
-		void recreate(Context* context, spirv::RenderPass* renderPass, Texture2D* colorOutput);
-
-		void process(VkCommandBuffer cmdBuf, IndexedVertexBuffer<Vertex>& screenRect)
-		{
-			pipeline.bind(cmdBuf);
-			vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(),
-									colorSampler.setIdx, 1, &colorSampler.set.get(), 0, nullptr);
-			vkCmdPushConstants(cmdBuf, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
-							   shader.pushConstant.size, &pushConstant);
-			screenRect.bind(cmdBuf);
-			vkCmdDrawIndexed(cmdBuf, screenRect.get_indexCount(), 1, 0, 0, 0);
-		}
-	};
+	constexpr static std::string_view vTransparencyShaderFileName = "shaders/deferred/vTransparency.vert.spv";
+	constexpr static std::string_view fTransparencyShaderFileName = "shaders/deferred/fTransparency.frag.spv";
 
 	struct Settings
 	{
@@ -84,12 +50,11 @@ private:
 	using SettingsUBOV = UBOVector<Settings>;
 
 	Texture2D depthBuffer;
-	spirv::RenderPass renderPass;
+	spirv::RenderPass mrtRenderPass;
+	spirv::RenderPass lightingRenderPass;
 
 	struct MRTAttachment
 	{
-		Texture2D output;
-
 		Texture2D position;
 		Texture2D normal;
 		Texture2D albedo;
@@ -100,10 +65,12 @@ private:
 
 		bool valid() const
 		{
-			return output.valid() && position.valid() && normal.valid() && albedo.valid() && omr.valid() && emission.valid();
+			return position.valid() && normal.valid() && albedo.valid() && omr.valid() && emission.valid();
 		}
 	} mrtAttachment;
-	spirv::SetSingleton inputAttachmentSet;
+	Texture2D outputAttachment;
+
+	spirv::SetSingleton mrtAttachmentSet;
 
 	spirv::Shader mrtShader;
 	spirv::Pipeline mrtPipeline;
@@ -114,7 +81,11 @@ private:
 	spirv::Shader dirLightShader;
 	spirv::Pipeline dirLightPipeline;
 
-	vkw::Framebuffer renderFramebuffer;
+	spirv::Shader forwardShader;
+	spirv::Pipeline forwardPipeline;
+
+	vkw::Framebuffer mrtFramebuffer;
+	vkw::Framebuffer lightingFramebuffer;
 
 	CameraUBOV cameraUBOs;
 	SettingsUBOV settingsUBOs;
@@ -132,7 +103,7 @@ private:
 	spirv::RenderPass postProcessRenderPass;
 	vkw::FramebufferVector postProcessFramebuffers;
 
-	HDRTonemapPostProcess hdrTonemap;
+	HDRTonemap hdrTonemap;
 
 public:
 	/**
@@ -177,13 +148,15 @@ protected:
 	virtual void recreateSwapchainDependents() override;
 
 private:
-	spirv::RenderPass createRenderpass();
+	spirv::RenderPass createMRTRenderpass();
+	spirv::RenderPass createLightingRenderpass();
 	Texture2D createDepthBuffer() const;
+	Texture2D createOutputAttachment() const;
 
 	spirv::Shader createMRTShader();
 	spirv::Pipeline createMRTPipeline();
 	MRTAttachment createMRTAttachment();
-	spirv::SetSingleton createInputAttachmentSet();
+	spirv::SetSingleton createMRTSet();
 
 	spirv::Shader createPointLightingShader();
 	spirv::Pipeline createPointLightingPipeline();
@@ -192,10 +165,15 @@ private:
 	spirv::Pipeline createDirLightingPipeline();
 
 	vkw::Framebuffer createRenderFramebuffer();
+	vkw::Framebuffer createLightingFramebuffer();
 
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
 	SettingsUBOV createSettingsUBOs();
+
+	// Transparency
+	spirv::Shader createForwardShader();
+	spirv::Pipeline createForwardPipeline();
 
 	// Post process
 	spirv::RenderPass createPostProcessRenderPass();

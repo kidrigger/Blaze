@@ -4,16 +4,20 @@
 #include <Primitives.hpp>
 #include <util/files.hpp>
 
+#include <Version.hpp>
+
 namespace blaze
 {
 
 DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 	: ARenderer(window, enableValidationLayers)
 {
+	glfwSetWindowTitle(window, (std::string(VERSION.FULL_NAME) + " (Deferred)").c_str());
+
 	// Depthbuffer
 	depthBuffer = createDepthBuffer();
 	// Renderpass
-	renderPass = createRenderpass();
+	mrtRenderPass = createMRTRenderpass();
 
 	// XXX: G-buffer rendering
 	// Pipeline layouts
@@ -21,6 +25,7 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// Pipeline
 	mrtPipeline = createMRTPipeline();
 
+	lightingRenderPass = createLightingRenderpass();
 	// XXX: Lightpass
 	// Pipeline layouts
 	pointLightShader = createPointLightingShader();
@@ -30,6 +35,10 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	dirLightShader = createDirLightingShader();
 	// Pipeline
 	dirLightPipeline = createDirLightingPipeline();
+
+	// XXX: Transparency
+	forwardShader = createForwardShader();
+	forwardPipeline = createForwardPipeline();
 
 	environmentSet = context->get_pipelineFactory()->createSet(*dirLightShader.getSetWithUniform("skybox"));
 
@@ -48,16 +57,19 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 
 	// G-buffer
 	mrtAttachment = createMRTAttachment();
-	inputAttachmentSet = createInputAttachmentSet();
+	mrtAttachmentSet = createMRTSet();
+
+	outputAttachment = createOutputAttachment();
 
 	// Framebuffers
-	renderFramebuffer = createRenderFramebuffer();
+	mrtFramebuffer = createRenderFramebuffer();
+	lightingFramebuffer = createLightingFramebuffer();
 
 	// Post process
 	postProcessRenderPass = createPostProcessRenderPass();
 	postProcessFramebuffers = createPostProcessFramebuffers();
 
-	hdrTonemap = HDRTonemapPostProcess(context.get(), &postProcessRenderPass, &mrtAttachment.output);
+	hdrTonemap = HDRTonemap(context.get(), &postProcessRenderPass, &outputAttachment);
 
 	isComplete = true;
 }
@@ -78,18 +90,22 @@ void DfrRenderer::recreateSwapchainDependents()
 
 	// G-buffer
 	mrtAttachment = createMRTAttachment();
-	inputAttachmentSet = createInputAttachmentSet();
+	mrtAttachmentSet = createMRTSet();
+
+	outputAttachment = createOutputAttachment();
+
 	// Framebuffers
-	renderFramebuffer = createRenderFramebuffer();
+	mrtFramebuffer = createRenderFramebuffer();
+	lightingFramebuffer = createLightingFramebuffer();
 
 	// Post process
 	postProcessRenderPass = createPostProcessRenderPass(); // dep on swapchain
 	postProcessFramebuffers = createPostProcessFramebuffers();
 
-	hdrTonemap.recreate(context.get(), &postProcessRenderPass, &mrtAttachment.output);
+	hdrTonemap.recreate(context.get(), &postProcessRenderPass, &outputAttachment);
 }
 
-spirv::RenderPass DfrRenderer::createRenderpass()
+spirv::RenderPass DfrRenderer::createMRTRenderpass()
 {
 	assert(depthBuffer.valid());
 
@@ -99,65 +115,54 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 	AttachmentFormat* attachment;
 
 	std::vector<VkAttachmentReference> colorRefs;
-	VkAttachmentReference outputColorRef = {};
 	VkAttachmentReference depthRef = {};
 
-	std::vector<VkAttachmentReference> inputRefs;
-
 	uint32_t attachmentRefIdx = 0;
-
-	// Swapchain attachment
-	attachment = &attachments.emplace_back();
-	attachment->format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	attachment->loadStoreConfig = LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
-	outputColorRef = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// G-buffer attachments
 	// POSITION
 	attachment = &attachments.emplace_back();
 	attachment->format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	attachment->loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// NORMAL
 	attachment = &attachments.emplace_back();
 	attachment->format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	attachment->loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// ALBEDO
 	attachment = &attachments.emplace_back();
 	attachment->format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	attachment->loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// OCCLUSION METAL ROUGH
 	attachment = &attachments.emplace_back();
 	attachment->format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	attachment->loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// EMISSION
 	attachment = &attachments.emplace_back();
 	attachment->format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	attachment->loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// Depth Attachment
@@ -169,32 +174,7 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);
 	depthRef = {attachmentRefIdx++, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
 
-	// Input Attachments
-	inputRefs = colorRefs;
-	for (auto& ref : inputRefs)
-	{
-		ref.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	}
-
-	std::vector<VkSubpassDescription> subpassDescs = {};
-	{
-		VkSubpassDescription* subpassDesc;
-		subpassDesc = &subpassDescs.emplace_back();
-		subpassDesc->pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpassDesc->colorAttachmentCount = static_cast<uint32_t>(colorRefs.size());
-		subpassDesc->pColorAttachments = colorRefs.data();
-		subpassDesc->pDepthStencilAttachment = &depthRef;
-
-		subpassDesc = &subpassDescs.emplace_back();
-		subpassDesc->pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpassDesc->inputAttachmentCount = static_cast<uint32_t>(inputRefs.size());
-		subpassDesc->pInputAttachments = inputRefs.data();
-		subpassDesc->colorAttachmentCount = 1;
-		subpassDesc->pColorAttachments = &outputColorRef;
-		subpassDesc->pDepthStencilAttachment = &depthRef;
-	}
-
-	std::vector<VkSubpassDependency> deps;
+	std::vector<VkSubpassDependency> deps = {};
 	{
 		VkSubpassDependency* dependency;
 
@@ -209,15 +189,6 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 
 		dependency = &deps.emplace_back();
 		dependency->srcSubpass = 0;
-		dependency->dstSubpass = 1;
-		dependency->srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency->dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependency->srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		dependency->dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		dependency->dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-		dependency = &deps.emplace_back();
-		dependency->srcSubpass = 1;
 		dependency->dstSubpass = VK_SUBPASS_EXTERNAL;
 		dependency->srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		dependency->dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -226,7 +197,64 @@ spirv::RenderPass DfrRenderer::createRenderpass()
 		dependency->dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 	}
 
+	std::vector<VkSubpassDescription> subpassDescs = {};
+	{
+		VkSubpassDescription* subpassDesc;
+		subpassDesc = &subpassDescs.emplace_back();
+		subpassDesc->pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpassDesc->colorAttachmentCount = static_cast<uint32_t>(colorRefs.size());
+		subpassDesc->pColorAttachments = colorRefs.data();
+		subpassDesc->pDepthStencilAttachment = &depthRef;
+	}
+
 	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs, deps);
+}
+
+spirv::RenderPass DfrRenderer::createLightingRenderpass()
+{
+	assert(depthBuffer.valid());
+
+	using namespace spirv;
+	std::vector<AttachmentFormat> attachments;
+
+	AttachmentFormat* attachment;
+
+	VkAttachmentReference outputColorRef = {};
+	VkAttachmentReference depthRef = {};
+
+	std::vector<VkAttachmentReference> inputRefs;
+
+	uint32_t attachmentRefIdx = 0;
+
+	// Color attachment
+	attachment = &attachments.emplace_back();
+	attachment->format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
+	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
+	outputColorRef = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+	// Depth Attachment
+	attachment = &attachments.emplace_back();
+	attachment->format = depthBuffer.get_format();
+	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
+	attachment->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	attachment->loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CONTINUE, LoadStoreConfig::StoreAction::CONTINUE);
+	depthRef = {attachmentRefIdx++, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+
+	std::vector<VkSubpassDescription> subpassDescs = {};
+	{
+		VkSubpassDescription* subpassDesc;
+		subpassDesc = &subpassDescs.emplace_back();
+		subpassDesc->pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpassDesc->colorAttachmentCount = 1;
+		subpassDesc->pColorAttachments = &outputColorRef;
+		subpassDesc->pDepthStencilAttachment = &depthRef;
+	}
+
+	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs);
 }
 
 Texture2D DfrRenderer::createDepthBuffer() const
@@ -246,6 +274,24 @@ Texture2D DfrRenderer::createDepthBuffer() const
 	imageData.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	imageData.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	imageData.numChannels = 1;
+	imageData.size = swapchain->get_extent().width * swapchain->get_extent().height;
+
+	return Texture2D(context.get(), imageData);
+}
+
+Texture2D DfrRenderer::createOutputAttachment() const
+{
+	assert(swapchain);
+
+	ImageData2D imageData = {};
+	imageData.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+	imageData.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+	imageData.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageData.height = swapchain->get_extent().height;
+	imageData.width = swapchain->get_extent().width;
+	imageData.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	imageData.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	imageData.numChannels = 4;
 	imageData.size = swapchain->get_extent().width * swapchain->get_extent().height;
 
 	return Texture2D(context.get(), imageData);
@@ -281,30 +327,7 @@ spirv::RenderPass DfrRenderer::createPostProcessRenderPass()
 		subpassDesc->pDepthStencilAttachment = nullptr;
 	}
 
-	std::vector<VkSubpassDependency> deps;
-	{
-		VkSubpassDependency* dependency;
-
-		dependency = &deps.emplace_back();
-		dependency->srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency->dstSubpass = 0;
-		dependency->srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		dependency->dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency->srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-		dependency->dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		dependency->dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-		dependency = &deps.emplace_back();
-		dependency->srcSubpass = 0;
-		dependency->dstSubpass = VK_SUBPASS_EXTERNAL;
-		dependency->srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency->dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		dependency->srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		dependency->dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-		dependency->dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-	}
-
-	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs, deps);
+	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs);
 }
 
 vkw::FramebufferVector DfrRenderer::createPostProcessFramebuffers()
@@ -360,12 +383,12 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 	VkRenderPassBeginInfo renderpassBeginInfo = {};
 	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderpassBeginInfo.renderPass = renderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = renderFramebuffer.get();
+	renderpassBeginInfo.renderPass = mrtRenderPass.renderPass.get();
+	renderpassBeginInfo.framebuffer = mrtFramebuffer.get();
 	renderpassBeginInfo.renderArea.offset = {0, 0};
 	renderpassBeginInfo.renderArea.extent = swapchain->get_extent();
 
-	std::array<VkClearValue, 7> clearColor;
+	std::array<VkClearValue, 6> clearColor;
 	for (auto& clCol : clearColor)
 	{
 		clCol.color = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -402,7 +425,22 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		drawable->drawOpaque(commandBuffers[frame], mrtShader.pipelineLayout.get());
 	}
 
-	vkCmdNextSubpass(commandBuffers[frame], VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdEndRenderPass(commandBuffers[frame]);
+
+	// lighting
+	std::array<VkClearValue, 2> lightingClear;
+	lightingClear[0].color = {0.0f, 0.0f, 0.0f, 0.0f};
+	lightingClear[1].depthStencil = {1.0f, 0};
+
+	renderpassBeginInfo.renderPass = lightingRenderPass.renderPass.get();
+	renderpassBeginInfo.framebuffer = lightingFramebuffer.get();
+	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(lightingClear.size());
+	renderpassBeginInfo.pClearValues = lightingClear.data();
+
+	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
+	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
 
 	// Point lights first
 	// Only if we are running lights. Else skip.
@@ -413,7 +451,7 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, pointLightShader.pipelineLayout.get(),
 								cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 		vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, pointLightShader.pipelineLayout.get(),
-								inputAttachmentSet.setIdx, 1, &inputAttachmentSet.get(), 0, nullptr);
+								mrtAttachmentSet.setIdx, 1, &mrtAttachmentSet.get(), 0, nullptr);
 		lightVolume.bind(commandBuffers[frame]);
 		for (auto it = lightCaster->getPointLightIterator(); it.valid(); ++it)
 		{
@@ -431,11 +469,23 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
 							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
-							inputAttachmentSet.setIdx, 1, &inputAttachmentSet.get(), 0, nullptr);
+							mrtAttachmentSet.setIdx, 1, &mrtAttachmentSet.get(), 0, nullptr);
 	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, dirLightShader.pipelineLayout.get(),
 							environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
 	lightVolume.bind(commandBuffers[frame]);
 	vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+
+	// Transparency
+	forwardPipeline.bind(commandBuffers[frame]);
+	lightCaster->bind(commandBuffers[frame], forwardShader.pipelineLayout.get(), frame);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, forwardShader.pipelineLayout.get(),
+							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
+	vkCmdBindDescriptorSets(commandBuffers[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, forwardShader.pipelineLayout.get(),
+							environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
+	for (Drawable* drawable : drawables)
+	{
+		drawable->drawAlphaBlended(commandBuffers[frame], forwardShader.pipelineLayout.get());
+	}
 
 	vkCmdEndRenderPass(commandBuffers[frame]);
 
@@ -443,8 +493,6 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 	renderpassBeginInfo.renderPass = postProcessRenderPass.renderPass.get();
 	renderpassBeginInfo.framebuffer = postProcessFramebuffers[frame];
-	renderpassBeginInfo.renderArea.offset = {0, 0};
-	renderpassBeginInfo.renderArea.extent = swapchain->get_extent();
 
 	VkClearValue postProcessClearColor;
 	postProcessClearColor.color = {1.0f, 0.0f, 0.0f, 0.0f};
@@ -475,25 +523,39 @@ void DfrRenderer::drawSettings()
 		ImGui::Checkbox("Enable IBL", (bool*)&settings.enableIBL);
 		if (ImGui::CollapsingHeader("MRT Debug Output"))
 		{
-			settings.viewRT =
-				ImGui::RadioButton("Full Render", settings.viewRT == settings.RENDER) ? settings.RENDER : settings.viewRT;
-			settings.viewRT = ImGui::RadioButton("MRT Position", settings.viewRT == settings.POSITION) ? settings.POSITION
-																									   : settings.viewRT;
-			settings.viewRT =
-				ImGui::RadioButton("MRT Normal", settings.viewRT == settings.NORMAL) ? settings.NORMAL : settings.viewRT;
-			settings.viewRT =
-				ImGui::RadioButton("MRT Albedo", settings.viewRT == settings.ALBEDO) ? settings.ALBEDO : settings.viewRT;
-			settings.viewRT =
-				ImGui::RadioButton("MRT OMR", settings.viewRT == settings.OMR) ? settings.OMR : settings.viewRT;
-			settings.viewRT = ImGui::RadioButton("MRT EMISSION", settings.viewRT == settings.EMISSION) ? settings.EMISSION
-																									   : settings.viewRT;
+			if (ImGui::RadioButton("Full Render", settings.viewRT == settings.RENDER))
+			{
+				settings.viewRT = settings.RENDER;
+				hdrTonemap.pushConstant.enable = 1.0f;
+			}
+			if (ImGui::RadioButton("MRT Position", settings.viewRT == settings.POSITION))
+			{
+				settings.viewRT = settings.POSITION;
+				hdrTonemap.pushConstant.enable = 0.0f;
+			}
+			if (ImGui::RadioButton("MRT Normal", settings.viewRT == settings.NORMAL))
+			{
+				settings.viewRT = settings.NORMAL;
+				hdrTonemap.pushConstant.enable = 0.0f;
+			}
+			if (ImGui::RadioButton("MRT Albedo", settings.viewRT == settings.ALBEDO))
+			{
+				settings.viewRT = settings.ALBEDO;
+				hdrTonemap.pushConstant.enable = 0.0f;
+			}
+			if (ImGui::RadioButton("MRT OMR", settings.viewRT == settings.OMR))
+			{
+				settings.viewRT = settings.OMR;
+				hdrTonemap.pushConstant.enable = 0.0f;
+			}
+			if (ImGui::RadioButton("MRT EMISSION", settings.viewRT == settings.EMISSION))
+			{
+				settings.viewRT = settings.EMISSION;
+				hdrTonemap.pushConstant.enable = 0.0f;
+			}
 		}
 	}
 	ImGui::End();
-	if (settings.viewRT != settings.RENDER)
-	{
-		hdrTonemap.pushConstant.enable = 0;
-	}
 }
 
 ALightCaster* DfrRenderer::get_lightCaster()
@@ -584,7 +646,7 @@ spirv::Pipeline DfrRenderer::createMRTPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	return context->get_pipelineFactory()->createGraphicsPipeline(mrtShader, renderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(mrtShader, mrtRenderPass, info);
 }
 
 DfrRenderer::MRTAttachment DfrRenderer::createMRTAttachment()
@@ -599,7 +661,7 @@ DfrRenderer::MRTAttachment DfrRenderer::createMRTAttachment()
 	id2d.numChannels = 4;
 	id2d.anisotropy = VK_FALSE;
 	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	id2d.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	id2d.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 	id2d.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -613,15 +675,10 @@ DfrRenderer::MRTAttachment DfrRenderer::createMRTAttachment()
 	attachment.position = Texture2D(context.get(), id2d, false);
 	attachment.normal = Texture2D(context.get(), id2d, false);
 
-	id2d.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	id2d.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-	attachment.output = Texture2D(context.get(), id2d, false);
-
 	return attachment;
 }
 
-spirv::SetSingleton DfrRenderer::createInputAttachmentSet()
+spirv::SetSingleton DfrRenderer::createMRTSet()
 {
 	assert(mrtAttachment.valid());
 	assert(pointLightShader.valid());
@@ -638,14 +695,13 @@ spirv::SetSingleton DfrRenderer::createInputAttachmentSet()
 		mrtAttachment.albedo.get_imageInfo(),	mrtAttachment.omr.get_imageInfo(),
 		mrtAttachment.emission.get_imageInfo(),
 	};
-	std::vector<VkWriteDescriptorSet> writes(5);
+	std::vector<VkWriteDescriptorSet> writes(MRTAttachment::attachmentCount);
 
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < MRTAttachment::attachmentCount; ++i)
 	{
 		const spirv::UniformInfo* unif = unifs[i];
 		VkDescriptorImageInfo* info = &infos[i];
 		info->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Read
-		info->sampler = VK_NULL_HANDLE;								  // No sampler for input attachments
 
 		VkWriteDescriptorSet* write = &writes[i];
 		write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -680,6 +736,7 @@ spirv::Shader DfrRenderer::createPointLightingShader()
 
 spirv::Pipeline DfrRenderer::createPointLightingPipeline()
 {
+	assert(lightingRenderPass.valid());
 	assert(pointLightShader.valid());
 
 	spirv::GraphicsPipelineCreateInfo info = {};
@@ -743,9 +800,7 @@ spirv::Pipeline DfrRenderer::createPointLightingPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	info.subpass = 1;
-
-	return context->get_pipelineFactory()->createGraphicsPipeline(pointLightShader, renderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(pointLightShader, lightingRenderPass, info);
 }
 
 spirv::Shader DfrRenderer::createDirLightingShader()
@@ -766,6 +821,7 @@ spirv::Shader DfrRenderer::createDirLightingShader()
 
 spirv::Pipeline DfrRenderer::createDirLightingPipeline()
 {
+	assert(lightingRenderPass.valid());
 	assert(dirLightShader.valid());
 
 	spirv::GraphicsPipelineCreateInfo info = {};
@@ -828,9 +884,7 @@ spirv::Pipeline DfrRenderer::createDirLightingPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	info.subpass = 1;
-
-	return context->get_pipelineFactory()->createGraphicsPipeline(dirLightShader, renderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(dirLightShader, lightingRenderPass, info);
 }
 
 vkw::Framebuffer DfrRenderer::createRenderFramebuffer()
@@ -838,19 +892,48 @@ vkw::Framebuffer DfrRenderer::createRenderFramebuffer()
 	using namespace std;
 	assert(depthBuffer.valid());
 	assert(mrtAttachment.valid());
-	assert(renderPass.valid());
+	assert(mrtRenderPass.valid());
 
 	VkFramebuffer frameBuffer;
 	vector<VkImageView> attachments = {
-		mrtAttachment.output.get_imageView(), mrtAttachment.position.get_imageView(),
-		mrtAttachment.normal.get_imageView(), mrtAttachment.albedo.get_imageView(),
-		mrtAttachment.omr.get_imageView(),	  mrtAttachment.emission.get_imageView(),
-		depthBuffer.get_imageView(),
+		mrtAttachment.position.get_imageView(), mrtAttachment.normal.get_imageView(),
+		mrtAttachment.albedo.get_imageView(),	mrtAttachment.omr.get_imageView(),
+		mrtAttachment.emission.get_imageView(), depthBuffer.get_imageView(),
 	};
 
 	VkFramebufferCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	createInfo.renderPass = renderPass.get();
+	createInfo.renderPass = mrtRenderPass.get();
+	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	createInfo.pAttachments = attachments.data();
+	createInfo.width = swapchain->get_extent().width;
+	createInfo.height = swapchain->get_extent().height;
+	createInfo.layers = 1;
+
+	auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffer);
+	if (result != VK_SUCCESS)
+	{
+		throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
+	}
+
+	return vkw::Framebuffer(frameBuffer, context->get_device());
+}
+
+vkw::Framebuffer DfrRenderer::createLightingFramebuffer()
+{
+	using namespace std;
+	assert(depthBuffer.valid());
+	assert(outputAttachment.valid());
+	assert(lightingRenderPass.valid());
+
+	VkFramebuffer frameBuffer;
+	vector<VkImageView> attachments = {
+		outputAttachment.get_imageView(), depthBuffer.get_imageView(),
+	};
+
+	VkFramebufferCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	createInfo.renderPass = lightingRenderPass.get();
 	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 	createInfo.pAttachments = attachments.data();
 	createInfo.width = swapchain->get_extent().width;
@@ -922,105 +1005,28 @@ DfrRenderer::SettingsUBOV DfrRenderer::createSettingsUBOs()
 	return ubos;
 }
 
-DfrRenderer::HDRTonemapPostProcess::HDRTonemapPostProcess(Context* context, spirv::RenderPass* renderPass, Texture2D* colorAttachmentOutput)
+spirv::Shader DfrRenderer::createForwardShader()
 {
-	// Shader
 	std::vector<spirv::ShaderStageData> stages;
 
 	spirv::ShaderStageData* stage;
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile(vShaderFile);
+	stage->spirv = util::loadBinaryFile(vTransparencyShaderFileName);
 	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
 
 	stage = &stages.emplace_back();
-	stage->spirv = util::loadBinaryFile(fShaderFile);
+	stage->spirv = util::loadBinaryFile(fTransparencyShaderFileName);
 	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	shader = context->get_pipelineFactory()->createShader(stages);
-
-	spirv::GraphicsPipelineCreateInfo info = {};
-	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	info.inputAssemblyCreateInfo.flags = 0;
-	info.inputAssemblyCreateInfo.pNext = nullptr;
-	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
-
-	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-	info.rasterizerCreateInfo.lineWidth = 1.0f;
-	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
-	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
-	info.rasterizerCreateInfo.pNext = nullptr;
-	info.rasterizerCreateInfo.flags = 0;
-
-	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
-	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
-	colorblendAttachment.blendEnable = VK_FALSE;
-	colorblendAttachment.colorWriteMask =
-		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
-	info.colorblendCreateInfo.attachmentCount = 1;
-	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
-
-	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	info.depthStencilCreateInfo.depthTestEnable = VK_FALSE;
-	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
-	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
-	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
-	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
-	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
-	info.depthStencilCreateInfo.front = {}; // Don't Care
-	info.depthStencilCreateInfo.back = {};	// Don't Care
-
-	std::vector<VkDynamicState> dynamicStates = {
-		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR,
-	};
-
-	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
-
-	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, *renderPass, info);
-
-	colorSampler = context->get_pipelineFactory()->createSet(*shader.getSetWithUniform("colorSampler"));
-
-	const spirv::UniformInfo* unif = shader.getUniform("colorSampler");
-	VkDescriptorImageInfo imageInfo = colorAttachmentOutput->get_imageInfo();
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Read
-
-	VkWriteDescriptorSet write = {};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.descriptorType = unif->type;
-	write.descriptorCount = unif->arrayLength;
-	write.dstSet = colorSampler.get();
-	write.dstBinding = unif->binding;
-	write.dstArrayElement = 0;
-	write.pImageInfo = &imageInfo;
-
-	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
+	return context->get_pipelineFactory()->createShader(stages);
 }
-void DfrRenderer::HDRTonemapPostProcess::recreate(Context* context, spirv::RenderPass* renderPass,
-												  Texture2D* colorAttachmentOutput)
+
+spirv::Pipeline DfrRenderer::createForwardPipeline()
 {
-	assert(shader.valid());
+	assert(forwardShader.valid());
 
 	spirv::GraphicsPipelineCreateInfo info = {};
+
 	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	info.inputAssemblyCreateInfo.flags = 0;
 	info.inputAssemblyCreateInfo.pNext = nullptr;
@@ -1043,15 +1049,14 @@ void DfrRenderer::HDRTonemapPostProcess::recreate(Context* context, spirv::Rende
 	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
-	colorblendAttachment.colorWriteMask = 0;
-	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.blendEnable = VK_TRUE;
 	colorblendAttachment.colorWriteMask =
 		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // TODO: Verify
 	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
 	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -1061,8 +1066,8 @@ void DfrRenderer::HDRTonemapPostProcess::recreate(Context* context, spirv::Rende
 
 	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	info.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
-	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
 	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
 	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
@@ -1079,23 +1084,6 @@ void DfrRenderer::HDRTonemapPostProcess::recreate(Context* context, spirv::Rende
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, *renderPass, info);
-
-	colorSampler = context->get_pipelineFactory()->createSet(*shader.getSetWithUniform("colorSampler"));
-
-	const spirv::UniformInfo* unif = shader.getUniform("colorSampler");
-	VkDescriptorImageInfo imageInfo = colorAttachmentOutput->get_imageInfo();
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Read
-
-	VkWriteDescriptorSet write = {};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.descriptorType = unif->type;
-	write.descriptorCount = unif->arrayLength;
-	write.dstSet = colorSampler.get();
-	write.dstBinding = unif->binding;
-	write.dstArrayElement = 0;
-	write.pImageInfo = &imageInfo;
-
-	vkUpdateDescriptorSets(context->get_device(), 1, &write, 0, nullptr);
+	return context->get_pipelineFactory()->createGraphicsPipeline(forwardShader, lightingRenderPass, info);
 }
 } // namespace blaze

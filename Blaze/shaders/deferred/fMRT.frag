@@ -24,6 +24,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 projection;
 	vec3 viewPos;
 	float farPlane;
+	vec2 screenSize;
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {

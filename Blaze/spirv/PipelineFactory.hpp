@@ -267,7 +267,7 @@ public:
 	 * @brief Creates the graphic pipeline from the shader and renderpass.
 	 *
 	 * @param shader The Shader to use to create the pipeline.
-	 * @param renderPass The RenderPass that would use the pipeline.
+	 * @param mrtRenderPass The RenderPass that would use the pipeline.
 	 * @param createInfo The complete set of structs that describe the pipeline variables.
 	 */
 	Pipeline createGraphicsPipeline(const Shader& shader, const RenderPass& renderPass,

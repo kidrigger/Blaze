@@ -47,6 +47,7 @@ Model::Material::AlphaMode getAlphaModeFromString(const std::string_view& str)
 	{
 		return Model::Material::AlphaMode::ALPHA_MASK;
 	}
+	return Model::Material::AlphaMode::ALPHA_OPAQUE;
 }
 
 void ModelLoader::scan()

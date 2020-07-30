@@ -24,6 +24,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 projection;
 	vec3 viewPos;
 	float farPlane;
+	vec2 screenSize;
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
@@ -48,19 +49,19 @@ struct DirLightData {
 	int shadowIndex;
 };
 
-layout(set = 1, binding = 0) readonly buffer Lights {
+layout(set = 1, binding = 0) uniform sampler2D I_POSITION;
+layout(set = 1, binding = 1) uniform sampler2D I_NORMAL;
+layout(set = 1, binding = 2) uniform sampler2D I_ALBEDO;
+layout(set = 1, binding = 3) uniform sampler2D I_OMR;
+layout(set = 1, binding = 4) uniform sampler2D I_EMISSION;
+
+layout(set = 2, binding = 0) readonly buffer Lights {
 	PointLightData data[];
 } lights;
 
-layout(set = 1, binding = 1) readonly buffer DirLights {
+layout(set = 2, binding = 1) readonly buffer DirLights {
 	DirLightData data[];
 } dirLights;
-
-layout(input_attachment_index = 1, set = 2, binding = 0) uniform subpassInput I_POSITION;
-layout(input_attachment_index = 2, set = 2, binding = 1) uniform subpassInput I_NORMAL;
-layout(input_attachment_index = 3, set = 2, binding = 2) uniform subpassInput I_ALBEDO;
-layout(input_attachment_index = 4, set = 2, binding = 3) uniform subpassInput I_OMR;
-layout(input_attachment_index = 5, set = 2, binding = 4) uniform subpassInput I_EMISSION;
 
 layout(set = 3, binding = 0) uniform samplerCube shadows[MAX_SHADOWS];
 layout(set = 3, binding = 1) uniform sampler2DArray dirShadows[MAX_SHADOWS];
@@ -167,17 +168,19 @@ vec4 sampleSkybox() {
 }
 
 void main() {
+	vec2 UV = gl_FragCoord.xy / camera.screenSize;
+
 	vec3 lightColor = vec3(23.47, 21.31, 20.79);
-	vec4 hCoord = subpassLoad(I_POSITION);
+	vec4 hCoord = texture(I_POSITION, UV);
 	vec3 position = hCoord.xyz;
 	float pixelValid = hCoord.a;
-	vec3 N = subpassLoad(I_NORMAL).rgb;
-	vec3 OMR = subpassLoad(I_OMR).rgb;
+	vec3 N = texture(I_NORMAL, UV).rgb;
+	vec3 OMR = texture(I_OMR, UV).rgb;
 	float ao = OMR.r;
 	float metallic = OMR.g;
 	float roughness = OMR.b;
-	vec3 albedo = subpassLoad(I_ALBEDO).rgb;
-	vec3 emission = subpassLoad(I_EMISSION).rgb;
+	vec3 albedo = texture(I_ALBEDO, UV).rgb;
+	vec3 emission = texture(I_EMISSION, UV).rgb;
 	vec3 V = normalize(camera.viewPos - position.xyz);
 
 	// Skybox out

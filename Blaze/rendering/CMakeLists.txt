@@ -12,3 +12,4 @@ target_sources( Blaze PRIVATE ${HEADER_FILES} ${SOURCE_FILES} )
 
 add_subdirectory( "forward" )
 add_subdirectory( "deferred" )
+add_subdirectory( "postprocess" )

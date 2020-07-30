@@ -132,7 +132,7 @@ namespace blaze::util
  *
  * @param device The logical device in use.
  * @param pipelineLayout The layout to use for the pipeline.
- * @param renderPass The renderpass to be used.
+ * @param mrtRenderPass The renderpass to be used.
  * @param viewPortSize The extent2D for the viewport.
  * @param vShader The file location of the vertex shader.
  * @param fShader The file location of the fragment shader.

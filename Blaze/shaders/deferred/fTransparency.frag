@@ -8,6 +8,13 @@
 
 #define MANUAL_SRGB 1
 
+const uint RT_POSITION = 0x0;
+const uint RT_NORMAL = 0x1;
+const uint RT_ALBEDO = 0x2;
+const uint RT_OMR = 0x3;
+const uint RT_EMISSION = 0x4;
+const uint RT_RENDER = 0x5;
+
 layout(location = 0) in vec4 V_POSITION;
 layout(location = 1) in vec4 V_NORMAL;
 layout(location = 2, component = 0) in vec2 V_UV0;
@@ -15,7 +22,7 @@ layout(location = 2, component = 2) in vec2 V_UV1;
 layout(location = 3) in vec4 V_VIEWPOS;
 layout(location = 4) in vec4 V_LIGHTCOORD[MAX_DIRECTION_LIGHTS][MAX_CASCADES];
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 O_COLOR;
 
 layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
@@ -26,21 +33,15 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
-	float exposure;
-	float gamma;
 	int enableIBL;
+	int viewRT;
 } settings;
 
-layout(set = 1, binding = 0) uniform samplerCube skybox;
-layout(set = 1, binding = 1) uniform samplerCube irradianceMap;
-layout(set = 1, binding = 2) uniform samplerCube prefilteredMap;
-layout(set = 1, binding = 3) uniform sampler2D brdfLUT;
-
-layout(set = 2, binding = 0) uniform sampler2D diffuseMap[MAX_TEX_IN_MAT];
-layout(set = 2, binding = 1) uniform sampler2D normalMap[MAX_TEX_IN_MAT];
-layout(set = 2, binding = 2) uniform sampler2D metalRoughMap[MAX_TEX_IN_MAT];
-layout(set = 2, binding = 3) uniform sampler2D occlusionMap[MAX_TEX_IN_MAT];
-layout(set = 2, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
+layout(set = 1, binding = 0) uniform sampler2D diffuseMap[MAX_TEX_IN_MAT];
+layout(set = 1, binding = 1) uniform sampler2D normalMap[MAX_TEX_IN_MAT];
+layout(set = 1, binding = 2) uniform sampler2D metalRoughMap[MAX_TEX_IN_MAT];
+layout(set = 1, binding = 3) uniform sampler2D occlusionMap[MAX_TEX_IN_MAT];
+layout(set = 1, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
 
 struct PointLightData {
 	vec3 position;
@@ -58,23 +59,29 @@ struct DirLightData {
 	int shadowIndex;
 };
 
+layout(set = 2, binding = 0) readonly buffer Lights {
+	PointLightData data[];
+} lights;
+
+layout(set = 2, binding = 1) readonly buffer DirLights {
+	DirLightData data[];
+} dirLights;
+
+layout(set = 3, binding = 0) uniform samplerCube shadows[MAX_SHADOWS];
+layout(set = 3, binding = 1) uniform sampler2DArray dirShadows[MAX_SHADOWS];
+
+layout(set = 4, binding = 0) uniform samplerCube skybox;
+layout(set = 4, binding = 1) uniform samplerCube irradianceMap;
+layout(set = 4, binding = 2) uniform samplerCube prefilteredMap;
+layout(set = 4, binding = 3) uniform sampler2D brdfLUT;
+
 // AlphaMode
 const uint ALPHA_OPAQUE = 0x00000000u;
 const uint ALPHA_MASK   = 0x00000001u;
 const uint ALPHA_BLEND  = 0x00000002u;
 
-layout(set = 3, binding = 0) uniform PointLightUBO {
-	PointLightData data[MAX_POINT_LIGHTS];
-} lights;
-layout(set = 3, binding = 1) uniform DirLightUBO {
-	DirLightData data[MAX_DIRECTION_LIGHTS];
-} dirLights;
-
-layout(set = 4, binding = 0) uniform samplerCube shadows[MAX_SHADOWS];
-layout(set = 4, binding = 1) uniform sampler2DArray dirShadows[MAX_SHADOWS];
-
 layout(push_constant) uniform ModelBlock {
-	float opaque_[16];
+	mat4 model;
 	vec4 baseColorFactor;
 	vec4 emissiveColorFactor;
 	float metallicFactor;
@@ -90,25 +97,6 @@ layout(push_constant) uniform ModelBlock {
 } pcb;
 
 const float PI = 3.1415926535897932384626433832795f;
-
-vec3 Uncharted2Tonemap(vec3 color)
-{
-	float A = 0.15;
-	float B = 0.50;
-	float C = 0.10;
-	float D = 0.20;
-	float E = 0.02;
-	float F = 0.30;
-	float W = 11.2;
-	return ((color*(A*color+C*B)+D*E)/(color*(A*color+B)+D*F))-E/F;
-}
-
-vec4 tonemap(vec4 color)
-{
-	vec3 outcol = Uncharted2Tonemap(color.rgb * settings.exposure);
-	outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
-	return vec4(pow(outcol, vec3(1.0f / settings.gamma)), color.a);
-}
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
 {
@@ -253,16 +241,6 @@ void main()
 		alpha = texRGBA.a;
 	}
 
-	if (pcb.alphaMode == ALPHA_MASK) {
-		if (alpha < pcb.alphaCutoff) {
-			discard;
-		} else {
-			alpha = 1.0f;
-		}
-	} else if (pcb.alphaMode == ALPHA_OPAQUE) {
-		alpha = 1.0f;
-	}
-
 	if (pcb.physicalDescriptorTextureSet < 0) {
 		metallic  = pcb.metallicFactor;
 		roughness = pcb.roughnessFactor;
@@ -294,7 +272,7 @@ void main()
 	vec3 ambient = vec3(0.03f) * ao * albedo;
 
 	// Point Lighting
-	for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+	for (int i = 0; i < lights.data.length(); i++) {
 		if (lights.data[i].brightness < 0.0f) continue;
 		if (distance(V_POSITION.xyz, lights.data[i].position) >= lights.data[i].radius) continue;
 		
@@ -325,7 +303,7 @@ void main()
 	}
 
 	// Direction Lighting
-	for (int i = 0; i < MAX_DIRECTION_LIGHTS; i++) {
+	for (int i = 0; i < dirLights.data.length(); i++) {
 		if (dirLights.data[i].brightness < 0.0f) continue;
 		
 		vec3 L		 = normalize(-dirLights.data[i].direction.xyz);
@@ -372,5 +350,13 @@ void main()
 	}
 
 	vec3 color	 = ambient + L0 + emission;
-	outColor	 = SRGBtoLINEAR(tonemap(vec4(color, alpha)));
+	O_COLOR	 = vec4(color, alpha);
+
+	switch (settings.viewRT) {
+		case RT_POSITION: O_COLOR = vec4(V_POSITION.xyz, 1.0f); break;
+		case RT_NORMAL: O_COLOR = vec4(N, 1.0f); break;
+		case RT_ALBEDO: O_COLOR = vec4(albedo, 1.0f); break;
+		case RT_OMR: O_COLOR = vec4(ao, metallic, roughness, 1.0f); break;
+		case RT_EMISSION: O_COLOR = vec4(emission, 1.0f); break;
+	}
 }
