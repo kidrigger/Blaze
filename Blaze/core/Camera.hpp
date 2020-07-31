@@ -39,10 +39,13 @@ public:
 		/// The position of the camera.
 		alignas(16) glm::vec3 viewPos;
 
+		alignas(8) glm::vec2 screenSize;
+
+		/// The distance of the Near Plane of the frustum from the camera.
+		alignas(4) float nearPlane;
+
 		/// The distance of the Far Plane of the frustum from the camera.
 		alignas(4) float farPlane;
-
-		alignas(8) glm::vec2 screenSize;
 	};
 	/// @}
 
@@ -70,6 +73,7 @@ public:
 		ubo.view = glm::lookAt(position, direction + position, up);
 		ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 		ubo.viewPos = position;
+		ubo.nearPlane = nearPlane;
 		ubo.farPlane = farPlane;
 		ubo.screenSize = screenSize;
 		uboDirty = true;
@@ -126,6 +130,7 @@ public:
 			ubo.view = glm::lookAt(position, direction + position, up);
 			ubo.projection = glm::perspective(fov, aspect, nearPlane, farPlane);
 			ubo.viewPos = position;
+			ubo.nearPlane = nearPlane;
 			ubo.farPlane = farPlane;
 			ubo.screenSize = screenSize;
 			uboDirty = false;

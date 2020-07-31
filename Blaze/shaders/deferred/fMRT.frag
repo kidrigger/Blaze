@@ -23,8 +23,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float farPlane;
+	float _pad;
 	vec2 screenSize;
+	float nearPlane;
+	float farPlane;
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
@@ -93,10 +95,16 @@ vec3 getNormal()
 	return normalize(TBN * tangentNormal);
 }
 
+float linearDepth(float depth)
+{
+	float z = depth * 2.0f - 1.0f; 
+	return (2.0f * camera.nearPlane * camera.farPlane) / (camera.farPlane + camera.nearPlane - z * (camera.farPlane - camera.nearPlane));	
+}
+
 void main()
 {
 	// Setup
-	O_POSITION = V_POSITION;
+	O_POSITION = vec4(V_POSITION.xyz, linearDepth(gl_FragCoord.z));
 
 	O_NORMAL = vec4((pcb.normalTextureSet > -1 ? getNormal() : normalize(V_NORMAL.xyz)), 0.0f);
 

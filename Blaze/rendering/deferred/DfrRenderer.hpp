@@ -32,17 +32,26 @@ private:
 	constexpr static std::string_view vTransparencyShaderFileName = "shaders/deferred/vTransparency.vert.spv";
 	constexpr static std::string_view fTransparencyShaderFileName = "shaders/deferred/fTransparency.frag.spv";
 
+	constexpr static std::string_view vSSAOShaderFileName = "shaders/deferred/vSSAO.vert.spv";
+	constexpr static std::string_view fSSAOShaderFileName = "shaders/deferred/fSSAO.frag.spv";
+
+	constexpr static std::string_view vSSAOBlurShaderFileName = "shaders/deferred/vSSAOBlur.vert.spv";
+	constexpr static std::string_view fSSAOBlurShaderFileName = "shaders/deferred/fSSAOBlur.frag.spv";
+
 	struct Settings
 	{
 		int enableIBL{1};
 		enum : int
 		{
-			POSITION = 0x0,
-			NORMAL = 0x1,
-			ALBEDO = 0x2,
-			OMR = 0x3,
-			EMISSION = 0x4,
-			RENDER = 0x5,
+			RENDER = 0x0,
+			POSITION = 0x1,
+			NORMAL = 0x2,
+			ALBEDO = 0x3,
+			AO = 0x4,
+			METALLIC = 0x5,
+			ROUGHNESS = 0x6,
+			EMISSION = 0x7,
+			IBL = 0x8,
 		} viewRT{RENDER};
 	} settings;
 
@@ -50,8 +59,6 @@ private:
 	using SettingsUBOV = UBOVector<Settings>;
 
 	Texture2D depthBuffer;
-	spirv::RenderPass mrtRenderPass;
-	spirv::RenderPass lightingRenderPass;
 
 	struct MRTAttachment
 	{
@@ -67,13 +74,46 @@ private:
 		{
 			return position.valid() && normal.valid() && albedo.valid() && omr.valid() && emission.valid();
 		}
-	} mrtAttachment;
-	Texture2D outputAttachment;
+	};
 
-	spirv::SetSingleton mrtAttachmentSet;
+	// MRT
+	spirv::RenderPass mrtRenderPass;
+	MRTAttachment mrtAttachment;
+	vkw::Framebuffer mrtFramebuffer;
+
+	spirv::SetSingleton lightInputSet;
 
 	spirv::Shader mrtShader;
 	spirv::Pipeline mrtPipeline;
+
+	// SSAO
+	Texture2D ssaoNoise;
+	BaseUBO ssaoKernel;
+	spirv::SetSingleton ssaoSampleSet;
+
+	bool ssaoEnabled{true};
+	struct SSAOSettings
+	{
+		float kernelRadius{0.5f};
+		float bias{0.025f};
+	} ssaoSettings;
+	Texture2D ssaoAttachment;
+	vkw::Framebuffer ssaoFramebuffer;
+	spirv::RenderPass ssaoRenderPass;
+	spirv::Shader ssaoShader;
+	spirv::Pipeline ssaoPipeline;
+	spirv::SetSingleton ssaoDepthSet;
+
+	vkw::Framebuffer ssaoBlurFramebuffer;
+	spirv::RenderPass ssaoBlurRenderPass;
+	spirv::Shader ssaoBlurShader;
+	spirv::Pipeline ssaoBlurPipeline;
+	spirv::SetSingleton ssaoBlurSet;
+
+	// Lighting
+	spirv::RenderPass lightingRenderPass;
+	Texture2D lightingAttachment;
+	vkw::Framebuffer lightingFramebuffer;
 
 	spirv::Shader pointLightShader;
 	spirv::Pipeline pointLightPipeline;
@@ -81,16 +121,16 @@ private:
 	spirv::Shader dirLightShader;
 	spirv::Pipeline dirLightPipeline;
 
+	// Transparency
 	spirv::Shader forwardShader;
 	spirv::Pipeline forwardPipeline;
 
-	vkw::Framebuffer mrtFramebuffer;
-	vkw::Framebuffer lightingFramebuffer;
-
+	// Data
 	CameraUBOV cameraUBOs;
 	SettingsUBOV settingsUBOs;
 	spirv::SetVector cameraSets;
 
+	// Lights
 	IndexedVertexBuffer<Vertex> lightVolume;
 	IndexedVertexBuffer<Vertex> lightQuad;
 
@@ -151,13 +191,32 @@ private:
 	spirv::RenderPass createMRTRenderpass();
 	spirv::RenderPass createLightingRenderpass();
 	Texture2D createDepthBuffer() const;
-	Texture2D createOutputAttachment() const;
+	Texture2D createLightingAttachment() const;
 
 	spirv::Shader createMRTShader();
 	spirv::Pipeline createMRTPipeline();
 	MRTAttachment createMRTAttachment();
-	spirv::SetSingleton createMRTSet();
+	spirv::SetSingleton createLightingInputSet();
 
+	// SSAO
+	Texture2D createSSAONoise();
+	BaseUBO createSSAOKernel();
+	spirv::SetSingleton createSSAOSampleSet();
+
+	Texture2D createSSAOAttachment();
+	spirv::RenderPass createSSAORenderpass();
+	spirv::Shader createSSAOShader();
+	spirv::Pipeline createSSAOPipeline();
+	vkw::Framebuffer createSSAOFramebuffer();
+	spirv::SetSingleton createSSAODepthSet();
+
+	spirv::RenderPass createSSAOBlurRenderpass();
+	vkw::Framebuffer createSSAOBlurFramebuffer();
+	spirv::Shader createSSAOBlurShader();
+	spirv::Pipeline createSSAOBlurPipeline();
+	spirv::SetSingleton createSSAOBlurSet();
+
+	// Lighting
 	spirv::Shader createPointLightingShader();
 	spirv::Pipeline createPointLightingPipeline();
 

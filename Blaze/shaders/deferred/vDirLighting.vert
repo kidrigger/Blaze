@@ -17,8 +17,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float farPlane;
+	float _pad;
 	vec2 screenSize;
+	float nearPlane;
+	float farPlane;
 } camera;
 
 layout(push_constant) uniform LightIdx {

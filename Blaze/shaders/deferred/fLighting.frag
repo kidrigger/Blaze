@@ -8,13 +8,6 @@
 
 #define MANUAL_SRGB 1
 
-const uint RT_POSITION = 0x0;
-const uint RT_NORMAL = 0x1;
-const uint RT_ALBEDO = 0x2;
-const uint RT_OMR = 0x3;
-const uint RT_EMISSION = 0x4;
-const uint RT_RENDER = 0x5;
-
 layout(location = 0) in vec4 V_POSITION;
 layout(location = 1, component = 0) in vec2 V_UV0;
 
@@ -24,8 +17,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float farPlane;
+	float _pad;
 	vec2 screenSize;
+	float nearPlane;
+	float farPlane;
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {

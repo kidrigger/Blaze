@@ -12,9 +12,7 @@ layout(location = 2) in vec2 A_UV0;
 layout(location = 3) in vec2 A_UV1;
 
 layout(location = 0) out vec4 O_POSITION;
-layout(location = 1) out vec4 O_NORMAL;
-layout(location = 2, component = 0) out vec2 O_UV0;
-layout(location = 2, component = 2) out vec2 O_UV1;
+layout(location = 1) out vec2 O_UV0;
 
 layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
@@ -26,15 +24,9 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	float farPlane;
 } camera;
 
-layout(push_constant) uniform ModelBlock {
-	mat4 model;
-	float opaque_[18];
-} pcb;
-
 void main() {
-	O_POSITION = pcb.model * vec4(A_POSITION, 1.0f);
-	gl_Position = camera.projection * camera.view * O_POSITION;
-	O_NORMAL = transpose(inverse(pcb.model)) * vec4(A_NORMAL, 0.0f);
+	O_POSITION = vec4(A_POSITION, 1.0f);
 	O_UV0 = A_UV0;
-	O_UV1 = A_UV1;
+	O_UV0.y = 1.0f - O_UV0.y;
+	gl_Position = O_POSITION;
 }

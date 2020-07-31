@@ -8,12 +8,15 @@
 
 #define MANUAL_SRGB 1
 
-const uint RT_POSITION = 0x0;
-const uint RT_NORMAL = 0x1;
-const uint RT_ALBEDO = 0x2;
-const uint RT_OMR = 0x3;
-const uint RT_EMISSION = 0x4;
-const uint RT_RENDER = 0x5;
+const uint RT_RENDER = 0x0;
+const uint RT_POSITION = 0x1;
+const uint RT_NORMAL = 0x2;
+const uint RT_ALBEDO = 0x3;
+const uint RT_AO = 0x4;
+const uint RT_METALLIC = 0x5;
+const uint RT_ROUGHNESS = 0x6;
+const uint RT_EMISSION = 0x7;
+const uint RT_IBL = 0x8;
 
 layout(location = 0) in vec4 V_POSITION;
 
@@ -23,8 +26,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float farPlane;
+	float _pad;
 	vec2 screenSize;
+	float nearPlane;
+	float farPlane;
 } camera;
 
 layout(set = 0, binding = 1) uniform SettingsUBO {
@@ -226,6 +231,7 @@ void main() {
 		L0 += mix((kd * albedo / PI + specular) * radiance * NdotL, vec3(0.0f), shade);
 	}
 
+	vec3 iblContrib = vec3(0.0f);
 	if (settings.enableIBL > 0) {
 		vec3 R = reflect(-V, N);
 
@@ -242,16 +248,20 @@ void main() {
 
 		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
-		ambient = (kd * diffuse + specular) * ao;
+		iblContrib = (kd * diffuse + specular);
 	}
 
-	O_COLOR	= vec4(ambient + L0 + emission, 1.0f);
+	ambient = iblContrib * ao;
 
 	switch (settings.viewRT) {
+		case RT_RENDER: O_COLOR = vec4(ambient + L0 + emission, 1.0f); break;
 		case RT_POSITION: O_COLOR = vec4(position, 1.0f); break;
 		case RT_NORMAL: O_COLOR = vec4(N, 1.0f); break;
 		case RT_ALBEDO: O_COLOR = vec4(albedo, 1.0f); break;
-		case RT_OMR: O_COLOR = vec4(OMR, 1.0f); break;
+		case RT_AO: O_COLOR = vec4(OMR.rrr, 1.0f); break;
+		case RT_METALLIC: O_COLOR = vec4(OMR.ggg, 1.0f); break;
+		case RT_ROUGHNESS: O_COLOR = vec4(OMR.bbb, 1.0f); break;
 		case RT_EMISSION: O_COLOR = vec4(emission, 1.0f); break;
+		case RT_IBL: O_COLOR = vec4(iblContrib, 1.0f); break;
 	}
 }
