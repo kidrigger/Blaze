@@ -74,19 +74,6 @@ void FwdRenderer::recordCommands(uint32_t frame)
 {
 	lightCaster->cast(commandBuffers[frame], drawables.get_data());
 
-	VkRenderPassBeginInfo renderpassBeginInfo = {};
-	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderpassBeginInfo.renderPass = renderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = renderFramebuffers[frame];
-	renderpassBeginInfo.renderArea.offset = {0, 0};
-	renderpassBeginInfo.renderArea.extent = swapchain->get_extent();
-
-	std::array<VkClearValue, 2> clearColor;
-	clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-	clearColor[1].depthStencil = {1.0f, 0};
-	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-	renderpassBeginInfo.pClearValues = clearColor.data();
-
 	auto& extent = swapchain->get_extent();
 
 	VkViewport viewport = {};
@@ -101,7 +88,7 @@ void FwdRenderer::recordCommands(uint32_t frame)
 	scissor.extent = extent;
 	scissor.offset = {0, 0};
 
-	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	renderPass.begin(commandBuffers[frame], renderFramebuffers[frame]);
 
 	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
 	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
@@ -126,7 +113,7 @@ void FwdRenderer::recordCommands(uint32_t frame)
 	skyboxCube.bind(commandBuffers[frame]);
 	vkCmdDrawIndexed(commandBuffers[frame], skyboxCube.get_indexCount(), 1, 0, 0, 0);
 
-	vkCmdEndRenderPass(commandBuffers[frame]);
+	renderPass.end(commandBuffers[frame]);
 }
 
 // Custom creation functions
@@ -167,8 +154,14 @@ spirv::RenderPass FwdRenderer::createRenderpass()
 	subpassDesc.colorAttachmentCount = 1;
 	subpassDesc.pColorAttachments = &colorRef;
 	subpassDesc.pDepthStencilAttachment = &depthRef;
+	
+	std::vector<VkClearValue> clearColor(2);
+	clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+	clearColor[1].depthStencil = {1.0f, 0};
 
-	return context->get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
+	auto rp = context->get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
+	rp.clearValues = std::move(clearColor);
+	return std::move(rp);
 }
 
 spirv::Shader FwdRenderer::createShader()
@@ -335,36 +328,20 @@ spirv::Pipeline FwdRenderer::createSkyboxPipeline()
 	return context->get_pipelineFactory()->createGraphicsPipeline(skyboxShader, renderPass, info);
 }
 
-vkw::FramebufferVector FwdRenderer::createFramebuffers() const
+std::vector<spirv::Framebuffer> FwdRenderer::createFramebuffers()
 {
 	using namespace std;
 	assert(depthBuffer.valid());
 
-	vector<VkFramebuffer> frameBuffers(maxFrameInFlight);
+	vector<spirv::Framebuffer> frameBuffers;
 	for (uint32_t i = 0; i < maxFrameInFlight; i++)
 	{
 		vector<VkImageView> attachments = {swapchain->get_imageView(i), depthBuffer.get_imageView()};
 
-		VkFramebufferCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		createInfo.renderPass = renderPass.get();
-		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		createInfo.pAttachments = attachments.data();
-		createInfo.width = swapchain->get_extent().width;
-		createInfo.height = swapchain->get_extent().height;
-		createInfo.layers = 1;
-
-		auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffers[i]);
-		if (result != VK_SUCCESS)
-		{
-			for (size_t j = 0; j < i; j++)
-			{
-				vkDestroyFramebuffer(context->get_device(), frameBuffers[i], nullptr);
-			}
-			throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-		}
+		frameBuffers.push_back(
+			get_pipelineFactory()->createFramebuffer(renderPass, swapchain->get_extent(), attachments));
 	}
-	return vkw::FramebufferVector(std::move(frameBuffers), context->get_device());
+	return std::move(frameBuffers);
 }
 
 Texture2D FwdRenderer::createDepthBuffer() const

@@ -79,7 +79,7 @@ private:
 	// MRT
 	spirv::RenderPass mrtRenderPass;
 	MRTAttachment mrtAttachment;
-	vkw::Framebuffer mrtFramebuffer;
+	spirv::Framebuffer mrtFramebuffer;
 
 	spirv::SetSingleton lightInputSet;
 
@@ -98,13 +98,13 @@ private:
 		float bias{0.025f};
 	} ssaoSettings;
 	Texture2D ssaoAttachment;
-	vkw::Framebuffer ssaoFramebuffer;
+	spirv::Framebuffer ssaoFramebuffer;
 	spirv::RenderPass ssaoRenderPass;
 	spirv::Shader ssaoShader;
 	spirv::Pipeline ssaoPipeline;
 	spirv::SetSingleton ssaoDepthSet;
 
-	vkw::Framebuffer ssaoBlurFramebuffer;
+	spirv::Framebuffer ssaoBlurFramebuffer;
 	spirv::RenderPass ssaoBlurRenderPass;
 	spirv::Shader ssaoBlurShader;
 	spirv::Pipeline ssaoBlurPipeline;
@@ -113,7 +113,7 @@ private:
 	// Lighting
 	spirv::RenderPass lightingRenderPass;
 	Texture2D lightingAttachment;
-	vkw::Framebuffer lightingFramebuffer;
+	spirv::Framebuffer lightingFramebuffer;
 
 	spirv::Shader pointLightShader;
 	spirv::Pipeline pointLightPipeline;
@@ -141,7 +141,7 @@ private:
 	// Post processing
 
 	spirv::RenderPass postProcessRenderPass;
-	vkw::FramebufferVector postProcessFramebuffers;
+	std::vector<spirv::Framebuffer> postProcessFramebuffers;
 
 	HDRTonemap hdrTonemap;
 
@@ -207,11 +207,11 @@ private:
 	spirv::RenderPass createSSAORenderpass();
 	spirv::Shader createSSAOShader();
 	spirv::Pipeline createSSAOPipeline();
-	vkw::Framebuffer createSSAOFramebuffer();
+	spirv::Framebuffer createSSAOFramebuffer();
 	spirv::SetSingleton createSSAODepthSet();
 
 	spirv::RenderPass createSSAOBlurRenderpass();
-	vkw::Framebuffer createSSAOBlurFramebuffer();
+	spirv::Framebuffer createSSAOBlurFramebuffer();
 	spirv::Shader createSSAOBlurShader();
 	spirv::Pipeline createSSAOBlurPipeline();
 	spirv::SetSingleton createSSAOBlurSet();
@@ -223,8 +223,8 @@ private:
 	spirv::Shader createDirLightingShader();
 	spirv::Pipeline createDirLightingPipeline();
 
-	vkw::Framebuffer createRenderFramebuffer();
-	vkw::Framebuffer createLightingFramebuffer();
+	spirv::Framebuffer createRenderFramebuffer();
+	spirv::Framebuffer createLightingFramebuffer();
 
 	spirv::SetVector createCameraSets();
 	CameraUBOV createCameraUBOs();
@@ -236,7 +236,7 @@ private:
 
 	// Post process
 	spirv::RenderPass createPostProcessRenderPass();
-	vkw::FramebufferVector createPostProcessFramebuffers();
+	std::vector<spirv::Framebuffer> createPostProcessFramebuffers();
 
 	// Inherited via ARenderer
 	virtual spirv::SetSingleton* get_environmentSet() override;

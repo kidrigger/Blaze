@@ -15,7 +15,7 @@ TextureCube Environment::createIrradianceCube(const Context* context, spirv::Set
 	spirv::RenderPass renderpass;
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
-	vkw::Framebuffer framebuffer;
+	spirv::Framebuffer framebuffer;
 	TextureCube irradianceMap;
 	spirv::SetSingleton descriptorSet;
 
@@ -82,6 +82,11 @@ TextureCube Environment::createIrradianceCube(const Context* context, spirv::Set
 	multiview.pViewOffsets = nullptr;
 
 	renderpass = context->get_pipelineFactory()->createRenderPass({format}, {subpass}, &multiview);
+
+	VkClearValue clearColor = {};
+	clearColor.color = {0.0f, 0.0f, 0.0f, 1.0f};
+	renderpass.clearValues = {clearColor};
+
 	shader = context->get_pipelineFactory()->createShader(shaderStages);
 
 	spirv::GraphicsPipelineCreateInfo info = {};
@@ -139,19 +144,8 @@ TextureCube Environment::createIrradianceCube(const Context* context, spirv::Set
 
 	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, renderpass, info);
 
-	{
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = dim;
-		fbCreateInfo.height = dim;
-		fbCreateInfo.layers = 6;
-		fbCreateInfo.renderPass = renderpass.get();
-		fbCreateInfo.attachmentCount = 1;
-		fbCreateInfo.pAttachments = &irradianceMap.get_imageView();
-		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		framebuffer = vkw::Framebuffer(fbo, context->get_device());
-	}
+	framebuffer =
+		context->get_pipelineFactory()->createFramebuffer(renderpass, {dim, dim}, {irradianceMap.get_imageView()});
 
 	auto cube = getUVCube(context);
 
@@ -193,60 +187,47 @@ TextureCube Environment::createIrradianceCube(const Context* context, spirv::Set
 
 	glm::mat4 mvppcb{};
 
-	{
-		auto cmdBuffer = context->startCommandBufferRecord();
+	auto cmdBuffer = context->startCommandBufferRecord();
 
-		// RENDERPASSES
+	// RENDERPASSES
 
-		VkRenderPassBeginInfo renderpassBeginInfo = {};
-		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpassBeginInfo.renderPass = renderpass.get();
-		renderpassBeginInfo.framebuffer = framebuffer.get();
-		renderpassBeginInfo.renderArea.offset = {0, 0};
-		renderpassBeginInfo.renderArea.extent = {dim, dim};
+	renderpass.begin(cmdBuffer, framebuffer);
 
-		std::array<VkClearValue, 1> clearColor;
-		clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-		renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-		renderpassBeginInfo.pClearValues = clearColor.data();
+	VkViewport viewport = {};
+	viewport.x = 0.0f;
+	viewport.y = static_cast<float>(dim);
+	viewport.width = (float)dim;
+	viewport.height = -(float)dim;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
 
-		vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	VkRect2D scissor = {};
+	scissor.offset = {0, 0};
+	scissor.extent = {dim, dim};
 
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = static_cast<float>(dim);
-		viewport.width = (float)dim;
-		viewport.height = -(float)dim;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
+	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-		VkRect2D scissor = {};
-		scissor.offset = {0, 0};
-		scissor.extent = {dim, dim};
+	pipeline.bind(cmdBuffer);
+	vkCmdBindDescriptorSets(cmdBuffer, pipeline.bindPoint, shader.pipelineLayout.get(), 0, 1,
+							&descriptorSet.get(), 0, nullptr);
+	vkCmdBindDescriptorSets(cmdBuffer, pipeline.bindPoint, shader.pipelineLayout.get(), 1, 1,
+							&environment->get(), 0, nullptr);
 
-		vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-		vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+	mvppcb = glm::mat4(1.0f);
+	vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
+						sizeof(glm::mat4), &mvppcb);
+	vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage,
+						sizeof(glm::mat4), sizeof(PCB), &pcb);
 
-		pipeline.bind(cmdBuffer);
-		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
-								&descriptorSet.get(), 0, nullptr);
-		vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 1, 1,
-								&environment->get(), 0, nullptr);
+	VkDeviceSize offsets = {0};
 
-		mvppcb = glm::mat4(1.0f);
-		vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage, 0,
-						   sizeof(glm::mat4), &mvppcb);
-		vkCmdPushConstants(cmdBuffer, shader.pipelineLayout.get(), shader.pushConstant.stage,
-							sizeof(glm::mat4), sizeof(PCB), &pcb);
+	cube.bind(cmdBuffer);
+	vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
 
-		VkDeviceSize offsets = {0};
+	renderpass.end(cmdBuffer);
+	context->flushCommandBuffer(cmdBuffer);
 
-		cube.bind(cmdBuffer);
-		vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
-
-		vkCmdEndRenderPass(cmdBuffer);
-		context->flushCommandBuffer(cmdBuffer);
-	}
 	irradianceMap.implicitTransferLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
 	return irradianceMap;
@@ -267,7 +248,7 @@ TextureCube Environment::createPrefilteredCube(const Context* context, spirv::Se
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
 	spirv::RenderPass renderpass;
-	vkw::Framebuffer framebuffer;
+	spirv::Framebuffer framebuffer;
 
 	VkFormat imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
 
@@ -325,6 +306,11 @@ TextureCube Environment::createPrefilteredCube(const Context* context, spirv::Se
 	subpass.pDepthStencilAttachment = nullptr;
 
 	renderpass = context->get_pipelineFactory()->createRenderPass({format}, {subpass});
+
+	std::vector<VkClearValue> clearColor(1);
+	clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+	renderpass.clearValues = std::move(clearColor);
+
 	shader = context->get_pipelineFactory()->createShader(shaderStages);
 
 	spirv::GraphicsPipelineCreateInfo info = {};
@@ -382,19 +368,8 @@ TextureCube Environment::createPrefilteredCube(const Context* context, spirv::Se
 
 	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, renderpass, info);
 
-	{
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = dim;
-		fbCreateInfo.height = dim;
-		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = renderpass.get();
-		fbCreateInfo.attachmentCount = 1;
-		fbCreateInfo.pAttachments = &fbColorAttachment.get_imageView();
-		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		framebuffer = vkw::Framebuffer(fbo, context->get_device());
-	}
+	framebuffer =
+		context->get_pipelineFactory()->createFramebuffer(renderpass, {dim, dim}, {fbColorAttachment.get_imageView()});
 
 	auto cube = getUVCube(context);
 
@@ -434,28 +409,17 @@ TextureCube Environment::createPrefilteredCube(const Context* context, spirv::Se
 		VkRect2D scissor = {};
 		scissor.offset = {0, 0};
 		scissor.extent = {mipsize, mipsize};
+		framebuffer.renderArea = scissor;
 
 		for (int face = 0; face < 6; face++)
 		{
-
-			VkRenderPassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderpass.get();
-			renderpassBeginInfo.framebuffer = framebuffer.get();
-			renderpassBeginInfo.renderArea = scissor;
-
-			std::vector<VkClearValue> clearColor(1);
-			clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-			renderpassBeginInfo.pClearValues = clearColor.data();
-
-			vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			renderpass.begin(cmdBuffer, framebuffer);
 			vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 			vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 			pipeline.bind(cmdBuffer);
 
-			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipelineLayout.get(), 0, 1,
+			vkCmdBindDescriptorSets(cmdBuffer, pipeline.bindPoint, shader.pipelineLayout.get(), 0, 1,
 									&environment->get(), 0, nullptr);
 
 			mvppcb = proj * matrices[face];
@@ -469,7 +433,7 @@ TextureCube Environment::createPrefilteredCube(const Context* context, spirv::Se
 			cube.bind(cmdBuffer);
 			vkCmdDrawIndexed(cmdBuffer, cube.get_indexCount(), 1, 0, 0, 0);
 
-			vkCmdEndRenderPass(cmdBuffer);
+			renderpass.end(cmdBuffer);
 			fbColorAttachment.implicitTransferLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 													 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
@@ -517,7 +481,7 @@ Texture2D Environment::createBrdfLut(const Context* context)
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
 	spirv::RenderPass renderpass;
-	vkw::Framebuffer framebuffer;
+	spirv::Framebuffer framebuffer;
 
 	auto rect = getUVRect(context);
 
@@ -568,6 +532,11 @@ Texture2D Environment::createBrdfLut(const Context* context)
 	subpass.pDepthStencilAttachment = nullptr;
 
 	renderpass = context->get_pipelineFactory()->createRenderPass({format}, {subpass});
+
+	VkClearValue clearColor = {};
+	clearColor.color = {0.0f, 0.0f, 0.0f, 1.0f};
+	renderpass.clearValues = {clearColor};
+
 	shader = context->get_pipelineFactory()->createShader(shaderStages);
 
 	spirv::GraphicsPipelineCreateInfo info = {};
@@ -625,20 +594,6 @@ Texture2D Environment::createBrdfLut(const Context* context)
 
 	pipeline = context->get_pipelineFactory()->createGraphicsPipeline(shader, renderpass, info);
 
-	{
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = dim;
-		fbCreateInfo.height = dim;
-		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = renderpass.get();
-		fbCreateInfo.attachmentCount = 1;
-		fbCreateInfo.pAttachments = &lut.get_imageView();
-		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		framebuffer = vkw::Framebuffer(fbo, context->get_device());
-	}
-
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = static_cast<float>(dim);
@@ -651,23 +606,12 @@ Texture2D Environment::createBrdfLut(const Context* context)
 	scissor.offset = {0, 0};
 	scissor.extent = {dim, dim};
 
+	framebuffer = context->get_pipelineFactory()->createFramebuffer(renderpass, scissor.extent, {lut.get_imageView()});
+
 	auto cmdBuffer = context->startCommandBufferRecord();
 
 	// RENDERPASSES
-
-	VkRenderPassBeginInfo renderpassBeginInfo = {};
-	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderpassBeginInfo.renderPass = renderpass.get();
-	renderpassBeginInfo.framebuffer = framebuffer.get();
-	renderpassBeginInfo.renderArea.offset = {0, 0};
-	renderpassBeginInfo.renderArea.extent = {dim, dim};
-
-	std::array<VkClearValue, 1> clearColor;
-	clearColor[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-	renderpassBeginInfo.pClearValues = clearColor.data();
-
-	vkCmdBeginRenderPass(cmdBuffer, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	renderpass.begin(cmdBuffer, framebuffer);
 
 	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
@@ -677,7 +621,7 @@ Texture2D Environment::createBrdfLut(const Context* context)
 	rect.bind(cmdBuffer);
 	vkCmdDrawIndexed(cmdBuffer, rect.get_indexCount(), 1, 0, 0, 0);
 
-	vkCmdEndRenderPass(cmdBuffer);
+	renderpass.end(cmdBuffer);
 	lut.implicitTransferLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT);
 
 	context->flushCommandBuffer(cmdBuffer);

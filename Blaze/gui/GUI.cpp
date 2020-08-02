@@ -24,28 +24,24 @@ void GUI::recreate(const Context* context, const Swapchain* swapchain)
 {
 	width = swapchain->get_extent().width;
 	height = swapchain->get_extent().height;
-	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchain->get_imageViews());
+
+	framebuffers.clear();
+	for (auto& iv : swapchain->get_imageViews())
+	{
+		framebuffers.push_back(
+			context->get_pipelineFactory()->createFramebuffer(renderPass, swapchain->get_extent(), {iv}));
+	}
 }
 
 void GUI::draw(VkCommandBuffer cmdBuffer, int frameCount)
 {
 	if (complete)
 	{
-		VkClearValue clearValue = {};
-		clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f};
-
-		VkRenderPassBeginInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		info.renderPass = renderPass.get();
-		info.framebuffer = framebuffers[frameCount];
-		info.renderArea.extent.width = width;
-		info.renderArea.extent.height = height;
-		info.clearValueCount = 1;
-		info.pClearValues = &clearValue;
-		vkCmdBeginRenderPass(cmdBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+		renderPass.begin(cmdBuffer, framebuffers[frameCount]);
 
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
-		vkCmdEndRenderPass(cmdBuffer);
+		
+		renderPass.end(cmdBuffer);
 	}
 }
 
@@ -66,12 +62,33 @@ GUI::GUI(const Context* context, const Swapchain* swapchain) noexcept
 	descriptorPool =
 		vkw::DescriptorPool(util::createDescriptorPool(context->get_device(), pool_sizes, 1000), context->get_device());
 
-	{
-		auto rpass =
-			util::createRenderPass(context->get_device(), swapchain->get_format(), VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD);
-		renderPass = vkw::RenderPass(rpass, context->get_device());
-	}
+	spirv::AttachmentFormat format = {};
+	format.format = swapchain->get_format();
+	format.sampleCount = VK_SAMPLE_COUNT_1_BIT;
+	format.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	format.loadStoreConfig = spirv::LoadStoreConfig(spirv::LoadStoreConfig::LoadAction::CONTINUE,
+													spirv::LoadStoreConfig::StoreAction::PRESENT);
+
+	VkAttachmentReference colorRef = {};
+	colorRef.attachment = 0;
+	colorRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	std::vector<VkSubpassDescription> subpass(1);
+	subpass[0].pDepthStencilAttachment = nullptr;
+	subpass[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass[0].inputAttachmentCount = 0;
+	subpass[0].pInputAttachments = nullptr;
+	subpass[0].colorAttachmentCount = 1;
+	subpass[0].pColorAttachments = &colorRef;
+	subpass[0].preserveAttachmentCount = 0;
+	subpass[0].pPreserveAttachments = nullptr;
+	subpass[0].pResolveAttachments = nullptr;
+	subpass[0].flags = 0;
+
+	renderPass = context->get_pipelineFactory()->createRenderPass({format}, subpass);
+	VkClearValue clearValue = {};
+	clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f};
+	renderPass.clearValues = {clearValue};
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -99,7 +116,11 @@ GUI::GUI(const Context* context, const Swapchain* swapchain) noexcept
 	ImGui_ImplVulkan_CreateFontsTexture(cmdBuffer);
 	context->flushCommandBuffer(cmdBuffer);
 
-	framebuffers = createSwapchainFramebuffers(context->get_device(), swapchain->get_imageViews());
+	for (auto& iv : swapchain->get_imageViews())
+	{
+		framebuffers.push_back(
+			context->get_pipelineFactory()->createFramebuffer(renderPass, swapchain->get_extent(), {iv}));
+	}
 
 	valid = true;
 }
@@ -135,37 +156,5 @@ GUI::~GUI()
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
 	}
-}
-
-vkw::FramebufferVector GUI::createSwapchainFramebuffers(VkDevice device,
-															const std::vector<VkImageView>& swapchainImageViews) const
-{
-	using namespace std;
-
-	vector<VkFramebuffer> frameBuffers(swapchainImageViews.size());
-	for (size_t i = 0; i < swapchainImageViews.size(); i++)
-	{
-		vector<VkImageView> attachments = {swapchainImageViews[i]};
-
-		VkFramebufferCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		createInfo.renderPass = renderPass.get();
-		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		createInfo.pAttachments = attachments.data();
-		createInfo.width = width;
-		createInfo.height = height;
-		createInfo.layers = 1;
-
-		auto result = vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffers[i]);
-		if (result != VK_SUCCESS)
-		{
-			for (size_t j = 0; j < i; j++)
-			{
-				vkDestroyFramebuffer(device, frameBuffers[i], nullptr);
-			}
-			throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-		}
-	}
-	return vkw::FramebufferVector(std::move(frameBuffers), device);
 }
 } // namespace blaze

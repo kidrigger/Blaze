@@ -24,7 +24,8 @@ namespace blaze::fwd
 struct PointShadow
 {
 	TextureCube shadowMap;
-	vkw::Framebuffer framebuffer;
+	spirv::Framebuffer framebuffer;
+	VkRect2D scissor;
 	VkViewport viewport;
 	uint16_t next;
 	
@@ -36,7 +37,7 @@ struct PointShadow
 		alignas(4) float p32;
 	};
 
-	PointShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept;
+	PointShadow(const Context* context, const spirv::RenderPass& renderPass, uint32_t mapResolution) noexcept;
 };
 /**
  * @endcond

@@ -12,7 +12,6 @@ constexpr std::string_view PROJECT_NAME = "Blaze";
 namespace blaze
 {
 void run();
-void runDeferred();
 }
 
 // TODO: Reference additional headers your program requires here.

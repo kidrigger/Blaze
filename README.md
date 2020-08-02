@@ -25,8 +25,17 @@ Made by Anish Bhobe
 - [x] Smooth Descriptor Creation Pipeline
 - [x] Deferred Rendering
 - [x] Post Process Stack
+- [ ] Ambient Occlusion
+  - [x] SSAO
+  - [ ] HBAO
+  - [ ] VXAO/SDFAO
+- [ ] Reflection
+  - [ ] ScreenSpace Reflection
+  - [ ] Cubemap Reflection
 - [ ] Forward+ Rendering
 - [ ] Global Illumination
+  - [ ] Precomputed Radiance Transfer
+  - [ ] Voxel Cone Tracing
 - [ ] Shadows v2
   - [ ] Spot Lights
   - [ ] Area Lights
@@ -51,6 +60,21 @@ Made by Anish Bhobe
 
 ### Deferred Shading Implemented.
 
-Blaze now has a deferred renderer with spherical volumes.
+Blaze now has a deferred renderer with spherical volumes.  
+The unoptimized GBuffer is:  
+Position - R16G16B16A16 SFLOAT (3 channel position + alpha linear distance)  
+Albedo - R8G8B8A8 UNORM (3 channel color + alpha unused)  
+Normal - R16G16B16A16 SFLOAT (3 channel world space normals + alpha unused)  
+Physical Desc - R8G8B8A8 UNORM (R: Occlusion, G: Metallic, B: Roughness, A: Unused)  
+Emission - R8G8B8A8 SFLOAT (3 channel emission + alpha unused)  
+
+### Added SSAO
+
+SSAO has been added with 64 samples in a hemisphere, and 5x5 blur at half resolution.
+Next up to reduce the sample requirement by using low discrepancy samples.
+
+Performance hit ~6ms at 1920x1080 full resolution SSAO.
+
+![Full resolution SSAO in Sponza](presentation/ssao.png)
 
 ### Next up: Forward+/Clustered Forward renderer

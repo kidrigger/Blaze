@@ -46,7 +46,7 @@ private:
 
 	Texture2D depthBuffer;
 	spirv::RenderPass renderPass;
-	vkw::FramebufferVector renderFramebuffers;
+	std::vector<spirv::Framebuffer> renderFramebuffers;
 	
 	spirv::Shader shader;
 	spirv::Pipeline pipeline;
@@ -116,7 +116,7 @@ protected:
 private:
 	spirv::RenderPass createRenderpass();
 	Texture2D createDepthBuffer() const;
-	vkw::FramebufferVector createFramebuffers() const;
+	std::vector<spirv::Framebuffer> createFramebuffers();
 	spirv::Shader createShader();
 	spirv::Pipeline createPipeline();
 	spirv::Shader createSkyboxShader();

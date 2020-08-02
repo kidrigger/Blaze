@@ -44,7 +44,7 @@ PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVecto
 
 	for (uint32_t i = 0; i < maxShadows; ++i)
 	{
-		auto& shadow = shadows.emplace_back(context, renderPass.get(), OMNI_MAP_RESOLUTION);
+		auto& shadow = shadows.emplace_back(context, renderPass, OMNI_MAP_RESOLUTION);
 		shadow.next = i + 1;
 	}
 	shadows.back().next = -1;
@@ -214,19 +214,7 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 			continue;
 		PointShadow* shadow = &shadows[light.shadowIdx];
 
-		VkRenderPassBeginInfo renderpassBeginInfo = {};
-		renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpassBeginInfo.renderPass = renderPass.get();
-		renderpassBeginInfo.framebuffer = shadow->framebuffer.get();
-		renderpassBeginInfo.renderArea.offset = {0, 0};
-		renderpassBeginInfo.renderArea.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
-
-		std::array<VkClearValue, 1> clearColor;
-		clearColor[0].depthStencil = {1.0f, 0};
-		renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-		renderpassBeginInfo.pClearValues = clearColor.data();
-
-		vkCmdBeginRenderPass(cmd, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		renderPass.begin(cmd, shadow->framebuffer);
 
 		float denom = (0.3f - light.radius);
 		float p22 = light.radius / denom;
@@ -239,13 +227,9 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 			p32,
 		};
 
-		VkRect2D scissor;
-		scissor.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
-		scissor.offset = {0, 0};
-
 		shadowPipeline.bind(cmd);
 		vkCmdSetViewport(cmd, 0, 1, &shadow->viewport);
-		vkCmdSetScissor(cmd, 0, 1, &scissor);
+		vkCmdSetScissor(cmd, 0, 1, &shadow->scissor);
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowShader.pipelineLayout.get(), viewSet.setIdx,
 								1, &viewSet.get(), 0, nullptr);
 		vkCmdPushConstants(cmd, shadowShader.pipelineLayout.get(), shadowShader.pushConstant.stage,
@@ -255,7 +239,7 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 			d->drawGeometry(cmd, shadowShader.pipelineLayout.get());
 		}
 
-		vkCmdEndRenderPass(cmd);
+		renderPass.end(cmd);
 	}
 }
 
@@ -341,7 +325,12 @@ spirv::RenderPass PointLightCaster::createRenderPass(const Context* context)
 	multiview.dependencyCount = 0;
 	multiview.pViewOffsets = nullptr;
 
-	return context->get_pipelineFactory()->createRenderPass(format, subpass, &multiview);
+	VkClearValue clear = {};
+	clear.depthStencil = {1.0f, 0};
+
+	auto rp = context->get_pipelineFactory()->createRenderPass(format, subpass, &multiview);
+	rp.clearValues = {clear};
+	return std::move(rp);
 }
 
 spirv::Shader PointLightCaster::createShader(const Context* context)
@@ -417,7 +406,7 @@ spirv::Pipeline PointLightCaster::createPipeline(const Context* context)
 }
 
 // Point Shadow 2
-PointShadow::PointShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution) noexcept
+PointShadow::PointShadow(const Context* context, const spirv::RenderPass& renderPass, uint32_t mapResolution) noexcept
 {
 	ImageDataCube idc{};
 	idc.height = mapResolution;
@@ -439,21 +428,12 @@ PointShadow::PointShadow(const Context* context, VkRenderPass renderPass, uint32
 						  0.0f,
 						  1.0f};
 
-	{
-		std::vector<VkImageView> attachments = {shadowMap.get_imageView()};
+	scissor.offset = {0, 0};
+	scissor.extent = {mapResolution, mapResolution};
 
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = mapResolution;
-		fbCreateInfo.height = mapResolution;
-		fbCreateInfo.layers = 6;
-		fbCreateInfo.renderPass = renderPass;
-		fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		fbCreateInfo.pAttachments = attachments.data();
-		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
-		framebuffer = vkw::Framebuffer(fbo, context->get_device());
-	}
+	std::vector<VkImageView> attachments = {shadowMap.get_imageView()};
+
+	framebuffer = context->get_pipelineFactory()->createFramebuffer(renderPass, scissor.extent, attachments);
 }
 
 } // namespace blaze

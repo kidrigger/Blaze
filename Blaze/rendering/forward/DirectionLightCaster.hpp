@@ -25,7 +25,8 @@ namespace blaze::fwd
 struct DirectionShadow
 {
 	Texture2D shadowMap;
-	vkw::FramebufferVector framebuffer;
+	std::vector<spirv::Framebuffer> framebuffers;
+	VkRect2D scissor;
 	VkViewport viewport;
 	uint16_t next;
 
@@ -37,7 +38,7 @@ struct DirectionShadow
 		alignas(4) float p32;
 	};
 
-	DirectionShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept;
+	DirectionShadow(const Context* context, const spirv::RenderPass& renderPass, uint32_t mapResolution, uint32_t numCascades) noexcept;
 };
 /**
  * @endcond

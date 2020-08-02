@@ -34,6 +34,7 @@ struct LoadStoreConfig
 		READ,	   ///< Will be used as a sample image next.
 		DONT_CARE, ///< Doesn't matter if you store the data.
 		CONTINUE,  ///< Will be continued to use as attachment.
+		PRESENT,   ///< Will be converted to present.
 	};
 
 	LoadAction loadAction;
@@ -141,6 +142,15 @@ struct Framebuffer
 			return false;
 		}
 	};
+
+	FormatID format;
+	vkw::Framebuffer framebuffer;
+	VkRect2D renderArea;
+
+	VkFramebuffer get() const
+	{
+		return framebuffer.get();
+	}
 };
 
 /**
@@ -224,6 +234,28 @@ struct RenderPass
 	{
 		return renderPass.valid();
 	}
+
+	std::vector<VkClearValue> clearValues;
+
+	void begin(VkCommandBuffer cmd, const spirv::Framebuffer& fb)
+	{
+		assert(fb.format == fbFormat);
+
+		VkRenderPassBeginInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		info.pNext = nullptr;
+		info.framebuffer = fb.get();
+		info.renderPass = renderPass.get();
+		info.renderArea = fb.renderArea;
+		info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		info.pClearValues = clearValues.data();
+		vkCmdBeginRenderPass(cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
+	}
+
+	void end(VkCommandBuffer cmd)
+	{
+		vkCmdEndRenderPass(cmd);
+	}
 };
 
 /**
@@ -297,6 +329,9 @@ public:
 	RenderPass createRenderPass(const std::vector<AttachmentFormat>& formats,
 								const std::vector<VkSubpassDescription>& subpasses,
 								const VkRenderPassMultiviewCreateInfo* multiview = nullptr);
+
+	Framebuffer createFramebuffer(const spirv::RenderPass& renderPass, VkExtent2D extent,
+								  const std::vector<VkImageView>& attachments);
 
 	/**
 	 * @brief Creates the DescriptorSets for the given set.

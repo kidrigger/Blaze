@@ -551,6 +551,22 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 			}
 		};
 		break;
+		case LoadStoreConfig::StoreAction::PRESENT: {
+			if (isDepthStencil)
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.finalLayout = (isSampled ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+													 : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+			else
+			{
+				description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			}
+		};
+		break;
 		}
 	}
 
@@ -619,6 +635,38 @@ RenderPass PipelineFactory::createRenderPass(const std::vector<AttachmentFormat>
 											 const VkRenderPassMultiviewCreateInfo* multiview)
 {
 	return createRenderPass(formats, subpasses, {}, multiview);
+}
+
+Framebuffer PipelineFactory::createFramebuffer(const spirv::RenderPass& renderPass, VkExtent2D extent, const std::vector<VkImageView>& attachments)
+{
+	using namespace std;
+
+	VkFramebuffer frameBuffer;
+
+	VkFramebufferCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	createInfo.renderPass = renderPass.get();
+	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	createInfo.pAttachments = attachments.data();
+	createInfo.width = extent.width;
+	createInfo.height = extent.height;
+	createInfo.layers = 1;
+
+	auto result = vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffer);
+	if (result != VK_SUCCESS)
+	{
+		throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
+	}
+
+	VkRect2D rect = {};
+	rect.offset = {0, 0};
+	rect.extent = extent;
+
+	return Framebuffer{
+		renderPass.fbFormat,
+		vkw::Framebuffer(frameBuffer, device),
+		rect,
+	};
 }
 
 SetVector PipelineFactory::createSets(const Shader::Set& set, uint32_t count)

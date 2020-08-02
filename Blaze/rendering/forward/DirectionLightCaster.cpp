@@ -44,7 +44,7 @@ DirectionLightCaster::DirectionLightCaster(const Context* context, const spirv::
 
 	for (uint32_t i = 0; i < maxShadows; ++i)
 	{
-		auto& shadow = shadows.emplace_back(context, renderPass.get(), DIRECTION_MAP_RESOLUTION, MAX_CSM_SPLITS);
+		auto& shadow = shadows.emplace_back(context, renderPass, DIRECTION_MAP_RESOLUTION, MAX_CSM_SPLITS);
 		shadow.next = i + 1;
 	}
 	shadows.back().next = -1;
@@ -275,27 +275,11 @@ void DirectionLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*
 
 		for (int i = 0; i < light.numCascades; ++i)
 		{
-			VkRenderPassBeginInfo renderpassBeginInfo = {};
-			renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpassBeginInfo.renderPass = renderPass.get();
-			renderpassBeginInfo.framebuffer = shadow->framebuffer[i];
-			renderpassBeginInfo.renderArea.offset = {0, 0};
-			renderpassBeginInfo.renderArea.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
-
-			std::array<VkClearValue, 1> clearColor;
-			clearColor[0].depthStencil = {1.0f, 0};
-			renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-			renderpassBeginInfo.pClearValues = clearColor.data();
-
-			vkCmdBeginRenderPass(cmd, &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			VkRect2D scissor;
-			scissor.extent = {shadow->shadowMap.get_width(), shadow->shadowMap.get_height()};
-			scissor.offset = {0, 0};
+			renderPass.begin(cmd, shadow->framebuffers[i]);
 
 			shadowPipeline.bind(cmd);
 			vkCmdSetViewport(cmd, 0, 1, &shadow->viewport);
-			vkCmdSetScissor(cmd, 0, 1, &scissor);
+			vkCmdSetScissor(cmd, 0, 1, &shadow->scissor);
 			vkCmdPushConstants(cmd, shadowShader.pipelineLayout.get(), shadowShader.pushConstant.stage,
 							   sizeof(ModelPushConstantBlock), sizeof(glm::mat4), &light.cascadeViewProj[i]);
 			for (Drawable* d : drawables)
@@ -303,7 +287,7 @@ void DirectionLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*
 				d->drawGeometry(cmd, shadowShader.pipelineLayout.get());
 			}
 
-			vkCmdEndRenderPass(cmd);
+			renderPass.end(cmd);
 		}
 	}
 }
@@ -377,7 +361,11 @@ spirv::RenderPass DirectionLightCaster::createRenderPass(const Context* context)
 	subpass[0].pResolveAttachments = nullptr;
 	subpass[0].flags = 0;
 
-	return context->get_pipelineFactory()->createRenderPass(format, subpass);
+	VkClearValue clear = {};
+	clear.depthStencil = {1.0f, 0};
+	auto rp = context->get_pipelineFactory()->createRenderPass(format, subpass);
+	rp.clearValues = {clear};
+	return std::move(rp);
 }
 
 spirv::Shader DirectionLightCaster::createShader(const Context* context)
@@ -452,7 +440,7 @@ spirv::Pipeline DirectionLightCaster::createPipeline(const Context* context)
 	return context->get_pipelineFactory()->createGraphicsPipeline(shadowShader, renderPass, info);
 }
 
-DirectionShadow::DirectionShadow(const Context* context, VkRenderPass renderPass, uint32_t mapResolution,
+DirectionShadow::DirectionShadow(const Context* context, const spirv::RenderPass& renderPass, uint32_t mapResolution,
 								   uint32_t numCascades) noexcept
 {
 	ImageData2D id2d{};
@@ -477,22 +465,15 @@ DirectionShadow::DirectionShadow(const Context* context, VkRenderPass renderPass
 						  0.0f,
 						  1.0f};
 
-	std::vector<VkFramebuffer> fbos;
+	scissor.offset = {0, 0};
+	scissor.extent = {mapResolution, mapResolution};
+
 	for (int i = 0; i < MAX_CSM_SPLITS; ++i)
 	{
 		std::vector<VkImageView> attachments = {shadowMap.get_imageView(i)};
 
-		VkFramebuffer& fbo = fbos.emplace_back<VkFramebuffer>(VK_NULL_HANDLE);
-		VkFramebufferCreateInfo fbCreateInfo = {};
-		fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbCreateInfo.width = mapResolution;
-		fbCreateInfo.height = mapResolution;
-		fbCreateInfo.layers = 1;
-		fbCreateInfo.renderPass = renderPass;
-		fbCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		fbCreateInfo.pAttachments = attachments.data();
-		vkCreateFramebuffer(context->get_device(), &fbCreateInfo, nullptr, &fbo);
+		framebuffers.push_back(
+			context->get_pipelineFactory()->createFramebuffer(renderPass, scissor.extent, attachments));
 	}
-	framebuffer = vkw::FramebufferVector(std::move(fbos), context->get_device());
 }
 } // namespace blaze

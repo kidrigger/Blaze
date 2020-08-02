@@ -235,7 +235,16 @@ spirv::RenderPass DfrRenderer::createMRTRenderpass()
 		subpassDesc->pDepthStencilAttachment = &depthRef;
 	}
 
-	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs, deps);
+	std::vector<VkClearValue> clearColor(6);
+	for (auto& clCol : clearColor)
+	{
+		clCol.color = {0.0f, 0.0f, 0.0f, 0.0f};
+	}
+	clearColor.back().depthStencil = {1.0f, 0};
+
+	auto rp = context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs, deps);
+	rp.clearValues = std::move(clearColor);
+	return std::move(rp);
 }
 
 spirv::RenderPass DfrRenderer::createLightingRenderpass()
@@ -282,7 +291,13 @@ spirv::RenderPass DfrRenderer::createLightingRenderpass()
 		subpassDesc->pDepthStencilAttachment = &depthRef;
 	}
 
-	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs);
+	std::vector<VkClearValue> lightingClear(2);
+	lightingClear[0].color = {0.0f, 0.0f, 0.0f, 0.0f};
+	lightingClear[1].depthStencil = {1.0f, 0};
+	auto rp = context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs);
+	rp.clearValues = std::move(lightingClear);
+
+	return std::move(rp);
 }
 
 Texture2D DfrRenderer::createDepthBuffer() const
@@ -355,42 +370,31 @@ spirv::RenderPass DfrRenderer::createPostProcessRenderPass()
 		subpassDesc->pDepthStencilAttachment = nullptr;
 	}
 
-	return context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs);
+	VkClearValue clear = {};
+	clear.color = {0.0f, 0.0f, 0.0f, 1.0f};
+
+	auto rp = context->get_pipelineFactory()->createRenderPass(attachments, subpassDescs);
+	rp.clearValues = {clear};
+	return rp;
 }
 
-vkw::FramebufferVector DfrRenderer::createPostProcessFramebuffers()
+std::vector<spirv::Framebuffer> DfrRenderer::createPostProcessFramebuffers()
 {
 	using namespace std;
 	assert(depthBuffer.valid());
 	assert(postProcessRenderPass.valid());
 
-	vector<VkFramebuffer> frameBuffers(maxFrameInFlight);
+	vector<spirv::Framebuffer> frameBuffers;
 	for (uint32_t i = 0; i < maxFrameInFlight; i++)
 	{
 		vector<VkImageView> attachments = {
 			swapchain->get_imageView(i),
 		};
 
-		VkFramebufferCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		createInfo.renderPass = postProcessRenderPass.get();
-		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		createInfo.pAttachments = attachments.data();
-		createInfo.width = swapchain->get_extent().width;
-		createInfo.height = swapchain->get_extent().height;
-		createInfo.layers = 1;
-
-		auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffers[i]);
-		if (result != VK_SUCCESS)
-		{
-			for (size_t j = 0; j < i; j++)
-			{
-				vkDestroyFramebuffer(context->get_device(), frameBuffers[i], nullptr);
-			}
-			throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-		}
+		frameBuffers.push_back(get_pipelineFactory()->createFramebuffer(postProcessRenderPass, swapchain->get_extent(), attachments));
 	}
-	return vkw::FramebufferVector(std::move(frameBuffers), context->get_device());
+
+	return std::move(frameBuffers);
 }
 
 spirv::SetSingleton* DfrRenderer::get_environmentSet()
@@ -409,22 +413,6 @@ void DfrRenderer::recordCommands(uint32_t frame)
 {
 	lightCaster->cast(commandBuffers[frame], drawables.get_data());
 
-	VkRenderPassBeginInfo renderpassBeginInfo = {};
-	renderpassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderpassBeginInfo.renderPass = mrtRenderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = mrtFramebuffer.get();
-	renderpassBeginInfo.renderArea.offset = {0, 0};
-	renderpassBeginInfo.renderArea.extent = swapchain->get_extent();
-
-	std::array<VkClearValue, 6> clearColor;
-	for (auto& clCol : clearColor)
-	{
-		clCol.color = {0.0f, 0.0f, 0.0f, 0.0f};
-	}
-	clearColor.back().depthStencil = {1.0f, 0};
-	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColor.size());
-	renderpassBeginInfo.pClearValues = clearColor.data();
-
 	auto& extent = swapchain->get_extent();
 
 	VkViewport viewport = {};
@@ -439,7 +427,7 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	scissor.extent = extent;
 	scissor.offset = {0, 0};
 
-	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	mrtRenderPass.begin(commandBuffers[frame], mrtFramebuffer);
 
 	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
 	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
@@ -453,21 +441,22 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		drawable->drawOpaque(commandBuffers[frame], mrtShader.pipelineLayout.get());
 	}
 
-	vkCmdEndRenderPass(commandBuffers[frame]);
+	mrtRenderPass.end(commandBuffers[frame]);
 
-	// ssao
-	VkClearValue ssaoClear;
-	ssaoClear.color = {1.0f, 0.0f, 0.0f, 0.0f};
+	ssaoRenderPass.begin(commandBuffers[frame], ssaoFramebuffer);
 
-	renderpassBeginInfo.renderPass = ssaoRenderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = ssaoFramebuffer.get();
-	renderpassBeginInfo.clearValueCount = 1;
-	renderpassBeginInfo.pClearValues = &ssaoClear;
+	VkExtent2D ssaoExtent = ssaoFramebuffer.renderArea.extent;
 
-	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	VkViewport ssaoViewport = {};
+	ssaoViewport.minDepth = 0.0f;
+	ssaoViewport.maxDepth = 1.0f;
+	ssaoViewport.x = 0;
+	ssaoViewport.y = static_cast<float>(ssaoExtent.height);
+	ssaoViewport.width = static_cast<float>(ssaoExtent.width);
+	ssaoViewport.height = -static_cast<float>(ssaoExtent.height);
 
-	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
-	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
+	vkCmdSetScissor(commandBuffers[frame], 0, 1, &ssaoFramebuffer.renderArea);
+	vkCmdSetViewport(commandBuffers[frame], 0, 1, &ssaoViewport);
 
 	if (ssaoEnabled)
 	{
@@ -483,14 +472,9 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
 	}
 
-	vkCmdEndRenderPass(commandBuffers[frame]);
+	ssaoRenderPass.end(commandBuffers[frame]);
 
-	renderpassBeginInfo.renderPass = ssaoBlurRenderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = ssaoBlurFramebuffer.get();
-	renderpassBeginInfo.clearValueCount = 1;
-	renderpassBeginInfo.pClearValues = &ssaoClear;
-
-	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	ssaoBlurRenderPass.begin(commandBuffers[frame], ssaoBlurFramebuffer);
 
 	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
 	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
@@ -506,19 +490,9 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
 	}
 
-	vkCmdEndRenderPass(commandBuffers[frame]);
+	ssaoBlurRenderPass.end(commandBuffers[frame]);
 
-	// lighting
-	std::array<VkClearValue, 2> lightingClear;
-	lightingClear[0].color = {0.0f, 0.0f, 0.0f, 0.0f};
-	lightingClear[1].depthStencil = {1.0f, 0};
-
-	renderpassBeginInfo.renderPass = lightingRenderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = lightingFramebuffer.get();
-	renderpassBeginInfo.clearValueCount = static_cast<uint32_t>(lightingClear.size());
-	renderpassBeginInfo.pClearValues = lightingClear.data();
-
-	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	lightingRenderPass.begin(commandBuffers[frame], lightingFramebuffer);
 
 	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
 	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
@@ -568,26 +542,18 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		drawable->drawAlphaBlended(commandBuffers[frame], forwardShader.pipelineLayout.get());
 	}
 
-	vkCmdEndRenderPass(commandBuffers[frame]);
+	lightingRenderPass.end(commandBuffers[frame]);
 
 	// Post process
-
-	renderpassBeginInfo.renderPass = postProcessRenderPass.renderPass.get();
-	renderpassBeginInfo.framebuffer = postProcessFramebuffers[frame];
-
-	VkClearValue postProcessClearColor;
-	postProcessClearColor.color = {1.0f, 0.0f, 0.0f, 0.0f};
-	renderpassBeginInfo.clearValueCount = 1;
-	renderpassBeginInfo.pClearValues = &postProcessClearColor;
-
-	vkCmdBeginRenderPass(commandBuffers[frame], &renderpassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	
+	postProcessRenderPass.begin(commandBuffers[frame], postProcessFramebuffers[frame]);
 
 	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
 	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
 
 	hdrTonemap.process(commandBuffers[frame], lightQuad);
 
-	vkCmdEndRenderPass(commandBuffers[frame]);
+	postProcessRenderPass.end(commandBuffers[frame]);
 }
 
 const spirv::Shader* DfrRenderer::get_shader() const
@@ -599,14 +565,14 @@ void DfrRenderer::drawSettings()
 {
 	if (ImGui::Begin("Deferred Settings"))
 	{
-		ImGui::SliderFloat("Exposure", &hdrTonemap.pushConstant.exposure, 1.0f, 10.0f);
-		ImGui::SliderFloat("Gamma", &hdrTonemap.pushConstant.gamma, 1.0f, 4.0f);
+		ImGui::DragFloat("Exposure", &hdrTonemap.pushConstant.exposure, 0.1f, 1.0f, 10.0f);
+		ImGui::DragFloat("Gamma", &hdrTonemap.pushConstant.gamma, 0.1f, 1.0f, 4.0f);
 		ImGui::Checkbox("Enable IBL", (bool*)&settings.enableIBL);
 		ImGui::Checkbox("Enable SSAO", &ssaoEnabled);
 		if (ssaoEnabled)
 		{
-			ImGui::DragFloat("SSAO Kernel Radius", &ssaoSettings.kernelRadius, 0.01f, 1.0f);
-			ImGui::DragFloat("SSAO Bias", &ssaoSettings.bias, 0.01f, 0.1f);
+			ImGui::DragFloat("SSAO Kernel Radius", &ssaoSettings.kernelRadius, 0.01f, 0.01f, 1.0f);
+			ImGui::DragFloat("SSAO Bias", &ssaoSettings.bias, 0.01f, 0.01f, 1.0f);
 		}
 		if (ImGui::CollapsingHeader("MRT Debug Output"))
 		{
@@ -914,8 +880,8 @@ Texture2D DfrRenderer::createSSAOAttachment()
 	auto extent = swapchain->get_extent();
 
 	ImageData2D id2d = {};
-	id2d.height = extent.height;
-	id2d.width = extent.width;
+	id2d.height = extent.height / 2;
+	id2d.width = extent.width / 2;
 	id2d.numChannels = 4;
 	id2d.anisotropy = VK_FALSE;
 	id2d.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -951,7 +917,12 @@ spirv::RenderPass DfrRenderer::createSSAORenderpass()
 	subpassDesc.pColorAttachments = &colorRef;
 	subpassDesc.pDepthStencilAttachment = nullptr;
 
-	return get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
+	VkClearValue ssaoClear;
+	ssaoClear.color = {1.0f, 0.0f, 0.0f, 0.0f};
+
+	auto rp = get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
+	rp.clearValues = {ssaoClear};
+	return std::move(rp);
 }
 
 spirv::Shader DfrRenderer::createSSAOShader()
@@ -1037,7 +1008,7 @@ spirv::Pipeline DfrRenderer::createSSAOPipeline()
 	return context->get_pipelineFactory()->createGraphicsPipeline(ssaoShader, ssaoRenderPass, info);
 }
 
-vkw::Framebuffer DfrRenderer::createSSAOFramebuffer()
+spirv::Framebuffer DfrRenderer::createSSAOFramebuffer()
 {
 	using namespace std;
 	assert(ssaoAttachment.valid());
@@ -1047,23 +1018,8 @@ vkw::Framebuffer DfrRenderer::createSSAOFramebuffer()
 		ssaoAttachment.get_imageView(),
 	};
 
-	VkFramebufferCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	createInfo.renderPass = ssaoRenderPass.get();
-	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	createInfo.pAttachments = attachments.data();
-	createInfo.width = swapchain->get_extent().width;
-	createInfo.height = swapchain->get_extent().height;
-	createInfo.layers = 1;
-
-	VkFramebuffer frameBuffer = VK_NULL_HANDLE;
-	auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffer);
-	if (result != VK_SUCCESS)
-	{
-		throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-	}
-
-	return vkw::Framebuffer(frameBuffer, context->get_device());
+	return get_pipelineFactory()->createFramebuffer(
+		ssaoRenderPass, {ssaoAttachment.get_width(), ssaoAttachment.get_height()}, attachments);
 }
 
 spirv::SetSingleton DfrRenderer::createSSAODepthSet()
@@ -1127,7 +1083,7 @@ spirv::RenderPass DfrRenderer::createSSAOBlurRenderpass()
 	return get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
 }
 
-vkw::Framebuffer DfrRenderer::createSSAOBlurFramebuffer()
+spirv::Framebuffer DfrRenderer::createSSAOBlurFramebuffer()
 {
 	using namespace std;
 	assert(mrtAttachment.valid());
@@ -1137,23 +1093,7 @@ vkw::Framebuffer DfrRenderer::createSSAOBlurFramebuffer()
 		mrtAttachment.omr.get_imageView(),
 	};
 
-	VkFramebufferCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	createInfo.renderPass = ssaoBlurRenderPass.get();
-	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	createInfo.pAttachments = attachments.data();
-	createInfo.width = swapchain->get_extent().width;
-	createInfo.height = swapchain->get_extent().height;
-	createInfo.layers = 1;
-
-	VkFramebuffer frameBuffer = VK_NULL_HANDLE;
-	auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffer);
-	if (result != VK_SUCCESS)
-	{
-		throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-	}
-
-	return vkw::Framebuffer(frameBuffer, context->get_device());
+	return get_pipelineFactory()->createFramebuffer(ssaoBlurRenderPass, swapchain->get_extent(), attachments);
 }
 
 spirv::Shader DfrRenderer::createSSAOBlurShader()
@@ -1441,66 +1381,33 @@ spirv::Pipeline DfrRenderer::createDirLightingPipeline()
 	return context->get_pipelineFactory()->createGraphicsPipeline(dirLightShader, lightingRenderPass, info);
 }
 
-vkw::Framebuffer DfrRenderer::createRenderFramebuffer()
+spirv::Framebuffer DfrRenderer::createRenderFramebuffer()
 {
 	using namespace std;
 	assert(depthBuffer.valid());
 	assert(mrtAttachment.valid());
 	assert(mrtRenderPass.valid());
 
-	VkFramebuffer frameBuffer;
 	vector<VkImageView> attachments = {
 		mrtAttachment.position.get_imageView(), mrtAttachment.normal.get_imageView(),
 		mrtAttachment.albedo.get_imageView(),	mrtAttachment.omr.get_imageView(),
 		mrtAttachment.emission.get_imageView(), depthBuffer.get_imageView(),
 	};
-
-	VkFramebufferCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	createInfo.renderPass = mrtRenderPass.get();
-	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	createInfo.pAttachments = attachments.data();
-	createInfo.width = swapchain->get_extent().width;
-	createInfo.height = swapchain->get_extent().height;
-	createInfo.layers = 1;
-
-	auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffer);
-	if (result != VK_SUCCESS)
-	{
-		throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-	}
-
-	return vkw::Framebuffer(frameBuffer, context->get_device());
+	return get_pipelineFactory()->createFramebuffer(mrtRenderPass, swapchain->get_extent(), attachments);
 }
 
-vkw::Framebuffer DfrRenderer::createLightingFramebuffer()
+spirv::Framebuffer DfrRenderer::createLightingFramebuffer()
 {
 	using namespace std;
 	assert(depthBuffer.valid());
 	assert(lightingAttachment.valid());
 	assert(lightingRenderPass.valid());
 
-	VkFramebuffer frameBuffer;
 	vector<VkImageView> attachments = {
 		lightingAttachment.get_imageView(), depthBuffer.get_imageView(),
 	};
 
-	VkFramebufferCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	createInfo.renderPass = lightingRenderPass.get();
-	createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	createInfo.pAttachments = attachments.data();
-	createInfo.width = swapchain->get_extent().width;
-	createInfo.height = swapchain->get_extent().height;
-	createInfo.layers = 1;
-
-	auto result = vkCreateFramebuffer(context->get_device(), &createInfo, nullptr, &frameBuffer);
-	if (result != VK_SUCCESS)
-	{
-		throw runtime_error("Framebuffer creation failed with " + std::to_string(result));
-	}
-
-	return vkw::Framebuffer(frameBuffer, context->get_device());
+	return get_pipelineFactory()->createFramebuffer(lightingRenderPass, swapchain->get_extent(), attachments);
 }
 
 spirv::SetVector DfrRenderer::createCameraSets()

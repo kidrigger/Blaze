@@ -17,7 +17,7 @@
 #undef min
 
 #include <algorithm>
-#include <vkwrap/VkWrap.hpp>
+#include <spirv/PipelineFactory.hpp>
 
 namespace blaze
 {
@@ -48,8 +48,8 @@ private:
 	uint32_t width{0};
 	uint32_t height{0};
 	vkw::DescriptorPool descriptorPool;
-	vkw::RenderPass renderPass;
-	vkw::FramebufferVector framebuffers;
+	spirv::RenderPass renderPass;
+	std::vector<spirv::Framebuffer> framebuffers;
 	bool valid;
 
 	inline static bool complete = false;
@@ -121,8 +121,5 @@ public:
 	 * @brief Deinitializes the GUI components
 	 */
 	~GUI();
-
-private:
-	vkw::FramebufferVector createSwapchainFramebuffers(VkDevice device, const std::vector<VkImageView>& swapchainImageViews) const;
 };
 } // namespace blaze
