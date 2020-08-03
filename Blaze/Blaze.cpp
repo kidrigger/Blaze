@@ -16,9 +16,9 @@
 namespace blaze
 {
 // Constants
-const int WIDTH = 1920;
-const int HEIGHT = 1080;
-const bool FULLSCREEN = true;
+const int WIDTH = 1280;
+const int HEIGHT = 720;
+const bool FULLSCREEN = false;
 
 #ifdef VALIDATION_LAYERS_ENABLED
 const bool enableValidationLayers = true;
@@ -270,7 +270,7 @@ void run()
 	lightInfo.maxDirLights = renderer->get_lightCaster()->getMaxDirectionLights();
 
 	SceneInfo sceneInfo;
-	sceneInfo.modelName = "Sponza";
+	sceneInfo.modelName = "AlphaBlendModeTest";
 	sceneInfo.modelIndex = 0;
 	{
 		auto& ms = modelLoader->getFileNames();

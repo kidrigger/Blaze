@@ -97,6 +97,12 @@ private:
 		float kernelRadius{0.5f};
 		float bias{0.025f};
 	} ssaoSettings;
+	struct SSAOBlurSettings
+	{
+		int enable{1};
+		int depthAware{1};
+		float depth{0.02f};
+	} ssaoBlurSettings;
 	Texture2D ssaoAttachment;
 	spirv::Framebuffer ssaoFramebuffer;
 	spirv::RenderPass ssaoRenderPass;

@@ -116,8 +116,10 @@ void DfrRenderer::recreateSwapchainDependents()
 	// SSAO
 	ssaoAttachment = createSSAOAttachment();
 	ssaoFramebuffer = createSSAOFramebuffer();
+	ssaoDepthSet = createSSAODepthSet();
 
 	ssaoBlurFramebuffer = createSSAOBlurFramebuffer();
+	ssaoBlurSet = createSSAOBlurSet();
 
 	// Lighting
 	lightingAttachment = createLightingAttachment();
@@ -486,6 +488,8 @@ void DfrRenderer::recordCommands(uint32_t frame)
 								cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
 		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint, ssaoBlurShader.pipelineLayout.get(),
 								ssaoBlurSet.setIdx, 1, &ssaoBlurSet.get(), 0, nullptr);
+		vkCmdPushConstants(commandBuffers[frame], ssaoBlurShader.pipelineLayout.get(),
+						   ssaoBlurShader.pushConstant.stage, 0, ssaoBlurShader.pushConstant.size, &ssaoBlurSettings);
 		lightQuad.bind(commandBuffers[frame]);
 		vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
 	}
@@ -573,6 +577,12 @@ void DfrRenderer::drawSettings()
 		{
 			ImGui::DragFloat("SSAO Kernel Radius", &ssaoSettings.kernelRadius, 0.01f, 0.01f, 1.0f);
 			ImGui::DragFloat("SSAO Bias", &ssaoSettings.bias, 0.01f, 0.01f, 1.0f);
+			ImGui::Checkbox("SSAO Blur", (bool*)&ssaoBlurSettings.enable);
+			if (ssaoBlurSettings.enable)
+			{
+				ImGui::Checkbox("SSAO Blur Depth Awareness", (bool*)&ssaoBlurSettings.depthAware);
+				ImGui::DragFloat("SSAO Blur Depth Tolerance", &ssaoBlurSettings.depth);
+			}
 		}
 		if (ImGui::CollapsingHeader("MRT Debug Output"))
 		{
@@ -1180,15 +1190,18 @@ spirv::Pipeline DfrRenderer::createSSAOBlurPipeline()
 
 spirv::SetSingleton DfrRenderer::createSSAOBlurSet()
 {
+	assert(mrtAttachment.valid());
 	assert(ssaoBlurShader.valid());
 
 	auto set = context->get_pipelineFactory()->createSet(*ssaoBlurShader.getSetWithUniform("I_SSAO"));
 
 	std::vector<const spirv::UniformInfo*> unifs = {
 		set.getUniform("I_SSAO"),
+		set.getUniform("I_POSITION"),
 	};
 	std::vector<VkDescriptorImageInfo> infos = {
 		ssaoAttachment.get_imageInfo(),
+		mrtAttachment.position.get_imageInfo(),
 	};
 	std::vector<VkWriteDescriptorSet> writes(infos.size());
 
