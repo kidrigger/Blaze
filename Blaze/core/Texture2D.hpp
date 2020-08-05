@@ -207,6 +207,11 @@ public:
 	{
 		return height;
 	}
+
+	VkExtent2D get_extent() const
+	{
+		return {width, height};
+	}
 	/**
 	 * @}
 	 */

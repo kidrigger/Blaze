@@ -106,7 +106,7 @@ void run()
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
-	Camera cam({0.0f, 0.0f, 3.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
+	Camera cam({9.0f, 1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   glm::vec2((float)WIDTH, (float)HEIGHT), 1.0f, 30.0f);
 	camInfo.position = cam.get_position();
 
@@ -270,7 +270,7 @@ void run()
 	lightInfo.maxDirLights = renderer->get_lightCaster()->getMaxDirectionLights();
 
 	SceneInfo sceneInfo;
-	sceneInfo.modelName = "AlphaBlendModeTest";
+	sceneInfo.modelName = "Sponza";
 	sceneInfo.modelIndex = 0;
 	{
 		auto& ms = modelLoader->getFileNames();

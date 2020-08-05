@@ -35,8 +35,11 @@ private:
 	constexpr static std::string_view vSSAOShaderFileName = "shaders/deferred/vSSAO.vert.spv";
 	constexpr static std::string_view fSSAOShaderFileName = "shaders/deferred/fSSAO.frag.spv";
 
-	constexpr static std::string_view vSSAOBlurShaderFileName = "shaders/deferred/vSSAOBlur.vert.spv";
+	constexpr static std::string_view vSSAOBlurShaderFileName = "shaders/deferred/vSSAO.vert.spv";
 	constexpr static std::string_view fSSAOBlurShaderFileName = "shaders/deferred/fSSAOBlur.frag.spv";
+
+	constexpr static std::string_view vSSAOFilterShaderFileName = "shaders/deferred/vSSAO.vert.spv";
+	constexpr static std::string_view fSSAOFilterShaderFileName = "shaders/deferred/fSSAOFilter.frag.spv";
 
 	struct Settings
 	{
@@ -97,9 +100,11 @@ private:
 		float kernelRadius{0.5f};
 		float bias{0.025f};
 	} ssaoSettings;
+	bool ssaoBlurEnable{true};
+	int ssaoBlurCount{3};
 	struct SSAOBlurSettings
 	{
-		int enable{1};
+		int verticalPass{1};
 		int depthAware{1};
 		float depth{0.02f};
 	} ssaoBlurSettings;
@@ -110,11 +115,17 @@ private:
 	spirv::Pipeline ssaoPipeline;
 	spirv::SetSingleton ssaoDepthSet;
 
+	Texture2D ssaoBlurAttachment;
 	spirv::Framebuffer ssaoBlurFramebuffer;
-	spirv::RenderPass ssaoBlurRenderPass;
 	spirv::Shader ssaoBlurShader;
 	spirv::Pipeline ssaoBlurPipeline;
 	spirv::SetSingleton ssaoBlurSet;
+
+	spirv::Framebuffer ssaoFilterFramebuffer;
+	spirv::RenderPass ssaoFilterRenderPass;
+	spirv::Shader ssaoFilterShader;
+	spirv::Pipeline ssaoFilterPipeline;
+	spirv::SetSingleton ssaoFilterSet;
 
 	// Lighting
 	spirv::RenderPass lightingRenderPass;
@@ -216,11 +227,16 @@ private:
 	spirv::Framebuffer createSSAOFramebuffer();
 	spirv::SetSingleton createSSAODepthSet();
 
-	spirv::RenderPass createSSAOBlurRenderpass();
 	spirv::Framebuffer createSSAOBlurFramebuffer();
 	spirv::Shader createSSAOBlurShader();
 	spirv::Pipeline createSSAOBlurPipeline();
 	spirv::SetSingleton createSSAOBlurSet();
+
+	spirv::RenderPass createSSAOFilterRenderPass();
+	spirv::Framebuffer createSSAOFilterFramebuffer();
+	spirv::Shader createSSAOFilterShader();
+	spirv::Pipeline createSSAOFilterPipeline();
+	spirv::SetSingleton createSSAOFilterSet();
 
 	// Lighting
 	spirv::Shader createPointLightingShader();

@@ -44,11 +44,17 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	ssaoSampleSet = createSSAOSampleSet();
 	ssaoDepthSet = createSSAODepthSet();
 
-	ssaoBlurRenderPass = createSSAOBlurRenderpass();
+	ssaoBlurAttachment = createSSAOAttachment();
 	ssaoBlurShader = createSSAOBlurShader();
 	ssaoBlurPipeline = createSSAOBlurPipeline();
 	ssaoBlurFramebuffer = createSSAOBlurFramebuffer();
 	ssaoBlurSet = createSSAOBlurSet();
+
+	ssaoFilterRenderPass = createSSAOFilterRenderPass();
+	ssaoFilterFramebuffer = createSSAOFilterFramebuffer();
+	ssaoFilterShader = createSSAOFilterShader();
+	ssaoFilterPipeline = createSSAOFilterPipeline();
+	ssaoFilterSet = createSSAOFilterSet();
 
 	// XXX: Lightpass
 
@@ -183,7 +189,7 @@ spirv::RenderPass DfrRenderer::createMRTRenderpass()
 	attachment->sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachment->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	attachment->loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::CONTINUE);	// Written by SSAO
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 	colorRefs.emplace_back() = {attachmentRefIdx++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
 	// EMISSION
@@ -445,23 +451,23 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 	mrtRenderPass.end(commandBuffers[frame]);
 
-	ssaoRenderPass.begin(commandBuffers[frame], ssaoFramebuffer);
-
-	VkExtent2D ssaoExtent = ssaoFramebuffer.renderArea.extent;
-
-	VkViewport ssaoViewport = {};
-	ssaoViewport.minDepth = 0.0f;
-	ssaoViewport.maxDepth = 1.0f;
-	ssaoViewport.x = 0;
-	ssaoViewport.y = static_cast<float>(ssaoExtent.height);
-	ssaoViewport.width = static_cast<float>(ssaoExtent.width);
-	ssaoViewport.height = -static_cast<float>(ssaoExtent.height);
-
-	vkCmdSetScissor(commandBuffers[frame], 0, 1, &ssaoFramebuffer.renderArea);
-	vkCmdSetViewport(commandBuffers[frame], 0, 1, &ssaoViewport);
-
 	if (ssaoEnabled)
 	{
+		ssaoRenderPass.begin(commandBuffers[frame], ssaoFramebuffer);
+
+		VkExtent2D ssaoExtent = ssaoFramebuffer.renderArea.extent;
+
+		VkViewport ssaoViewport = {};
+		ssaoViewport.minDepth = 0.0f;
+		ssaoViewport.maxDepth = 1.0f;
+		ssaoViewport.x = 0;
+		ssaoViewport.y = static_cast<float>(ssaoExtent.height);
+		ssaoViewport.width = static_cast<float>(ssaoExtent.width);
+		ssaoViewport.height = -static_cast<float>(ssaoExtent.height);
+
+		vkCmdSetScissor(commandBuffers[frame], 0, 1, &ssaoFramebuffer.renderArea);
+		vkCmdSetViewport(commandBuffers[frame], 0, 1, &ssaoViewport);
+
 		ssaoPipeline.bind(commandBuffers[frame]);
 		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoPipeline.bindPoint, ssaoShader.pipelineLayout.get(),
 								cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
@@ -469,32 +475,80 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoPipeline.bindPoint, ssaoShader.pipelineLayout.get(),
 								ssaoSampleSet.setIdx, 1, &ssaoSampleSet.get(), 0, nullptr);
 		vkCmdPushConstants(commandBuffers[frame], ssaoShader.pipelineLayout.get(), ssaoShader.pushConstant.stage, 0,
-						   ssaoShader.pushConstant.size, &ssaoSettings);
+							ssaoShader.pushConstant.size, &ssaoSettings);
 		lightQuad.bind(commandBuffers[frame]);
 		vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
-	}
 
-	ssaoRenderPass.end(commandBuffers[frame]);
+		ssaoRenderPass.end(commandBuffers[frame]);
 
-	ssaoBlurRenderPass.begin(commandBuffers[frame], ssaoBlurFramebuffer);
+		if (ssaoBlurEnable)
+		{
+			for (int i = 0; i < ssaoBlurCount; i++)
+			{
+				ssaoRenderPass.begin(commandBuffers[frame], ssaoBlurFramebuffer);
 
-	vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
-	vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
+				vkCmdSetScissor(commandBuffers[frame], 0, 1, &ssaoBlurFramebuffer.renderArea);
+				vkCmdSetViewport(commandBuffers[frame], 0, 1, &ssaoViewport);
 
-	if (ssaoEnabled)
-	{
-		ssaoBlurPipeline.bind(commandBuffers[frame]);
-		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint, ssaoBlurShader.pipelineLayout.get(),
+				ssaoBlurSettings.verticalPass = 0;
+				ssaoBlurPipeline.bind(commandBuffers[frame]);
+				vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint,
+										ssaoBlurShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
+										nullptr);
+				vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint,
+										ssaoBlurShader.pipelineLayout.get(), ssaoBlurSet.setIdx, 1, &ssaoBlurSet.get(), 0,
+										nullptr);
+				vkCmdPushConstants(commandBuffers[frame], ssaoBlurShader.pipelineLayout.get(),
+									ssaoBlurShader.pushConstant.stage, 0, ssaoBlurShader.pushConstant.size,
+									&ssaoBlurSettings);
+				lightQuad.bind(commandBuffers[frame]);
+				vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
+
+				ssaoRenderPass.end(commandBuffers[frame]);
+
+				ssaoRenderPass.begin(commandBuffers[frame], ssaoFramebuffer);
+
+				vkCmdSetScissor(commandBuffers[frame], 0, 1, &ssaoFramebuffer.renderArea);
+				vkCmdSetViewport(commandBuffers[frame], 0, 1, &ssaoViewport);
+
+				ssaoBlurSettings.verticalPass = 1;
+				ssaoBlurPipeline.bind(commandBuffers[frame]);
+				vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint,
+										ssaoBlurShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
+										nullptr);
+				vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint,
+										ssaoBlurShader.pipelineLayout.get(), ssaoFilterSet.setIdx, 1, &ssaoFilterSet.get(),
+										0, nullptr);
+				vkCmdPushConstants(commandBuffers[frame], ssaoBlurShader.pipelineLayout.get(),
+									ssaoBlurShader.pushConstant.stage, 0, ssaoBlurShader.pushConstant.size,
+									&ssaoBlurSettings);
+				lightQuad.bind(commandBuffers[frame]);
+				vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
+
+				ssaoRenderPass.end(commandBuffers[frame]);
+			}
+		}
+
+		ssaoFilterRenderPass.begin(commandBuffers[frame], ssaoFilterFramebuffer);
+
+		vkCmdSetScissor(commandBuffers[frame], 0, 1, &scissor);
+		vkCmdSetViewport(commandBuffers[frame], 0, 1, &viewport);
+
+		ssaoFilterPipeline.bind(commandBuffers[frame]);
+		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoFilterPipeline.bindPoint,
+								ssaoFilterShader.pipelineLayout.get(),
 								cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
-		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoBlurPipeline.bindPoint, ssaoBlurShader.pipelineLayout.get(),
-								ssaoBlurSet.setIdx, 1, &ssaoBlurSet.get(), 0, nullptr);
-		vkCmdPushConstants(commandBuffers[frame], ssaoBlurShader.pipelineLayout.get(),
-						   ssaoBlurShader.pushConstant.stage, 0, ssaoBlurShader.pushConstant.size, &ssaoBlurSettings);
+		vkCmdBindDescriptorSets(commandBuffers[frame], ssaoFilterPipeline.bindPoint,
+								ssaoFilterShader.pipelineLayout.get(), ssaoBlurSet.setIdx, 1, &ssaoBlurSet.get(), 0,
+								nullptr);
+		/*vkCmdPushConstants(commandBuffers[frame], ssaoFilterShader.pipelineLayout.get(),
+							ssaoFilterShader.pushConstant.stage, 0, ssaoFilterShader.pushConstant.size,
+							&ssaoBlurSettings);*/
 		lightQuad.bind(commandBuffers[frame]);
 		vkCmdDrawIndexed(commandBuffers[frame], lightQuad.get_indexCount(), 1, 0, 0, 0);
-	}
 
-	ssaoBlurRenderPass.end(commandBuffers[frame]);
+		ssaoFilterRenderPass.end(commandBuffers[frame]);
+	}
 
 	lightingRenderPass.begin(commandBuffers[frame], lightingFramebuffer);
 
@@ -577,11 +631,12 @@ void DfrRenderer::drawSettings()
 		{
 			ImGui::DragFloat("SSAO Kernel Radius", &ssaoSettings.kernelRadius, 0.01f, 0.01f, 1.0f);
 			ImGui::DragFloat("SSAO Bias", &ssaoSettings.bias, 0.01f, 0.01f, 1.0f);
-			ImGui::Checkbox("SSAO Blur", (bool*)&ssaoBlurSettings.enable);
-			if (ssaoBlurSettings.enable)
+			ImGui::Checkbox("SSAO Blur", &ssaoBlurEnable);
+			if (ssaoBlurEnable)
 			{
+				ImGui::DragInt("SSAO Blur Iterations", &ssaoBlurCount, 0.2f, 1, 5);
 				ImGui::Checkbox("SSAO Blur Depth Awareness", (bool*)&ssaoBlurSettings.depthAware);
-				ImGui::DragFloat("SSAO Blur Depth Tolerance", &ssaoBlurSettings.depth);
+				ImGui::DragFloat("SSAO Blur Depth Tolerance", &ssaoBlurSettings.depth, 0.001f, 0.001f, 0.1f);
 			}
 		}
 		if (ImGui::CollapsingHeader("MRT Debug Output"))
@@ -1068,42 +1123,17 @@ spirv::SetSingleton DfrRenderer::createSSAODepthSet()
 	return std::move(set);
 }
 
-spirv::RenderPass DfrRenderer::createSSAOBlurRenderpass()
-{
-	assert(mrtAttachment.valid());
-
-	using namespace spirv;
-
-	VkAttachmentReference colorRef;
-
-	std::vector<AttachmentFormat> attachments(1);
-	attachments[0].format = mrtAttachment.omr.get_format();
-	attachments[0].sampleCount = VK_SAMPLE_COUNT_1_BIT;
-	attachments[0].usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	attachments[0].loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::CONTINUE, LoadStoreConfig::StoreAction::READ);
-	colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-	VkSubpassDescription subpassDesc = {};
-	subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpassDesc.colorAttachmentCount = 1;
-	subpassDesc.pColorAttachments = &colorRef;
-	subpassDesc.pDepthStencilAttachment = nullptr;
-
-	return get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
-}
-
 spirv::Framebuffer DfrRenderer::createSSAOBlurFramebuffer()
 {
 	using namespace std;
-	assert(mrtAttachment.valid());
-	assert(ssaoBlurRenderPass.valid());
+	assert(ssaoBlurAttachment.valid());
+	assert(ssaoRenderPass.valid());
 
 	vector<VkImageView> attachments = {
-		mrtAttachment.omr.get_imageView(),
+		ssaoBlurAttachment.get_imageView(),
 	};
 
-	return get_pipelineFactory()->createFramebuffer(ssaoBlurRenderPass, swapchain->get_extent(), attachments);
+	return get_pipelineFactory()->createFramebuffer(ssaoRenderPass, ssaoBlurAttachment.get_extent(), attachments);
 }
 
 spirv::Shader DfrRenderer::createSSAOBlurShader()
@@ -1124,7 +1154,7 @@ spirv::Shader DfrRenderer::createSSAOBlurShader()
 
 spirv::Pipeline DfrRenderer::createSSAOBlurPipeline()
 {
-	assert(ssaoBlurRenderPass.valid());
+	assert(ssaoRenderPass.valid());
 	assert(ssaoBlurShader.valid());
 
 	spirv::GraphicsPipelineCreateInfo info = {};
@@ -1185,7 +1215,7 @@ spirv::Pipeline DfrRenderer::createSSAOBlurPipeline()
 	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-	return context->get_pipelineFactory()->createGraphicsPipeline(ssaoBlurShader, ssaoBlurRenderPass, info);
+	return context->get_pipelineFactory()->createGraphicsPipeline(ssaoBlurShader, ssaoRenderPass, info);
 }
 
 spirv::SetSingleton DfrRenderer::createSSAOBlurSet()
@@ -1201,6 +1231,170 @@ spirv::SetSingleton DfrRenderer::createSSAOBlurSet()
 	};
 	std::vector<VkDescriptorImageInfo> infos = {
 		ssaoAttachment.get_imageInfo(),
+		mrtAttachment.position.get_imageInfo(),
+	};
+	std::vector<VkWriteDescriptorSet> writes(infos.size());
+
+	for (int i = 0; i < infos.size(); ++i)
+	{
+		const spirv::UniformInfo* unif = unifs[i];
+		VkDescriptorImageInfo* info = &infos[i];
+
+		VkWriteDescriptorSet* write = &writes[i];
+		write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write->descriptorType = unif->type;
+		write->descriptorCount = unif->arrayLength;
+		write->dstSet = set.get();
+		write->dstBinding = unif->binding;
+		write->dstArrayElement = 0;
+		write->pImageInfo = info;
+	}
+
+	vkUpdateDescriptorSets(context->get_device(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+	return std::move(set);
+}
+
+spirv::RenderPass DfrRenderer::createSSAOFilterRenderPass()
+{
+	assert(mrtAttachment.valid());
+
+	using namespace spirv;
+
+	VkAttachmentReference colorRef;
+
+	std::vector<AttachmentFormat> attachments(1);
+	attachments[0].format = mrtAttachment.omr.get_format();
+	attachments[0].sampleCount = VK_SAMPLE_COUNT_1_BIT;
+	attachments[0].usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	attachments[0].loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::READ, LoadStoreConfig::StoreAction::READ);
+	colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+	VkSubpassDescription subpassDesc = {};
+	subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpassDesc.colorAttachmentCount = 1;
+	subpassDesc.pColorAttachments = &colorRef;
+	subpassDesc.pDepthStencilAttachment = nullptr;
+
+	VkClearValue ssaoClear;
+	ssaoClear.color = {1.0f, 0.0f, 0.0f, 0.0f};
+
+	auto rp = get_pipelineFactory()->createRenderPass(attachments, {subpassDesc});
+	rp.clearValues = {ssaoClear};
+	return std::move(rp);
+}
+
+spirv::Framebuffer DfrRenderer::createSSAOFilterFramebuffer()
+{
+	using namespace std;
+	assert(mrtAttachment.valid());
+	assert(ssaoFilterRenderPass.valid());
+
+	vector<VkImageView> attachments = {
+		mrtAttachment.omr.get_imageView(),
+	};
+
+	return get_pipelineFactory()->createFramebuffer(ssaoFilterRenderPass, swapchain->get_extent(), attachments);
+}
+
+spirv::Shader DfrRenderer::createSSAOFilterShader()
+{
+	std::vector<spirv::ShaderStageData> stages;
+
+	spirv::ShaderStageData* stage;
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile(vSSAOFilterShaderFileName);
+	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile(fSSAOFilterShaderFileName);
+	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	return context->get_pipelineFactory()->createShader(stages);
+}
+
+spirv::Pipeline DfrRenderer::createSSAOFilterPipeline()
+{
+	assert(ssaoFilterRenderPass.valid());
+	assert(ssaoFilterShader.valid());
+
+	spirv::GraphicsPipelineCreateInfo info = {};
+
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.colorWriteMask = 0;
+	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT;
+	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+
+	info.depthStencilCreateInfo.front = {};
+	info.depthStencilCreateInfo.back = {};
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	return context->get_pipelineFactory()->createGraphicsPipeline(ssaoFilterShader, ssaoFilterRenderPass, info);
+}
+
+spirv::SetSingleton DfrRenderer::createSSAOFilterSet()
+{
+	assert(mrtAttachment.valid());
+	assert(ssaoFilterShader.valid());
+
+	auto set = context->get_pipelineFactory()->createSet(*ssaoFilterShader.getSetWithUniform("I_SSAO"));
+
+	std::vector<const spirv::UniformInfo*> unifs = {
+		set.getUniform("I_SSAO"),
+		set.getUniform("I_POSITION"),
+	};
+	std::vector<VkDescriptorImageInfo> infos = {
+		ssaoBlurAttachment.get_imageInfo(),
 		mrtAttachment.position.get_imageInfo(),
 	};
 	std::vector<VkWriteDescriptorSet> writes(infos.size());
