@@ -46,8 +46,8 @@ layout(set = 2, binding = 4) uniform sampler2D emissionMap[MAX_TEX_IN_MAT];
 
 struct PointLightData {
 	vec3 position;
-	float brightness;
 	float radius;
+	vec3 color;
 	int shadowIndex;
 };
 
@@ -297,7 +297,7 @@ void main()
 
 	// Point Lighting
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
-		if (lights.data[i].brightness < 0.0f) continue;
+		if (lights.data[i].radius < 0.0f) continue;
 		if (distance(V_POSITION.xyz, lights.data[i].position) >= lights.data[i].radius) continue;
 		
 		vec3 L		 = normalize(lights.data[i].position.xyz - V_POSITION.xyz);
@@ -306,7 +306,7 @@ void main()
 
 		float dist		  = length(lights.data[i].position.xyz - V_POSITION.xyz);
 		float attenuation = 1.0 / (dist * dist);
-		vec3 radiance	  = lightColor * attenuation * lights.data[i].brightness;
+		vec3 radiance	  = lightColor * attenuation * lights.data[i].color;
 		
 		float NDF = DistributionGGX(N, H, roughness);
 		float G	  = GeometrySmith(N, V, L, roughness);

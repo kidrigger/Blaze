@@ -27,6 +27,8 @@ public:
 		SPOT = 3,
 	};
 
+	virtual Handle createPointLight(const glm::vec3& position, const glm::vec3& color, float radius,
+									bool enableShadow) = 0;
 	virtual Handle createPointLight(const glm::vec3& position, float brightness, float radius, bool enableShadow) = 0;
 	virtual Handle createDirectionLight(const glm::vec3& direction, float brightness, uint32_t numCascades) = 0;
 	virtual void removeLight(Handle handle) = 0;
@@ -39,6 +41,7 @@ public:
 	virtual void setPosition(Handle handle, const glm::vec3& position) = 0;
 	virtual void setDirection(Handle handle, const glm::vec3& direction) = 0;
 	virtual void setRadius(Handle handle, float radius) = 0;
+	virtual void setColor(Handle handle, const glm::vec3& color) = 0;
 	virtual void setBrightness(Handle handle, float brightness) = 0;
 	virtual bool setShadow(Handle handle, bool hasShadow) = 0;
 

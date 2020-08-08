@@ -18,13 +18,6 @@ layout(location = 2, component = 2) out vec2 O_UV1;
 layout(location = 3) out vec4 O_VIEWPOS;
 layout(location = 4) out vec4 O_LIGHTCOORD[MAX_DIRECTION_LIGHTS][MAX_CASCADES];
 
-struct PointLightData {
-	vec3 position;
-	float brightness;
-	float radius;
-	int shadowIndex;
-};
-
 layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
@@ -34,6 +27,13 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	float nearPlane;
 	float farPlane;
 } camera;
+
+struct PointLightData {
+	vec3 position;
+	float radius;
+	vec3 color;
+	int shadowIndex;
+};
 
 struct DirLightData {
 	vec3 direction;

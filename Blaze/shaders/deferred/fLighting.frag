@@ -30,8 +30,8 @@ layout(set = 0, binding = 1) uniform SettingsUBO {
 
 struct PointLightData {
 	vec3 position;
-	float brightness;
 	float radius;
+	vec3 color;
 	int shadowIndex;
 };
 
@@ -153,7 +153,7 @@ void main() {
 
 	float dist		  = length(lights.data[i].position.xyz - position.xyz);
 	float attenuation = 1.0 / (dist * dist);
-	vec3 radiance	  = lightColor * attenuation * lights.data[i].brightness;
+	vec3 radiance	  = lightColor * attenuation * lights.data[i].color;
 		
 	float NDF = DistributionGGX(N, H, roughness);
 	float G	  = GeometrySmith(N, V, L, roughness);

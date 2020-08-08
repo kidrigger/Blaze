@@ -49,9 +49,12 @@ public:
 	// Inherited via ALightCaster
 	virtual Handle createPointLight(const glm::vec3& position, float brightness, float radius,
 									bool enableShadow) override;
+	virtual Handle createPointLight(const glm::vec3& position, const glm::vec3& color, float radius,
+									bool enableShadow) override;
 	virtual void removeLight(Handle handle) override;
 	virtual void setPosition(Handle handle, const glm::vec3& position) override;
 	virtual void setDirection(Handle handle, const glm::vec3& direction) override;
+	virtual void setColor(Handle handle, const glm::vec3& color) override;
 	virtual void setBrightness(Handle handle, float brightness) override;
 	virtual bool setShadow(Handle handle, bool hasShadow) override;
 	virtual void setRadius(Handle handle, float radius) override;

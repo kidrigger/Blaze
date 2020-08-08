@@ -32,8 +32,8 @@ layout(push_constant) uniform LightIdx {
 
 struct PointLightData {
 	vec3 position;
-	float brightness;
 	float radius;
+	vec3 color;
 	int shadowIndex;
 };
 

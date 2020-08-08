@@ -51,8 +51,8 @@ private:
 	struct LightData
 	{
 		alignas(16) glm::vec3 position;
-		alignas(4) float brightness;
 		alignas(4) float radius;
+		alignas(16) glm::vec3 color;
 		alignas(4) int shadowIdx;
 	};
 

@@ -52,8 +52,8 @@ private:
 	struct LightData
 	{
 		alignas(16) glm::vec3 position;
-		alignas(4) float brightness;
 		alignas(4) float radius;
+		alignas(16) glm::vec3 color;
 		alignas(4) int shadowIdx;
 	};
 
@@ -88,7 +88,7 @@ public:
 	void recreate(const Context* context, const spirv::SetVector& sets);
 	void update(uint32_t frame);
 
-	uint16_t createLight(const glm::vec3& position, float brightness, float radius, bool enableShadow);
+	uint16_t createLight(const glm::vec3& position, const glm::vec3& color, float radius, bool enableShadow);
 	void removeLight(uint16_t idx);
 	bool setShadow(uint16_t idx, bool enableShadow);
 
@@ -129,7 +129,7 @@ public:
 			{
 				data++;
 				index++;
-			} while (data->brightness < 0 && index < end);
+			} while (data->radius < 0 && index < end);
 			return *this;
 		}
 
@@ -147,7 +147,7 @@ public:
 			int i = 0;
 			for (auto& light : lights)
 			{
-				if (light.brightness > 0)
+				if (light.radius > 0)
 				{
 					index = i;
 					break;

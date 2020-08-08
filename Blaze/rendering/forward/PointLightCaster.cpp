@@ -30,13 +30,13 @@ PointLightCaster::PointLightCaster(const Context* context, const spirv::SetVecto
 	for (auto& light : lights)
 	{
 		light.position = glm::vec3(0);
-		light.brightness = static_cast<float>(i);
-		light.radius = 0.0f;
+		light.radius = static_cast<float>(i);
+		light.color = glm::vec3(1.0f);
 		light.shadowIdx = -1;
 		i--;
 	}
 	i = std::numeric_limits<int>::min();
-	lights.back().brightness = static_cast<float>(i);
+	lights.back().radius = static_cast<float>(i);
 	freeLight = 0;
 
 	uniform = texSet.getUniform(textureUniformName);
@@ -117,10 +117,10 @@ uint16_t PointLightCaster::createLight(const glm::vec3& position, float brightne
 	LightData* pLight = &lights[freeLight];
 	uint16_t idx = static_cast<uint16_t>(freeLight);
 
-	freeLight = -static_cast<int>(pLight->brightness);
+	freeLight = -static_cast<int>(pLight->radius);
 
 	pLight->position = position;
-	pLight->brightness = brightness;
+	pLight->color = glm::vec3(brightness);
 	pLight->radius = radius;
 	pLight->shadowIdx = -1;
 	if (enableShadow)
@@ -140,9 +140,9 @@ void PointLightCaster::removeLight(uint16_t idx)
 
 	LightData* pLight = &lights[idx];
 
-	assert(pLight->brightness > 0);
+	assert(pLight->radius > 0);
 
-	pLight->brightness = -static_cast<float>(freeLight);
+	pLight->radius = -static_cast<float>(freeLight);
 	pLight->position = glm::vec3(0.0f);
 
 	if (pLight->shadowIdx >= 0)
@@ -163,7 +163,7 @@ bool PointLightCaster::setShadow(uint16_t idx, bool enableShadow)
 
 	LightData* pLight = &lights[idx];
 
-	assert(pLight->brightness > 0);
+	assert(pLight->radius > 0);
 
 	if ((pLight->shadowIdx < 0) != enableShadow)
 	{

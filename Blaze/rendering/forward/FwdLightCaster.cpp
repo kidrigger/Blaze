@@ -58,6 +58,12 @@ FwdLightCaster::Handle FwdLightCaster::createPointLight(const glm::vec3& positio
 	return handle;
 }
 
+FwdLightCaster::Handle FwdLightCaster::createPointLight(const glm::vec3& position, const glm::vec3& color, float radius,
+										bool enableShadow)
+{
+	return createPointLight(position, color.r, radius, enableShadow);
+}
+
 void FwdLightCaster::setPosition(Handle handle, const glm::vec3& position)
 {
 	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
@@ -96,6 +102,27 @@ void FwdLightCaster::setDirection(Handle handle, const glm::vec3& direction)
 	}
 }
 
+void FwdLightCaster::setColor(Handle handle, const glm::vec3& color)
+{
+	assert(color.x >= 0.0f && color.y >= 0.0f && color.z >= 0.0f);
+
+	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
+	Type type = static_cast<Type>(exposed.type);
+	switch (type)
+	{
+	case Type::POINT: {
+		pointLights->getLight(exposed.idx)->color = color;
+	};
+	break;
+	case Type::DIRECTIONAL: {
+		throw std::invalid_argument("Unimplemented");
+	}
+	break;
+	default:
+		throw std::invalid_argument("Unimplemented");
+	}
+}
+
 void FwdLightCaster::setBrightness(Handle handle, float brightness)
 {
 	assert(brightness >= 0.0f);
@@ -105,7 +132,7 @@ void FwdLightCaster::setBrightness(Handle handle, float brightness)
 	switch (type)
 	{
 	case Type::POINT: {
-		pointLights->getLight(exposed.idx)->brightness = brightness;
+		throw std::invalid_argument("Unimplemented");
 	};
 	break;
 	case Type::DIRECTIONAL: {

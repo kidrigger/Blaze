@@ -37,11 +37,10 @@ layout(set = 0, binding = 1) uniform SettingsUBO {
 	int viewRT;
 } settings;
 
-
 struct PointLightData {
 	vec3 position;
-	float brightness;
 	float radius;
+	vec3 color;
 	int shadowIndex;
 };
 

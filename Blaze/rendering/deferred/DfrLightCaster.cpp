@@ -44,7 +44,30 @@ dfr::PointLightCaster::LightIterator DfrLightCaster::getPointLightIterator()
 DfrLightCaster::Handle DfrLightCaster::createPointLight(const glm::vec3& position, float brightness, float radius,
 														bool enableShadow)
 {
-	uint16_t idx = pointLights->createLight(position, brightness, radius, enableShadow);
+	uint16_t idx = pointLights->createLight(position, glm::vec3(brightness), radius, enableShadow);
+	if (idx == UINT16_MAX)
+	{
+		return 0;
+	}
+
+	HandleExposed exposed = {
+		static_cast<uint8_t>(Type::POINT),
+		pointGeneration,
+		idx,
+	};
+
+	pointGeneration = pointGeneration + 1;
+
+	Handle handle = reinterpret_cast<Handle&>(exposed);
+	validHandles.insert(handle);
+
+	return handle;
+}
+
+DfrLightCaster::Handle DfrLightCaster::createPointLight(const glm::vec3& position, const glm::vec3& color, float radius,
+										bool enableShadow)
+{
+	uint16_t idx = pointLights->createLight(position, color, radius, enableShadow);
 	if (idx == UINT16_MAX)
 	{
 		return 0;
@@ -102,6 +125,25 @@ void DfrLightCaster::setDirection(Handle handle, const glm::vec3& direction)
 	}
 }
 
+void DfrLightCaster::setColor(Handle handle, const glm::vec3& color)
+{
+	HandleExposed exposed = reinterpret_cast<HandleExposed&>(handle);
+	Type type = static_cast<Type>(exposed.type);
+	switch (type)
+	{
+	case Type::POINT: {
+		pointLights->getLight(exposed.idx)->color = color;
+	};
+	break;
+	case Type::DIRECTIONAL: {
+		throw std::invalid_argument("Unimplemented");
+	}
+	break;
+	default:
+		throw std::invalid_argument("Unimplemented");
+	}
+}
+
 void DfrLightCaster::setBrightness(Handle handle, float brightness)
 {
 	assert(brightness >= 0.0f);
@@ -111,7 +153,7 @@ void DfrLightCaster::setBrightness(Handle handle, float brightness)
 	switch (type)
 	{
 	case Type::POINT: {
-		pointLights->getLight(exposed.idx)->brightness = brightness;
+		throw std::invalid_argument("Unimplemented");
 	};
 	break;
 	case Type::DIRECTIONAL: {

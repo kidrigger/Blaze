@@ -148,7 +148,8 @@ void run()
 		struct PointLights
 		{
 			glm::vec3 pos{0};
-			float brightness{1};
+			glm::vec3 color{1};
+			float brightness;
 			float radius{1};
 			bool hasShadow{false};
 
@@ -156,7 +157,9 @@ void run()
 			{
 				bool edited = false;
 				edited |= ImGui::DragFloat3("Position##POINT", &pos[0], 0.2f, -100.0f, 100.0f);
-				edited |= ImGui::DragFloat("Brightness##POINT", &brightness, 0.05f, 0.1f, 2.0f);
+				edited |=
+					ImGui::ColorEdit3("Color##POINT", &color[0], ImGuiColorEditFlags_Float); // 0.05f, 0.0f, 16.0f);
+				edited |= ImGui::DragFloat("Brightness##POINT", &brightness, 0.01f, 0.0f, 16.0f);
 				edited |= ImGui::DragFloat("Radius##POINT", &radius, 0.1f, 0.1f, 100.0f);
 				edited |= ImGui::Checkbox("Enable Shadow##POINT", &hasShadow);
 				return edited;
@@ -216,12 +219,13 @@ void run()
 				if (toAdd >= 0)
 				{
 					lights.push_back(editable);
-					auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.brightness,
+					auto handle = renderer->get_lightCaster()->createPointLight(editable.pos, editable.color * editable.brightness,
 																				editable.radius, editable.hasShadow);
 					pointHandles.push_back(handle);
 
-					editable.brightness = 1.0f;
+					editable.color = glm::vec3(1.0f);
 					editable.pos = glm::vec3{0.0f};
+					editable.brightness = 1.0f;
 					editable.radius = 1.0f;
 					editable.hasShadow = false;
 				}
@@ -230,7 +234,7 @@ void run()
 					auto h = pointHandles[toUpdate];
 					auto& l = lights[toUpdate];
 					renderer->get_lightCaster()->setPosition(h, l.pos);
-					renderer->get_lightCaster()->setBrightness(h, l.brightness);
+					renderer->get_lightCaster()->setColor(h, l.color * l.brightness);
 					renderer->get_lightCaster()->setRadius(h, l.radius);
 					l.hasShadow = renderer->get_lightCaster()->setShadow(h, l.hasShadow);
 				}
