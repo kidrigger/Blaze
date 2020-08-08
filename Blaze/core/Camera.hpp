@@ -39,6 +39,8 @@ public:
 		/// The position of the camera.
 		alignas(16) glm::vec3 viewPos;
 
+		alignas(4) float ambientBrightness;
+
 		alignas(8) glm::vec2 screenSize;
 
 		/// The distance of the Near Plane of the frustum from the camera.
@@ -75,6 +77,7 @@ public:
 		ubo.viewPos = position;
 		ubo.nearPlane = nearPlane;
 		ubo.farPlane = farPlane;
+		ubo.ambientBrightness = 0.03f;
 		ubo.screenSize = screenSize;
 		uboDirty = true;
 	}
@@ -192,6 +195,16 @@ public:
 		aspect = screen_size.x / screen_size.y;
 		screenSize = screen_size;
 		uboDirty = true;
+	}
+
+	inline float get_ambient()
+	{
+		return ubo.ambientBrightness;
+	}
+
+	inline void set_ambient(float ambient) 
+	{
+		ubo.ambientBrightness = ambient;
 	}
 	/**
 	 * @}

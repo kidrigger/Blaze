@@ -14,7 +14,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float _pad;
+	float ambientBrightness;
 	vec2 screenSize;
 	float nearPlane;
 	float farPlane;

@@ -21,7 +21,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float _pad;
+	float ambientBrightness;
 	vec2 screenSize;
 	float nearPlane;
 	float farPlane;
@@ -371,6 +371,16 @@ void main()
 		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
 		ambient = (kd * diffuse + specular) * ao;
+	} else {
+		vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
+
+		vec3 diffuse = camera.ambientBrightness * albedo;
+
+		ambient = (kd * diffuse) * ao;
 	}
 
 	vec3 color	 = ambient + L0 + emission;

@@ -26,7 +26,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	mat4 view;
 	mat4 projection;
 	vec3 viewPos;
-	float _pad;
+	float ambientBrightness;
 	vec2 screenSize;
 	float nearPlane;
 	float farPlane;
@@ -201,8 +201,6 @@ void main() {
 
 	vec3 L0 = vec3(0.0f);
 
-	vec3 ambient = vec3(0.03f) * albedo * ao;
-
 	// Direction Lighting
 	for (int i = 0; i < dirLights.data.length(); i++) {
 		if (dirLights.data[i].brightness < 0.0f) continue;
@@ -232,6 +230,7 @@ void main() {
 	}
 
 	vec3 iblContrib = vec3(0.0f);
+	vec3 ambient;
 	if (settings.enableIBL > 0) {
 		vec3 R = reflect(-V, N);
 
@@ -249,9 +248,21 @@ void main() {
 		vec3 diffuse = texture(irradianceMap, N).rgb * albedo;
 
 		iblContrib = (kd * diffuse + specular);
-	}
 
-	ambient = iblContrib * ao;
+		ambient = iblContrib * ao;
+	} else {
+		vec3 R = reflect(-V, N);
+
+		vec3 F		  = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	
+		vec3 ks = F;
+		vec3 kd = vec3(1.0f) - ks;
+		kd *= 1.0f - metallic;
+
+		vec3 diffuse = camera.ambientBrightness * albedo;
+
+		ambient = (kd * diffuse) * ao;
+	}
 
 	switch (settings.viewRT) {
 		case RT_RENDER: O_COLOR = vec4(ambient + L0 + emission, 1.0f); break;

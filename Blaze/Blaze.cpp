@@ -37,13 +37,14 @@ struct CameraInfo
 	float yaw = 0.0f;
 	float lastX = 0.0;
 	float lastY = 0.0;
+	float ambient = 0.03f;
 
 	glm::vec3 getForward()
 	{
 		glm::vec3 front;
-		front.x = static_cast<float>(sin(camInfo.yaw) * cos(camInfo.pitch));
+		front.x = static_cast<float>(-cos(camInfo.yaw) * cos(camInfo.pitch));
 		front.y = static_cast<float>(sin(camInfo.pitch));
-		front.z = static_cast<float>(-cos(camInfo.yaw) * cos(camInfo.pitch));
+		front.z = static_cast<float>(-sin(camInfo.yaw) * cos(camInfo.pitch));
 
 		return glm::normalize(front);
 	}
@@ -109,6 +110,7 @@ void run()
 	Camera cam({9.0f, 1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, glm::radians(45.0f),
 			   glm::vec2((float)WIDTH, (float)HEIGHT), 1.0f, 30.0f);
 	camInfo.position = cam.get_position();
+	camInfo.ambient = cam.get_ambient();
 
 	// GLFW Setup
 	assert(glfwInit());
@@ -153,9 +155,9 @@ void run()
 			bool draw()
 			{
 				bool edited = false;
-				edited |= ImGui::InputFloat3("Position##POINT", &pos[0]);
-				edited |= ImGui::InputFloat("Brightness##POINT", &brightness);
-				edited |= ImGui::InputFloat("Radius##POINT", &radius);
+				edited |= ImGui::DragFloat3("Position##POINT", &pos[0], 0.2f, -100.0f, 100.0f);
+				edited |= ImGui::DragFloat("Brightness##POINT", &brightness, 0.05f, 0.1f, 2.0f);
+				edited |= ImGui::DragFloat("Radius##POINT", &radius, 0.1f, 0.1f, 100.0f);
 				edited |= ImGui::Checkbox("Enable Shadow##POINT", &hasShadow);
 				return edited;
 			}
@@ -171,8 +173,8 @@ void run()
 			bool draw(bool editCascade = false)
 			{
 				bool edited = false;
-				edited |= ImGui::InputFloat3("Direction##DIR", &dir[0]);
-				edited |= ImGui::InputFloat("Brightness##DIR", &brightness);
+				edited |= ImGui::DragFloat3("Direction##DIR", &dir[0], 0.01f, -1.0f, 1.0f);
+				edited |= ImGui::DragFloat("Brightness##DIR", &brightness, 0.05f, 0.1f, 2.0f);
 				edited |= ImGui::Checkbox("Enable Shadow##DIR", &hasShadow);
 				if (hasShadow && editCascade)
 				{
@@ -373,6 +375,10 @@ void run()
 
 				if (ImGui::Begin("Camera"))
 				{
+					if (ImGui::DragFloat("Ambient Brightness", &camInfo.ambient, 0.02f, 0.02f, 1.0f))
+					{
+						cam.set_ambient(camInfo.ambient);
+					}
 					if (ImGui::InputFloat3("Position", &camInfo.position[0]) || mouseEnabled)
 					{
 						cam.moveTo(camInfo.position);
