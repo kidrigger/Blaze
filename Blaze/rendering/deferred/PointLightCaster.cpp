@@ -218,9 +218,11 @@ void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& d
 
 		renderPass.begin(cmd, shadow->framebuffer);
 
-		float denom = (0.3f - light->radius);
+		constexpr float nearPlane = 0.05f;
+
+		float denom = (nearPlane - light->radius);
 		float p22 = light->radius / denom;
-		float p32 = (0.3f * light->radius) / denom;
+		float p32 = (nearPlane * light->radius) / denom;
 
 		PointShadow::PCB pcb = {
 			light->position,

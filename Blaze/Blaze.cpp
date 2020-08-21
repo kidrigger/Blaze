@@ -149,7 +149,7 @@ void run()
 		{
 			glm::vec3 pos{0};
 			glm::vec3 color{1};
-			float brightness;
+			float brightness{1.0f};
 			float radius{1};
 			bool hasShadow{false};
 
@@ -177,7 +177,7 @@ void run()
 			{
 				bool edited = false;
 				edited |= ImGui::DragFloat3("Direction##DIR", &dir[0], 0.01f, -1.0f, 1.0f);
-				edited |= ImGui::DragFloat("Brightness##DIR", &brightness, 0.05f, 0.1f, 2.0f);
+				edited |= ImGui::DragFloat("Brightness##DIR", &brightness, 0.05f, 0.1f, 16.0f);
 				edited |= ImGui::Checkbox("Enable Shadow##DIR", &hasShadow);
 				if (hasShadow && editCascade)
 				{
@@ -234,7 +234,7 @@ void run()
 					auto h = pointHandles[toUpdate];
 					auto& l = lights[toUpdate];
 					renderer->get_lightCaster()->setPosition(h, l.pos);
-					renderer->get_lightCaster()->setColor(h, l.color * l.brightness);
+					renderer->get_lightCaster()->setColor(h, glm::vec3(l.color) * l.brightness);
 					renderer->get_lightCaster()->setRadius(h, l.radius);
 					l.hasShadow = renderer->get_lightCaster()->setShadow(h, l.hasShadow);
 				}

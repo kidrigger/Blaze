@@ -9,6 +9,7 @@
 #include <rendering/deferred/DfrLightCaster.hpp>
 #include <core/VertexBuffer.hpp>
 #include <rendering/postprocess/HdrTonemap.hpp>
+#include <rendering/postprocess/Bloom.hpp>
 
 namespace blaze
 {
@@ -31,6 +32,9 @@ private:
 
 	constexpr static std::string_view vTransparencyShaderFileName = "shaders/deferred/vTransparency.vert.spv";
 	constexpr static std::string_view fTransparencyShaderFileName = "shaders/deferred/fTransparency.frag.spv";
+
+	constexpr static std::string_view vLightVisShaderFileName = "shaders/deferred/vLightVis.vert.spv";
+	constexpr static std::string_view fLightVisShaderFileName = "shaders/deferred/fLightVis.frag.spv";
 
 	constexpr static std::string_view vSSAOShaderFileName = "shaders/deferred/vSSAO.vert.spv";
 	constexpr static std::string_view fSSAOShaderFileName = "shaders/deferred/fSSAO.frag.spv";
@@ -155,6 +159,13 @@ private:
 
 	spirv::SetSingleton environmentSet;
 
+	spirv::Shader lightVisShader;
+	spirv::Pipeline lightVisPipeline;
+
+	// Bloom
+	bool bloomEnable{true};
+	Bloom bloom;
+
 	// Post processing
 
 	spirv::RenderPass postProcessRenderPass;
@@ -244,6 +255,9 @@ private:
 
 	spirv::Shader createDirLightingShader();
 	spirv::Pipeline createDirLightingPipeline();
+
+	spirv::Shader createLightVisShader();
+	spirv::Pipeline createLightVisPipeline();
 
 	spirv::Framebuffer createRenderFramebuffer();
 	spirv::Framebuffer createLightingFramebuffer();

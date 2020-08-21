@@ -69,6 +69,9 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	dirLightShader = createDirLightingShader();
 	dirLightPipeline = createDirLightingPipeline();
 
+	lightVisShader = createLightVisShader();
+	lightVisPipeline = createLightVisPipeline();
+
 	lightingFramebuffer = createLightingFramebuffer();
 	lightInputSet = createLightingInputSet();
 
@@ -91,11 +94,11 @@ DfrRenderer::DfrRenderer(GLFWwindow* window, bool enableValidationLayers) noexce
 	// Lights
 	lightCaster = std::make_unique<DfrLightCaster>(context.get(), &pointLightShader, maxFrameInFlight);
 
-
 	// Post process
 	postProcessRenderPass = createPostProcessRenderPass();
 	postProcessFramebuffers = createPostProcessFramebuffers();
 
+	bloom = Bloom(context.get(), &lightingAttachment);
 	hdrTonemap = HDRTonemap(context.get(), &postProcessRenderPass, &lightingAttachment);
 
 	isComplete = true;
@@ -600,9 +603,30 @@ void DfrRenderer::recordCommands(uint32_t frame)
 		drawable->drawAlphaBlended(commandBuffers[frame], forwardShader.pipelineLayout.get());
 	}
 
+	// Lights vis
+	lightVisPipeline.bind(commandBuffers[frame]);
+	vkCmdBindDescriptorSets(commandBuffers[frame], lightVisPipeline.bindPoint,
+							lightVisShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
+							nullptr);
+	lightVolume.bind(commandBuffers[frame]);
+	for (auto it = lightCaster->getPointLightIterator(); it.valid(); ++it)
+	{
+		glm::mat4 pos = glm::scale(glm::translate(glm::mat4(1.0f), it.data->position), glm::vec3(0.1f));
+		vkCmdPushConstants(commandBuffers[frame], lightVisShader.pipelineLayout.get(),
+						   lightVisShader.pushConstant.stage, 0, sizeof(glm::mat4), &pos);
+		vkCmdPushConstants(commandBuffers[frame], lightVisShader.pipelineLayout.get(),
+						   lightVisShader.pushConstant.stage, sizeof(glm::mat4), sizeof(glm::vec4), &it.data->color);
+		vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+	}
+
 	lightingRenderPass.end(commandBuffers[frame]);
 
 	// Post process
+
+	if (bloomEnable)
+	{
+		bloom.process(commandBuffers[frame], lightQuad);
+	}
 	
 	postProcessRenderPass.begin(commandBuffers[frame], postProcessFramebuffers[frame]);
 
@@ -629,16 +653,29 @@ void DfrRenderer::drawSettings()
 		ImGui::Checkbox("Enable SSAO", &ssaoEnabled);
 		if (ssaoEnabled)
 		{
-			ImGui::DragFloat("SSAO Kernel Radius", &ssaoSettings.kernelRadius, 0.01f, 0.01f, 1.0f);
-			ImGui::DragFloat("SSAO Bias", &ssaoSettings.bias, 0.01f, 0.01f, 1.0f);
-			ImGui::Checkbox("SSAO Blur", &ssaoBlurEnable);
-			if (ssaoBlurEnable)
+			if (ImGui::CollapsingHeader("SSAO Options")) 
 			{
-				ImGui::DragInt("SSAO Blur Iterations", &ssaoBlurCount, 0.2f, 1, 5);
-				ImGui::Checkbox("SSAO Blur Depth Awareness", (bool*)&ssaoBlurSettings.depthAware);
-				ImGui::DragFloat("SSAO Blur Depth Tolerance", &ssaoBlurSettings.depth, 0.001f, 0.001f, 0.1f);
+				ImGui::DragFloat("Kernel Radius##SSAO", &ssaoSettings.kernelRadius, 0.01f, 0.01f, 1.0f);
+				ImGui::DragFloat("Bias##SSAO", &ssaoSettings.bias, 0.01f, 0.01f, 1.0f);
+				ImGui::Checkbox("Blur Enabled##SSAO", &ssaoBlurEnable);
+				if (ssaoBlurEnable)
+				{
+					ImGui::DragInt("Blur Iterations##SSAO", &ssaoBlurCount, 0.2f, 1, 5);
+					ImGui::Checkbox("Bilateral Blur##SSAO", (bool*)&ssaoBlurSettings.depthAware);
+					ImGui::DragFloat("Bilateral Threshold##SSAO", &ssaoBlurSettings.depth, 0.001f, 0.001f, 0.1f);
+				}
 			}
 		}
+		ImGui::Checkbox("Enable Bloom", &bloomEnable);
+		if (bloomEnable) {
+			if (ImGui::CollapsingHeader("Bloom Options##Bloom"))
+			{
+				ImGui::DragInt("Blur Iterations##Bloom", &bloom.iterations, 0.5f, 1, 10);
+				ImGui::DragFloat("Highpass Threshold##Bloom", &bloom.highpassSettings.threshold, 0.1f, 0.1f, 5.0f);
+				ImGui::DragFloat("Highpass Tolerance##Bloom", &bloom.highpassSettings.tolerance, 0.01f, 0.0f, 0.5f);
+			}
+		}
+
 		if (ImGui::CollapsingHeader("MRT Debug Output"))
 		{
 			if (ImGui::RadioButton("Full Render", settings.viewRT == settings.RENDER))
@@ -797,7 +834,7 @@ DfrRenderer::MRTAttachment DfrRenderer::createMRTAttachment()
 	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	id2d.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	id2d.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-	id2d.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	id2d.access = VK_ACCESS_SHADER_READ_BIT;
 
 	id2d.format = VK_FORMAT_R8G8B8A8_UNORM;
 	attachment.albedo = Texture2D(context.get(), id2d, false);
@@ -953,7 +990,7 @@ Texture2D DfrRenderer::createSSAOAttachment()
 	id2d.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	id2d.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	id2d.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-	id2d.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	id2d.access = VK_ACCESS_SHADER_READ_BIT;
 
 	id2d.format = VK_FORMAT_R8_UNORM;
 
@@ -1586,6 +1623,90 @@ spirv::Pipeline DfrRenderer::createDirLightingPipeline()
 	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
 	return context->get_pipelineFactory()->createGraphicsPipeline(dirLightShader, lightingRenderPass, info);
+}
+
+spirv::Shader DfrRenderer::createLightVisShader()
+{
+	std::vector<spirv::ShaderStageData> stages;
+
+	spirv::ShaderStageData* stage;
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile(vLightVisShaderFileName);
+	stage->stage = VK_SHADER_STAGE_VERTEX_BIT;
+
+	stage = &stages.emplace_back();
+	stage->spirv = util::loadBinaryFile(fLightVisShaderFileName);
+	stage->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	return context->get_pipelineFactory()->createShader(stages);
+}
+
+spirv::Pipeline DfrRenderer::createLightVisPipeline()
+{
+	assert(lightingRenderPass.valid());
+	assert(lightVisShader.valid());
+
+	spirv::GraphicsPipelineCreateInfo info = {};
+
+	info.inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	info.inputAssemblyCreateInfo.flags = 0;
+	info.inputAssemblyCreateInfo.pNext = nullptr;
+	info.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	info.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	info.rasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	info.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+	info.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	info.rasterizerCreateInfo.lineWidth = 1.0f;
+	info.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+	info.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.rasterizerCreateInfo.depthBiasEnable = VK_TRUE;
+	info.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
+	info.rasterizerCreateInfo.pNext = nullptr;
+	info.rasterizerCreateInfo.flags = 0;
+
+	info.multisampleCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	info.multisampleCreateInfo.sampleShadingEnable = VK_FALSE;
+	info.multisampleCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorblendAttachment = {};
+	colorblendAttachment.colorWriteMask = 0;
+	colorblendAttachment.blendEnable = VK_FALSE;
+	colorblendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorblendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorblendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorblendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	info.colorblendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	info.colorblendCreateInfo.logicOpEnable = VK_FALSE;
+	info.colorblendCreateInfo.attachmentCount = 1;
+	info.colorblendCreateInfo.pAttachments = &colorblendAttachment;
+
+	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care
+	info.depthStencilCreateInfo.minDepthBounds = 1.0f; // Don't care
+	info.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+	info.depthStencilCreateInfo.front = {}; // Don't Care
+	info.depthStencilCreateInfo.back = {};	// Don't Care
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	info.dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	info.dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	info.dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+	return context->get_pipelineFactory()->createGraphicsPipeline(lightVisShader, lightingRenderPass, info);
 }
 
 spirv::Framebuffer DfrRenderer::createRenderFramebuffer()

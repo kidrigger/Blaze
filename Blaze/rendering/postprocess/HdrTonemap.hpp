@@ -10,7 +10,7 @@ namespace blaze
 {
 struct HDRTonemap
 {
-	constexpr static std::string_view vShaderFile = "shaders/postprocess/vHDRTonemap.vert.spv";
+	constexpr static std::string_view vShaderFile = "shaders/postprocess/vPostProcessQuad.vert.spv";
 	constexpr static std::string_view fShaderFile = "shaders/postprocess/fHDRTonemap.frag.spv";
 
 	spirv::Shader shader;
