@@ -98,7 +98,7 @@ private:
 	BaseUBO ssaoKernel;
 	spirv::SetSingleton ssaoSampleSet;
 
-	bool ssaoEnabled{true};
+	bool ssaoEnabled{false};
 	struct SSAOSettings
 	{
 		float kernelRadius{0.5f};

@@ -114,11 +114,22 @@ void run()
 
 	// GLFW Setup
 	assert(glfwInit());
+
+	auto monitor = glfwGetPrimaryMonitor();
+	struct MonitorArea
+	{
+		int x, y, w, h;
+	} monitorArea;
+	glfwGetMonitorWorkarea(monitor, &monitorArea.x, &monitorArea.y, &monitorArea.w, &monitorArea.h);
+
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_TRUE);
 	window =
-		glfwCreateWindow(WIDTH, HEIGHT, VERSION.FULL_NAME, FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
+		glfwCreateWindow(WIDTH, HEIGHT, VERSION.FULL_NAME, FULLSCREEN ? monitor : nullptr, nullptr);
 	assert(window != nullptr);
+
+	if (!FULLSCREEN)
+		glfwSetWindowPos(window, (monitorArea.w - WIDTH) / 2, (monitorArea.h - HEIGHT) / 2);
 
 	{
 		double x, y;

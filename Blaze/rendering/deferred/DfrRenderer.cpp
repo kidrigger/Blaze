@@ -7,6 +7,8 @@
 #include <Version.hpp>
 #include <random>
 
+#include <thirdparty/renderdoc/renderdoc.h>
+
 namespace blaze
 {
 
@@ -123,12 +125,19 @@ void DfrRenderer::recreateSwapchainDependents()
 	lightInputSet = createLightingInputSet();
 
 	// SSAO
+
 	ssaoAttachment = createSSAOAttachment();
 	ssaoFramebuffer = createSSAOFramebuffer();
+
+	ssaoSampleSet = createSSAOSampleSet();
 	ssaoDepthSet = createSSAODepthSet();
 
+	ssaoBlurAttachment = createSSAOAttachment();
 	ssaoBlurFramebuffer = createSSAOBlurFramebuffer();
 	ssaoBlurSet = createSSAOBlurSet();
+
+	ssaoFilterFramebuffer = createSSAOFilterFramebuffer();
+	ssaoFilterSet = createSSAOFilterSet();
 
 	// Lighting
 	lightingAttachment = createLightingAttachment();
@@ -141,6 +150,7 @@ void DfrRenderer::recreateSwapchainDependents()
 	postProcessRenderPass = createPostProcessRenderPass(); // dep on swapchain
 	postProcessFramebuffers = createPostProcessFramebuffers();
 
+	bloom.recreate(context.get(), &lightingAttachment);
 	hdrTonemap.recreate(context.get(), &postProcessRenderPass, &lightingAttachment);
 }
 
@@ -486,6 +496,7 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 		if (ssaoBlurEnable)
 		{
+			renderdoc::startCapture();
 			for (int i = 0; i < ssaoBlurCount; i++)
 			{
 				ssaoRenderPass.begin(commandBuffers[frame], ssaoBlurFramebuffer);
@@ -530,6 +541,7 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 				ssaoRenderPass.end(commandBuffers[frame]);
 			}
+			renderdoc::endCapture();
 		}
 
 		ssaoFilterRenderPass.begin(commandBuffers[frame], ssaoFilterFramebuffer);
