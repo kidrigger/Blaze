@@ -2,6 +2,7 @@
 #pragma once
 
 #include <thirdparty/imgui/imgui.h>
+#include <thirdparty/imgui/imgui_internal.h>
 #include <thirdparty/imgui/imgui_impl_glfw.h>
 #include <thirdparty/imgui/imgui_impl_vulkan.h>
 

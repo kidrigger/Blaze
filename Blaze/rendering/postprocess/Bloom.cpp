@@ -1,6 +1,7 @@
 
 #include "Bloom.hpp"
 #include <util/files.hpp>
+#include <gui/GUI.hpp>
 
 namespace blaze
 {
@@ -170,28 +171,35 @@ Bloom::Bloom(const Context* context, Texture2D* colorOutput)
 
 	VkExtent2D extent = colorOutput->get_extent();
 
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-	viewport.x = 0;
-	viewport.y = static_cast<float>(extent.height);
-	viewport.width = static_cast<float>(extent.width);
-	viewport.height = -static_cast<float>(extent.height);
-
-	scissor.extent = extent;
-	scissor.offset = {0, 0};
+	viewport = createViewport(extent);
 
 	extent.height /= 2;
 	extent.width /= 2;
 
-	halfViewport.minDepth = 0.0f;
-	halfViewport.maxDepth = 1.0f;
-	halfViewport.x = 0;
-	halfViewport.y = static_cast<float>(extent.height);
-	halfViewport.width = static_cast<float>(extent.width);
-	halfViewport.height = -static_cast<float>(extent.height);
+	halfViewport = createViewport(extent);
+}
 
-	halfScissor.extent = extent;
-	halfScissor.offset = {0, 0};
+void Bloom::drawSettings()
+{
+	if (ImGui::CollapsingHeader("Bloom##BloomSettings"))
+	{
+		ImGui::Checkbox("Enabled##Bloom", &enabled);
+		if (!enabled)
+		{
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+		}
+
+		ImGui::DragInt("Blur Iterations##Bloom", &iterations, 0.5f, 1, 10);
+		ImGui::DragFloat("Highpass Threshold##Bloom", &highpassSettings.threshold, 0.1f, 0.1f, 5.0f);
+		ImGui::DragFloat("Highpass Tolerance##Bloom", &highpassSettings.tolerance, 0.01f, 0.0f, 0.5f);
+		
+		if (!enabled)
+		{
+			ImGui::PopItemFlag();
+			ImGui::PopStyleVar();
+		}
+	}
 }
 
 void Bloom::recreate(const Context* context, Texture2D* colorOutput)
@@ -254,35 +262,19 @@ void Bloom::recreate(const Context* context, Texture2D* colorOutput)
 
 	VkExtent2D extent = colorOutput->get_extent();
 
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-	viewport.x = 0;
-	viewport.y = static_cast<float>(extent.height);
-	viewport.width = static_cast<float>(extent.width);
-	viewport.height = -static_cast<float>(extent.height);
-
-	scissor.extent = extent;
-	scissor.offset = {0, 0};
+	viewport = createViewport(extent);
 
 	extent.height /= 2;
 	extent.width /= 2;
 
-	halfViewport.minDepth = 0.0f;
-	halfViewport.maxDepth = 1.0f;
-	halfViewport.x = 0;
-	halfViewport.y = static_cast<float>(extent.height);
-	halfViewport.width = static_cast<float>(extent.width);
-	halfViewport.height = -static_cast<float>(extent.height);
-
-	halfScissor.extent = extent;
-	halfScissor.offset = {0, 0};
+	halfViewport = createViewport(extent);
 }
 
 void Bloom::process(VkCommandBuffer cmd, IndexedVertexBuffer<Vertex>& quad)
 {
 	renderpass.begin(cmd, pingPong[0]);
 	vkCmdSetViewport(cmd, 0, 1, &halfViewport);
-	vkCmdSetScissor(cmd, 0, 1, &halfScissor);
+	vkCmdSetScissor(cmd, 0, 1, &pingPong[0].renderArea);
 
 	highpassPipeline.bind(cmd);
 	vkCmdPushConstants(cmd, highpassShader.pipelineLayout.get(), highpassShader.pushConstant.stage, 0,
@@ -323,7 +315,7 @@ void Bloom::process(VkCommandBuffer cmd, IndexedVertexBuffer<Vertex>& quad)
 
 	renderpass.begin(cmd, outputFB);
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
-	vkCmdSetScissor(cmd, 0, 1, &scissor);
+	vkCmdSetScissor(cmd, 0, 1, &outputFB.renderArea);
 
 	combinePipeline.bind(cmd);
 	vkCmdBindDescriptorSets(cmd, combinePipeline.bindPoint, combineShader.pipelineLayout.get(), attachSets[0].setIdx, 1,

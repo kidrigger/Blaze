@@ -18,6 +18,8 @@ struct Bloom
 	constexpr static std::string_view vCombineShaderFile = "shaders/postprocess/vPostProcessQuad.vert.spv";
 	constexpr static std::string_view fCombineShaderFile = "shaders/postprocess/fCombine.frag.spv";
 
+	bool enabled{true};
+
 	spirv::Framebuffer pingPong[2];
 	Texture2D pingPongAttachment[2];
 	spirv::Framebuffer outputFB;
@@ -37,10 +39,7 @@ struct Bloom
 	spirv::SetSingleton inputSet;
 
 	VkViewport halfViewport;
-	VkRect2D halfScissor;
-
 	VkViewport viewport;
-	VkRect2D scissor;
 
 	struct HighpassSettings
 	{
@@ -54,6 +53,8 @@ struct Bloom
 	}
 
 	Bloom(const Context* context, Texture2D* colorOutput);
+
+	void drawSettings();
 
 	void recreate(const Context* context, Texture2D* colorOutput);
 	void process(VkCommandBuffer cmd, IndexedVertexBuffer<Vertex>& quad);

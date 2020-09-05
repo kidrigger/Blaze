@@ -5,6 +5,7 @@
 #include <core/Context.hpp>
 #include <core/Texture2D.hpp>
 #include <core/VertexBuffer.hpp>
+#include <gui/GUI.hpp>
 
 namespace blaze
 {
@@ -31,6 +32,15 @@ struct HDRTonemap
 	}
 
 	HDRTonemap(Context* context, spirv::RenderPass* renderPass, Texture2D* colorOutput);
+
+	void drawSettings()
+	{
+		if (ImGui::CollapsingHeader("Tonemap Settings##HDRPostProcess"))
+		{
+			ImGui::DragFloat("Exposure", &pushConstant.exposure, 0.1f, 1.0f, 10.0f);
+			ImGui::DragFloat("Gamma", &pushConstant.gamma, 0.1f, 1.0f, 4.0f);
+		}
+	}
 
 	void recreate(Context* context, spirv::RenderPass* renderPass, Texture2D* colorOutput);
 

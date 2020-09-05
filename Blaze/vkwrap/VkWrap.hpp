@@ -9,7 +9,7 @@
 #include <util/debugMessenger.hpp>
 
 #include "VkWrapBase.hpp"
-
+#include "VkUtil.hpp"
 #include "VkWrapSpecialized.hpp"
 
 /**

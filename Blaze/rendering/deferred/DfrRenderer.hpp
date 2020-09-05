@@ -11,6 +11,8 @@
 #include <rendering/postprocess/HdrTonemap.hpp>
 #include <rendering/postprocess/Bloom.hpp>
 
+#include "SSAO.hpp"
+
 namespace blaze
 {
 /**
@@ -36,15 +38,6 @@ private:
 	constexpr static std::string_view vLightVisShaderFileName = "shaders/deferred/vLightVis.vert.spv";
 	constexpr static std::string_view fLightVisShaderFileName = "shaders/deferred/fLightVis.frag.spv";
 
-	constexpr static std::string_view vSSAOShaderFileName = "shaders/deferred/vSSAO.vert.spv";
-	constexpr static std::string_view fSSAOShaderFileName = "shaders/deferred/fSSAO.frag.spv";
-
-	constexpr static std::string_view vSSAOBlurShaderFileName = "shaders/deferred/vSSAO.vert.spv";
-	constexpr static std::string_view fSSAOBlurShaderFileName = "shaders/deferred/fSSAOBlur.frag.spv";
-
-	constexpr static std::string_view vSSAOFilterShaderFileName = "shaders/deferred/vSSAO.vert.spv";
-	constexpr static std::string_view fSSAOFilterShaderFileName = "shaders/deferred/fSSAOFilter.frag.spv";
-
 	struct Settings
 	{
 		int enableIBL{1};
@@ -60,6 +53,10 @@ private:
 			EMISSION = 0x7,
 			IBL = 0x8,
 		} viewRT{RENDER};
+		float modRoughness;
+		float modMetallic;
+
+		void draw();
 	} settings;
 
 	using CameraUBOV = UBOVector<Camera::UBlock>;
@@ -94,42 +91,7 @@ private:
 	spirv::Pipeline mrtPipeline;
 
 	// SSAO
-	Texture2D ssaoNoise;
-	BaseUBO ssaoKernel;
-	spirv::SetSingleton ssaoSampleSet;
-
-	bool ssaoEnabled{false};
-	struct SSAOSettings
-	{
-		float kernelRadius{0.5f};
-		float bias{0.025f};
-	} ssaoSettings;
-	bool ssaoBlurEnable{true};
-	int ssaoBlurCount{3};
-	struct SSAOBlurSettings
-	{
-		int verticalPass{1};
-		int depthAware{1};
-		float depth{0.02f};
-	} ssaoBlurSettings;
-	Texture2D ssaoAttachment;
-	spirv::Framebuffer ssaoFramebuffer;
-	spirv::RenderPass ssaoRenderPass;
-	spirv::Shader ssaoShader;
-	spirv::Pipeline ssaoPipeline;
-	spirv::SetSingleton ssaoDepthSet;
-
-	Texture2D ssaoBlurAttachment;
-	spirv::Framebuffer ssaoBlurFramebuffer;
-	spirv::Shader ssaoBlurShader;
-	spirv::Pipeline ssaoBlurPipeline;
-	spirv::SetSingleton ssaoBlurSet;
-
-	spirv::Framebuffer ssaoFilterFramebuffer;
-	spirv::RenderPass ssaoFilterRenderPass;
-	spirv::Shader ssaoFilterShader;
-	spirv::Pipeline ssaoFilterPipeline;
-	spirv::SetSingleton ssaoFilterSet;
+	std::unique_ptr<SSAO> ssao;
 
 	// Lighting
 	spirv::RenderPass lightingRenderPass;
@@ -226,28 +188,6 @@ private:
 	MRTAttachment createMRTAttachment();
 	spirv::SetSingleton createLightingInputSet();
 
-	// SSAO
-	Texture2D createSSAONoise();
-	BaseUBO createSSAOKernel();
-	spirv::SetSingleton createSSAOSampleSet();
-
-	Texture2D createSSAOAttachment();
-	spirv::RenderPass createSSAORenderpass();
-	spirv::Shader createSSAOShader();
-	spirv::Pipeline createSSAOPipeline();
-	spirv::Framebuffer createSSAOFramebuffer();
-	spirv::SetSingleton createSSAODepthSet();
-
-	spirv::Framebuffer createSSAOBlurFramebuffer();
-	spirv::Shader createSSAOBlurShader();
-	spirv::Pipeline createSSAOBlurPipeline();
-	spirv::SetSingleton createSSAOBlurSet();
-
-	spirv::RenderPass createSSAOFilterRenderPass();
-	spirv::Framebuffer createSSAOFilterFramebuffer();
-	spirv::Shader createSSAOFilterShader();
-	spirv::Pipeline createSSAOFilterPipeline();
-	spirv::SetSingleton createSSAOFilterSet();
 
 	// Lighting
 	spirv::Shader createPointLightingShader();
