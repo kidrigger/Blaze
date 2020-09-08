@@ -8,8 +8,8 @@
 #include <core/UniformBuffer.hpp>
 #include <core/Context.hpp>
 #include <string>
-#include <util/DebugTimer.hpp>
 #include <util/createFunctions.hpp>
+#include <thirdparty/optick/optick.h>
 
 namespace blaze::util
 {
@@ -86,7 +86,7 @@ public:
 	 */
 	static TextureCube convertDescriptorToCubemap(const Context* context, const Texture2CubemapInfo<PCB>& info)
 	{
-		auto timer = AutoTimer("Process " + info.frag_shader + " took (us)");
+		OPTICK_EVENT();
 		const uint32_t dim = info.cube_side;
 
 		vkw::PipelineLayout irPipelineLayout;

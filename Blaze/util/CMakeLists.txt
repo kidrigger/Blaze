@@ -5,18 +5,15 @@ set( HEADER_FILES
 	"createFunctions.hpp"
 	"PackedHandler.hpp"
 	"debugMessenger.hpp"
-	"DebugTimer.hpp"
 	"DeviceSelection.hpp"
 	"files.hpp"
-	"processing.hpp"
-	"Environment.hpp")
+	"processing.hpp")
 
 set( SOURCE_FILES
 	"createFunctions.cpp"
 	"debugMessenger.cpp"
 	"DeviceSelection.cpp"
 	"files.cpp"
-	"processing.cpp"
-	"Environment.cpp")
+	"processing.cpp")
 
 target_sources( Blaze PRIVATE ${HEADER_FILES} ${SOURCE_FILES} )

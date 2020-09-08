@@ -32,6 +32,18 @@ public:
 		return modelFileNames;
 	}
 
+	std::shared_ptr<Model> loadModel(const Context* context, const spirv::Shader* set, const std::string& fileName)
+	{
+		int i = 0;
+		for (auto& name : modelFileNames)
+		{
+			if (name == fileName)
+			{
+				return loadModel(context, set, i);
+			}
+			i++;
+		}
+	}
 	std::shared_ptr<Model> loadModel(const Context* context, const spirv::Shader* set, uint32_t idx);
 
 private:

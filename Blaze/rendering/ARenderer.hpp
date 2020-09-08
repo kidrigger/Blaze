@@ -13,7 +13,7 @@
 #include <gui/GUI.hpp>
 #include <spirv/PipelineFactory.hpp>
 #include <util/PackedHandler.hpp>
-#include <util/Environment.hpp>
+#include <resource/Environment.hpp>
 #include <vkwrap/VkWrap.hpp>
 
 namespace blaze
@@ -51,7 +51,7 @@ protected:
 	using DrawList = util::PackedHandler<Drawable*>;
 	DrawList drawables;
 
-	std::unique_ptr<util::Environment> environment;
+	std::unique_ptr<Environment> environment;
 
 public:
 	ARenderer() noexcept
@@ -153,7 +153,7 @@ protected:
 	virtual void recordCommands(uint32_t frame) = 0;
 	virtual void recreateSwapchainDependents() = 0;
 
-	// Get the set relevant the environment
+	// Get the environment set
 	virtual spirv::SetSingleton* get_environmentSet() = 0;
 
 private:

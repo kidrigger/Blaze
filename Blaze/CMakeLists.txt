@@ -23,7 +23,7 @@ add_executable( Blaze "Source.cpp" "Blaze.hpp"  ${SOURCE_FILES} ${HEADER_FILES} 
 set_property( TARGET Blaze PROPERTY CXX_STANDARD 17 )
 
 add_subdirectory( "core" )
-add_subdirectory( "drawables" )
+add_subdirectory( "resource" )
 add_subdirectory( "rendering" )
 add_subdirectory( "vkwrap" )
 add_subdirectory( "gui" )

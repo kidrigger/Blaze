@@ -101,7 +101,7 @@ void ARenderer::render()
 
 void ARenderer::setSkybox(TextureCube&& env)
 {
-	environment = std::make_unique<util::Environment>(context.get(), std::move(env), this->get_environmentSet());
+	environment = std::make_unique<Environment>(context.get(), std::move(env), this->get_environmentSet());
 }
 
 vkw::SemaphoreVector ARenderer::createSemaphores(uint32_t imageCount) const

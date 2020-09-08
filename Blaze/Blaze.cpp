@@ -5,10 +5,10 @@
 #include <glm/glm.hpp>
 
 #include <core/Camera.hpp>
-#include <drawables/ModelLoader.hpp>
+#include <resource/ModelLoader.hpp>
 #include <rendering/forward/FwdRenderer.hpp>
 #include <rendering/deferred/DfrRenderer.hpp>
-#include <util/Environment.hpp>
+#include <resource/Environment.hpp>
 #include <util/files.hpp>
 
 #undef min
