@@ -117,6 +117,8 @@ private:
 	IndexedVertexBuffer<Vertex> lightVolume;
 	IndexedVertexBuffer<Vertex> lightQuad;
 
+	bool visualizeLights;
+
 	std::unique_ptr<DfrLightCaster> lightCaster;
 
 	spirv::SetSingleton environmentSet;

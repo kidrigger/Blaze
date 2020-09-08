@@ -4,6 +4,8 @@
 #include <rendering/ARenderer.hpp>
 #include <core/Swapchain.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 namespace blaze
 {
 
@@ -80,6 +82,7 @@ void GUI::recreate(const Context* context, const Swapchain* swapchain)
 
 void GUI::draw(VkCommandBuffer cmdBuffer, int frameCount)
 {
+	OPTICK_EVENT();
 	if (complete)
 	{
 		renderPass.begin(cmdBuffer, framebuffers[frameCount]);

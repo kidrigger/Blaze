@@ -6,6 +6,8 @@
 
 #include <Version.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 namespace blaze
 {
 FwdRenderer::FwdRenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
@@ -72,6 +74,8 @@ void FwdRenderer::update(uint32_t frame)
 
 void FwdRenderer::recordCommands(uint32_t frame)
 {
+	OPTICK_EVENT();
+
 	lightCaster->cast(commandBuffers[frame], drawables.get_data());
 
 	auto& extent = swapchain->get_extent();

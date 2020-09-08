@@ -10,6 +10,8 @@
 
 #include <Version.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 #undef max
 #undef min
 
@@ -387,6 +389,8 @@ Context::Context(GLFWwindow* window, bool enableValidationLayers) noexcept
 		std::cerr << "CONTEXT_CREATION_FAILED: " << e.what() << std::endl;
 		isComplete = false;
 	}
+
+	// OPTICK_GPU_INIT_VULKAN(&device.handle, &physicalDevice.handle, &graphicsQueue.handle, &queueFamilyIndices.graphicsIndex.value(), 1);
 
 	pipelineFactory = std::make_unique<spirv::PipelineFactory>(device.get());
 }

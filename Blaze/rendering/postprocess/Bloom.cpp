@@ -3,6 +3,8 @@
 #include <util/files.hpp>
 #include <gui/GUI.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 namespace blaze
 {
 
@@ -272,6 +274,7 @@ void Bloom::recreate(const Context* context, Texture2D* colorOutput)
 
 void Bloom::process(VkCommandBuffer cmd, IndexedVertexBuffer<Vertex>& quad)
 {
+	OPTICK_EVENT();
 	renderpass.begin(cmd, pingPong[0]);
 	vkCmdSetViewport(cmd, 0, 1, &halfViewport);
 	vkCmdSetScissor(cmd, 0, 1, &pingPong[0].renderArea);

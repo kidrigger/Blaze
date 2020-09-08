@@ -207,7 +207,7 @@ public:
 	{
 		return device.get();
 	}
-	inline VkQueue get_graphicsQueue() const
+	inline const VkQueue& get_graphicsQueue() const
 	{
 		return graphicsQueue.get();
 	}

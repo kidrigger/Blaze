@@ -1,6 +1,8 @@
 
 #include "ARenderer.hpp"
 
+#include "thirdparty/optick/optick.h"
+
 namespace blaze
 {
 
@@ -25,6 +27,7 @@ ARenderer::ARenderer(GLFWwindow* window, bool enableValidationLayers) noexcept
 
 void ARenderer::render()
 {
+	OPTICK_EVENT();
 	using namespace std;
 
 	uint32_t imageIndex;
@@ -58,7 +61,10 @@ void ARenderer::render()
 
 	vkResetFences(context->get_device(), 1, &inFlightFences[imageIndex]);
 
-	result = vkQueueSubmit(context->get_graphicsQueue(), 1, &submitInfo, inFlightFences[imageIndex]);
+	{
+		OPTICK_EVENT("Queue Submit");
+		result = vkQueueSubmit(context->get_graphicsQueue(), 1, &submitInfo, inFlightFences[imageIndex]);
+	}
 	if (result != VK_SUCCESS)
 	{
 		throw runtime_error("Queue Submit failed with " + to_string(result));
@@ -74,7 +80,10 @@ void ARenderer::render()
 	presentInfo.pSwapchains = swapchains;
 	presentInfo.pImageIndices = &imageIndex;
 
-	result = vkQueuePresentKHR(context->get_presentQueue(), &presentInfo);
+	{
+		OPTICK_EVENT("Queue Present");
+		result = vkQueuePresentKHR(context->get_presentQueue(), &presentInfo);
+	}
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || windowResized)
 	{
@@ -175,6 +184,7 @@ void ARenderer::rebuildAllCommandBuffers()
 
 void ARenderer::rebuildCommandBuffer(uint32_t frame)
 {
+	OPTICK_EVENT();
 	vkWaitForFences(context->get_device(), 1, &inFlightFences[frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};

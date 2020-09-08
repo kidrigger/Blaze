@@ -5,11 +5,13 @@
 #include <rendering/ARenderer.hpp>
 #include <util/files.hpp>
 #include <vector>
+#include <thirdparty/optick/optick.h>
 
 namespace blaze::util
 {
 TextureCube Environment::createIrradianceCube(const Context* context, spirv::SetSingleton* environment)
 {
+	OPTICK_EVENT();
 	auto timer = AutoTimer("Irradiance Cube Generation took (us)");
 
 	spirv::RenderPass renderpass;
@@ -235,6 +237,8 @@ TextureCube Environment::createIrradianceCube(const Context* context, spirv::Set
 
 TextureCube Environment::createPrefilteredCube(const Context* context, spirv::SetSingleton* environment)
 {
+	OPTICK_EVENT();
+
 	struct PCB
 	{
 		float roughness = 0;
@@ -476,6 +480,8 @@ TextureCube Environment::createPrefilteredCube(const Context* context, spirv::Se
 
 Texture2D Environment::createBrdfLut(const Context* context)
 {
+	OPTICK_EVENT();
+
 	const uint32_t dim = 512;
 
 	spirv::Shader shader;

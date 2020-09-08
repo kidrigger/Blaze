@@ -5,6 +5,8 @@
 #include <util/files.hpp>
 #include <gui/GUI.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 namespace blaze
 {
 SSAO::SSAO(const Context* context, const Texture2D* position, const Texture2D* normal, const Texture2D* omr)
@@ -66,6 +68,7 @@ void SSAO::process(VkCommandBuffer cmd, spirv::SetVector& cameraSets, uint32_t f
 {
 	if (enabled)
 	{
+		OPTICK_EVENT();
 		renderpass.begin(cmd, samplingFramebuffer);
 
 		VkExtent2D ssaoExtent = samplingFramebuffer.renderArea.extent;

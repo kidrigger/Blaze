@@ -8,6 +8,7 @@
 #include <random>
 
 #include <thirdparty/renderdoc/renderdoc.h>
+#include <thirdparty/optick/optick.h>
 
 namespace blaze
 {
@@ -389,6 +390,7 @@ spirv::SetSingleton* DfrRenderer::get_environmentSet()
 
 void DfrRenderer::update(uint32_t frame)
 {
+	OPTICK_EVENT();
 	cameraUBOs[frame].write(camera->getUbo());
 	settingsUBOs[frame].write(settings);
 	lightCaster->update(camera, frame);
@@ -396,6 +398,7 @@ void DfrRenderer::update(uint32_t frame)
 
 void DfrRenderer::recordCommands(uint32_t frame)
 {
+	OPTICK_EVENT();
 	lightCaster->cast(commandBuffers[frame], drawables.get_data());
 
 	auto& extent = swapchain->get_extent();
@@ -429,6 +432,7 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	// Only if we are running lights. Else skip.
 	if (settings.viewRT == Settings::RENDER)
 	{
+		OPTICK_EVENT("DrawPointLights");
 		pointLightPipeline.bind(commandBuffers[frame]);
 		lightCaster->bind(commandBuffers[frame], pointLightShader.pipelineLayout.get(), frame);
 		vkCmdBindDescriptorSets(commandBuffers[frame], pointLightPipeline.bindPoint, pointLightShader.pipelineLayout.get(),
@@ -447,16 +451,19 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	}
 
 	// Direction lights, environment, ambient and debug
-	dirLightPipeline.bind(commandBuffers[frame]);
-	lightCaster->bind(commandBuffers[frame], dirLightShader.pipelineLayout.get(), frame);
-	vkCmdBindDescriptorSets(commandBuffers[frame], dirLightPipeline.bindPoint, dirLightShader.pipelineLayout.get(),
-							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
-	vkCmdBindDescriptorSets(commandBuffers[frame], dirLightPipeline.bindPoint, dirLightShader.pipelineLayout.get(),
-							lightInputSet.setIdx, 1, &lightInputSet.get(), 0, nullptr);
-	vkCmdBindDescriptorSets(commandBuffers[frame], dirLightPipeline.bindPoint, dirLightShader.pipelineLayout.get(),
-							environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
-	lightVolume.bind(commandBuffers[frame]);
-	vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+	{
+		OPTICK_EVENT("DrawDirLights");
+		dirLightPipeline.bind(commandBuffers[frame]);
+		lightCaster->bind(commandBuffers[frame], dirLightShader.pipelineLayout.get(), frame);
+		vkCmdBindDescriptorSets(commandBuffers[frame], dirLightPipeline.bindPoint, dirLightShader.pipelineLayout.get(),
+								cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
+		vkCmdBindDescriptorSets(commandBuffers[frame], dirLightPipeline.bindPoint, dirLightShader.pipelineLayout.get(),
+								lightInputSet.setIdx, 1, &lightInputSet.get(), 0, nullptr);
+		vkCmdBindDescriptorSets(commandBuffers[frame], dirLightPipeline.bindPoint, dirLightShader.pipelineLayout.get(),
+								environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
+		lightVolume.bind(commandBuffers[frame]);
+		vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+	}
 
 	// Transparency
 	forwardPipeline.bind(commandBuffers[frame]);
@@ -471,19 +478,23 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	}
 
 	// Lights vis
-	lightVisPipeline.bind(commandBuffers[frame]);
-	vkCmdBindDescriptorSets(commandBuffers[frame], lightVisPipeline.bindPoint,
-							lightVisShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
-							nullptr);
-	lightVolume.bind(commandBuffers[frame]);
-	for (auto it = lightCaster->getPointLightIterator(); it.valid(); ++it)
+	if (visualizeLights)
 	{
-		glm::mat4 pos = glm::scale(glm::translate(glm::mat4(1.0f), it.data->position), glm::vec3(0.1f));
-		vkCmdPushConstants(commandBuffers[frame], lightVisShader.pipelineLayout.get(),
-						   lightVisShader.pushConstant.stage, 0, sizeof(glm::mat4), &pos);
-		vkCmdPushConstants(commandBuffers[frame], lightVisShader.pipelineLayout.get(),
-						   lightVisShader.pushConstant.stage, sizeof(glm::mat4), sizeof(glm::vec4), &it.data->color);
-		vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+		OPTICK_EVENT("VisualizeLights")
+		lightVisPipeline.bind(commandBuffers[frame]);
+		vkCmdBindDescriptorSets(commandBuffers[frame], lightVisPipeline.bindPoint,
+								lightVisShader.pipelineLayout.get(), cameraSets.setIdx, 1, &cameraSets[frame], 0,
+								nullptr);
+		lightVolume.bind(commandBuffers[frame]);
+		for (auto it = lightCaster->getPointLightIterator(); it.valid(); ++it)
+		{
+			glm::mat4 pos = glm::scale(glm::translate(glm::mat4(1.0f), it.data->position), glm::vec3(0.1f));
+			vkCmdPushConstants(commandBuffers[frame], lightVisShader.pipelineLayout.get(),
+							   lightVisShader.pushConstant.stage, 0, sizeof(glm::mat4), &pos);
+			vkCmdPushConstants(commandBuffers[frame], lightVisShader.pipelineLayout.get(),
+							   lightVisShader.pushConstant.stage, sizeof(glm::mat4), sizeof(glm::vec4), &it.data->color);
+			vkCmdDrawIndexed(commandBuffers[frame], lightVolume.get_indexCount(), 1, 0, 0, 0);
+		}
 	}
 
 	lightingRenderPass.end(commandBuffers[frame]);
@@ -519,6 +530,7 @@ void DfrRenderer::drawSettings()
 		bloom.drawSettings();
 
 		ImGui::Checkbox("Enable IBL", (bool*)&settings.enableIBL);
+		ImGui::Checkbox("Enable Light Visualization", &visualizeLights);
 
 		ssao->drawSettings();
 

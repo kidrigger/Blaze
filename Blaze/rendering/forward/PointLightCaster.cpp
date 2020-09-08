@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 #undef min
 #undef max
 
@@ -208,6 +210,7 @@ void PointLightCaster::removeShadow(int idx)
 
 void PointLightCaster::cast(VkCommandBuffer cmd, const std::vector<Drawable*>& drawables)
 {
+	OPTICK_EVENT();
 	for (auto& light : lights)
 	{
 		if (light.shadowIdx < 0)

@@ -11,6 +11,8 @@
 
 #include <spirv/PipelineFactory.hpp>
 
+#include <thirdparty/optick/optick.h>
+
 namespace blaze
 {
 void toRGBA(uint8_t* data, tinygltf::Image& image, uint64_t texelCount)
@@ -69,6 +71,7 @@ void ModelLoader::scan()
 
 std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spirv::Shader* shader, uint32_t index)
 {
+	OPTICK_EVENT();
 	fs::path filePath = modelFilePaths[index];
 
 	using namespace std;
@@ -91,29 +94,32 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 
 	auto ext = filePath.extension();
 
-	bool ret = false;
-	if (ext == ".gltf")
 	{
-		ret = loader.LoadASCIIFromFile(&model, &err, &warn, name);
-	}
-	else if (ext == ".glb")
-	{
-		ret = loader.LoadBinaryFromFile(&model, &err, &warn, name); // for binary glTF(.glb)
-	}
+		OPTICK_EVENT("Load glTF File");
+		bool ret = false;
+		if (ext == ".gltf")
+		{
+			ret = loader.LoadASCIIFromFile(&model, &err, &warn, name);
+		}
+		else if (ext == ".glb")
+		{
+			ret = loader.LoadBinaryFromFile(&model, &err, &warn, name); // for binary glTF(.glb)
+		}
 
-	if (!warn.empty())
-	{
-		cerr << "Warn: " << warn << endl;
-	}
+		if (!warn.empty())
+		{
+			cerr << "Warn: " << warn << endl;
+		}
 
-	if (!err.empty())
-	{
-		cerr << "Err: " << err << endl;
-	}
+		if (!err.empty())
+		{
+			cerr << "Err: " << err << endl;
+		}
 
-	if (!ret)
-	{
-		cerr << "Failed to parse GTLF" << endl;
+		if (!ret)
+		{
+			cerr << "Failed to parse GTLF" << endl;
+		}
 	}
 
 	vector<Vertex> vertexBuffer;
@@ -129,372 +135,384 @@ std::shared_ptr<Model> ModelLoader::loadModel(const Context* context, const spir
 	materialPack.emission.reserve(model.materials.size());
 	materialPack.pushConstantBlocks.reserve(model.materials.size());
 
-	for (auto& material : model.materials)
 	{
-
-		ImageData2D imgData;
-		uint32_t* data = new uint32_t[256 * 256];
-		memset(data, 0xFF00FFFF, 256 * 256);
-		imgData.data = reinterpret_cast<uint8_t*>(data);
-		imgData.width = 256;
-		imgData.height = 256;
-		imgData.size = 256 * 256 * 4;
-		imgData.numChannels = 4;
-
-		Model::Material::PCB pushConstantBlock = {};
-		ImageData2D diffuseImageData = imgData;
-		ImageData2D normalImageData = imgData;
-		ImageData2D metallicRoughnessImageData = imgData;
-		ImageData2D occlusionImageData = imgData;
-		ImageData2D emissiveImageData = imgData;
-
+		OPTICK_EVENT("Load Materials");
+		for (auto& material : model.materials)
 		{
-			pushConstantBlock.baseColorFactor = glm::make_vec4(material.pbrMetallicRoughness.baseColorFactor.data());
 
-			if (material.pbrMetallicRoughness.baseColorTexture.index < 0)
+			ImageData2D imgData;
+			uint32_t* data = new uint32_t[256 * 256];
+			memset(data, 0xFF00FFFF, 256 * 256);
+			imgData.data = reinterpret_cast<uint8_t*>(data);
+			imgData.width = 256;
+			imgData.height = 256;
+			imgData.size = 256 * 256 * 4;
+			imgData.numChannels = 4;
+
+			Model::Material::PCB pushConstantBlock = {};
+			ImageData2D diffuseImageData = imgData;
+			ImageData2D normalImageData = imgData;
+			ImageData2D metallicRoughnessImageData = imgData;
+			ImageData2D occlusionImageData = imgData;
+			ImageData2D emissiveImageData = imgData;
+
 			{
-				pushConstantBlock.baseColorTextureSet = -1;
+				pushConstantBlock.baseColorFactor =
+					glm::make_vec4(material.pbrMetallicRoughness.baseColorFactor.data());
+
+				if (material.pbrMetallicRoughness.baseColorTexture.index < 0)
+				{
+					pushConstantBlock.baseColorTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.baseColorTextureSet = material.pbrMetallicRoughness.baseColorTexture.texCoord;
+
+					auto& image =
+						model.images[model.textures[material.pbrMetallicRoughness.baseColorTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
+
+					toRGBA(data, image, texelCount);
+
+					diffuseImageData.data = data;
+					diffuseImageData.width = image.width;
+					diffuseImageData.height = image.height;
+					diffuseImageData.size = image.width * image.height * 4;
+					diffuseImageData.numChannels = 4;
+				}
 			}
-			else
+
 			{
-				pushConstantBlock.baseColorTextureSet = material.pbrMetallicRoughness.baseColorTexture.texCoord;
+				if (material.normalTexture.index < 0)
+				{
+					pushConstantBlock.normalTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.normalTextureSet = material.normalTexture.texCoord;
 
-				auto& image = model.images[model.textures[material.pbrMetallicRoughness.baseColorTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+					auto& image = model.images[model.textures[material.normalTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
 
-				toRGBA(data, image, texelCount);
+					toRGBA(data, image, texelCount);
 
-				diffuseImageData.data = data;
-				diffuseImageData.width = image.width;
-				diffuseImageData.height = image.height;
-				diffuseImageData.size = image.width * image.height * 4;
-				diffuseImageData.numChannels = 4;
+					normalImageData.data = data;
+					normalImageData.width = image.width;
+					normalImageData.height = image.height;
+					normalImageData.size = image.width * image.height * 4;
+					normalImageData.numChannels = 4;
+				}
 			}
+
+			{
+				pushConstantBlock.metallicFactor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+				pushConstantBlock.roughnessFactor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+
+				if (material.pbrMetallicRoughness.metallicRoughnessTexture.index < 0)
+				{
+					pushConstantBlock.physicalDescriptorTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.physicalDescriptorTextureSet =
+						material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
+
+					auto& image =
+						model.images[model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index]
+										 .source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
+
+					toRGBA(data, image, texelCount);
+
+					metallicRoughnessImageData.data = data;
+					metallicRoughnessImageData.width = image.width;
+					metallicRoughnessImageData.height = image.height;
+					metallicRoughnessImageData.size = image.width * image.height * 4;
+					metallicRoughnessImageData.numChannels = 4;
+				}
+			}
+
+			{
+				if (material.occlusionTexture.index < 0)
+				{
+					pushConstantBlock.occlusionTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.occlusionTextureSet = material.occlusionTexture.texCoord;
+
+					auto& image = model.images[model.textures[material.occlusionTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
+
+					toRGBA(data, image, texelCount);
+
+					occlusionImageData.data = data;
+					occlusionImageData.width = image.width;
+					occlusionImageData.height = image.height;
+					occlusionImageData.size = image.width * image.height * 4;
+					occlusionImageData.numChannels = 4;
+				}
+			}
+
+			{
+				if (material.emissiveTexture.index < 0)
+				{
+					pushConstantBlock.emissiveTextureSet = -1;
+				}
+				else
+				{
+					pushConstantBlock.emissiveTextureSet = material.emissiveTexture.texCoord;
+
+					pushConstantBlock.emissiveColorFactor = glm::make_vec4(material.emissiveFactor.data());
+
+					auto& image = model.images[model.textures[material.emissiveTexture.index].source];
+					uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
+					uint8_t* data = new uint8_t[texelCount * 4];
+
+					toRGBA(data, image, texelCount);
+
+					emissiveImageData.data = data;
+					emissiveImageData.width = image.width;
+					emissiveImageData.height = image.height;
+					emissiveImageData.size = image.width * image.height * 4;
+					emissiveImageData.numChannels = 4;
+				}
+			}
+
+			pushConstantBlock.alphaMode = getAlphaModeFromString(material.alphaMode);
+			pushConstantBlock.alphaCutoff = static_cast<float>(material.alphaCutoff);
+
+			pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
+
+			materialPack.pushConstantBlocks.push_back(pushConstantBlock);
+			materialPack.diffuse.emplace_back(context, diffuseImageData, true);
+			materialPack.normal.emplace_back(context, normalImageData, true);
+			materialPack.metalRough.emplace_back(context, metallicRoughnessImageData, true);
+			materialPack.occlusion.emplace_back(context, occlusionImageData, true);
+			materialPack.emission.emplace_back(context, emissiveImageData, true);
+
+			if (diffuseImageData.data != imgData.data)
+			{
+				delete[] diffuseImageData.data;
+			}
+			if (normalImageData.data != imgData.data)
+			{
+				delete[] normalImageData.data;
+			}
+			if (metallicRoughnessImageData.data != imgData.data)
+			{
+				delete[] metallicRoughnessImageData.data;
+			}
+			if (occlusionImageData.data != imgData.data)
+			{
+				delete[] occlusionImageData.data;
+			}
+			if (emissiveImageData.data != imgData.data)
+			{
+				delete[] emissiveImageData.data;
+			}
+			delete[] imgData.data;
 		}
-
+		// default material
 		{
-			if (material.normalTexture.index < 0)
-			{
-				pushConstantBlock.normalTextureSet = -1;
-			}
-			else
-			{
-				pushConstantBlock.normalTextureSet = material.normalTexture.texCoord;
+			ImageData2D imgData;
+			uint32_t* data = new uint32_t[256 * 256];
+			memset(data, 0xFF00FFFF, 256 * 256);
+			imgData.data = reinterpret_cast<uint8_t*>(data);
+			imgData.width = 256;
+			imgData.height = 256;
+			imgData.size = 256 * 256 * 4;
+			imgData.numChannels = 4;
 
-				auto& image = model.images[model.textures[material.normalTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
+			Model::Material::PCB pushConstantBlock = {};
+			pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
 
-				toRGBA(data, image, texelCount);
-
-				normalImageData.data = data;
-				normalImageData.width = image.width;
-				normalImageData.height = image.height;
-				normalImageData.size = image.width * image.height * 4;
-				normalImageData.numChannels = 4;
-			}
+			materialPack.pushConstantBlocks.push_back(pushConstantBlock);
+			materialPack.diffuse.emplace_back(context, imgData, true);
+			materialPack.normal.emplace_back(context, imgData, true);
+			materialPack.metalRough.emplace_back(context, imgData, true);
+			materialPack.occlusion.emplace_back(context, imgData, true);
+			materialPack.emission.emplace_back(context, imgData, true);
+			delete[] data;
 		}
-
-		{
-			pushConstantBlock.metallicFactor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-			pushConstantBlock.roughnessFactor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
-
-			if (material.pbrMetallicRoughness.metallicRoughnessTexture.index < 0)
-			{
-				pushConstantBlock.physicalDescriptorTextureSet = -1;
-			}
-			else
-			{
-				pushConstantBlock.physicalDescriptorTextureSet =
-					material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
-
-				auto& image =
-					model.images[model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
-
-				toRGBA(data, image, texelCount);
-
-				metallicRoughnessImageData.data = data;
-				metallicRoughnessImageData.width = image.width;
-				metallicRoughnessImageData.height = image.height;
-				metallicRoughnessImageData.size = image.width * image.height * 4;
-				metallicRoughnessImageData.numChannels = 4;
-			}
-		}
-
-		{
-			if (material.occlusionTexture.index < 0)
-			{
-				pushConstantBlock.occlusionTextureSet = -1;
-			}
-			else
-			{
-				pushConstantBlock.occlusionTextureSet = material.occlusionTexture.texCoord;
-
-				auto& image = model.images[model.textures[material.occlusionTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
-
-				toRGBA(data, image, texelCount);
-
-				occlusionImageData.data = data;
-				occlusionImageData.width = image.width;
-				occlusionImageData.height = image.height;
-				occlusionImageData.size = image.width * image.height * 4;
-				occlusionImageData.numChannels = 4;
-			}
-		}
-
-		{
-			if (material.emissiveTexture.index < 0)
-			{
-				pushConstantBlock.emissiveTextureSet = -1;
-			}
-			else
-			{
-				pushConstantBlock.emissiveTextureSet = material.emissiveTexture.texCoord;
-
-				pushConstantBlock.emissiveColorFactor = glm::make_vec4(material.emissiveFactor.data());
-
-				auto& image = model.images[model.textures[material.emissiveTexture.index].source];
-				uint64_t texelCount = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
-				uint8_t* data = new uint8_t[texelCount * 4];
-
-				toRGBA(data, image, texelCount);
-
-				emissiveImageData.data = data;
-				emissiveImageData.width = image.width;
-				emissiveImageData.height = image.height;
-				emissiveImageData.size = image.width * image.height * 4;
-				emissiveImageData.numChannels = 4;
-			}
-		}
-
-		pushConstantBlock.alphaMode = getAlphaModeFromString(material.alphaMode);
-		pushConstantBlock.alphaCutoff = static_cast<float>(material.alphaCutoff);
-
-		pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
-
-		materialPack.pushConstantBlocks.push_back(pushConstantBlock);
-		materialPack.diffuse.emplace_back(context, diffuseImageData, true);
-		materialPack.normal.emplace_back(context, normalImageData, true);
-		materialPack.metalRough.emplace_back(context, metallicRoughnessImageData, true);
-		materialPack.occlusion.emplace_back(context, occlusionImageData, true);
-		materialPack.emission.emplace_back(context, emissiveImageData, true);
-
-		if (diffuseImageData.data != imgData.data)
-		{
-			delete[] diffuseImageData.data;
-		}
-		if (normalImageData.data != imgData.data)
-		{
-			delete[] normalImageData.data;
-		}
-		if (metallicRoughnessImageData.data != imgData.data)
-		{
-			delete[] metallicRoughnessImageData.data;
-		}
-		if (occlusionImageData.data != imgData.data)
-		{
-			delete[] occlusionImageData.data;
-		}
-		if (emissiveImageData.data != imgData.data)
-		{
-			delete[] emissiveImageData.data;
-		}
-		delete[] imgData.data;
 	}
-	// default material
+
 	{
-		ImageData2D imgData;
-		uint32_t* data = new uint32_t[256 * 256];
-		memset(data, 0xFF00FFFF, 256 * 256);
-		imgData.data = reinterpret_cast<uint8_t*>(data);
-		imgData.width = 256;
-		imgData.height = 256;
-		imgData.size = 256 * 256 * 4;
-		imgData.numChannels = 4;
-
-		Model::Material::PCB pushConstantBlock = {};
-		pushConstantBlock.textureArrIdx = static_cast<uint32_t>(materialPack.diffuse.size());
-
-		materialPack.pushConstantBlocks.push_back(pushConstantBlock);
-		materialPack.diffuse.emplace_back(context, imgData, true);
-		materialPack.normal.emplace_back(context, imgData, true);
-		materialPack.metalRough.emplace_back(context, imgData, true);
-		materialPack.occlusion.emplace_back(context, imgData, true);
-		materialPack.emission.emplace_back(context, imgData, true);
-		delete[] data;
-	}
-
-	for (const auto& node : model.nodes)
-	{
-		std::pair<int, int> primitive_range;
-		if (node.mesh < 0)
+		OPTICK_EVENT("Load Nodes");
+		for (const auto& node : model.nodes)
 		{
-			primitive_range = std::make_pair(0, 0);
-		}
-		else
-		{
-			const auto& mesh = model.meshes[node.mesh];
-			primitive_range = std::make_pair(static_cast<int>(primitives.size()),
-											 static_cast<int>(primitives.size() + mesh.primitives.size()));
-
-			for (auto& primitive : mesh.primitives)
+			std::pair<int, int> primitive_range;
+			if (node.mesh < 0)
 			{
-				float* posBuffer = nullptr;
-				float* normBuffer = nullptr;
-				float* tex0Buffer = nullptr;
-				float* tex1Buffer = nullptr;
-				float* joint0Buffer = nullptr;
-				float* joint1Buffer = nullptr;
-				size_t vertexCount = 0;
-				size_t indexCount = 0;
-				vector<uint32_t> indices;
+				primitive_range = std::make_pair(0, 0);
+			}
+			else
+			{
+				const auto& mesh = model.meshes[node.mesh];
+				primitive_range = std::make_pair(static_cast<int>(primitives.size()),
+												 static_cast<int>(primitives.size() + mesh.primitives.size()));
 
+				for (auto& primitive : mesh.primitives)
 				{
-					const auto& posAccessorIterator = primitive.attributes.find(POSITION);
-					bool hasPosAccessor = (posAccessorIterator != primitive.attributes.end());
-					assert(hasPosAccessor);
-					{
-						const auto& posAccessor = model.accessors[posAccessorIterator->second];
-						const auto& bufferView = model.bufferViews[posAccessor.bufferView];
+					float* posBuffer = nullptr;
+					float* normBuffer = nullptr;
+					float* tex0Buffer = nullptr;
+					float* tex1Buffer = nullptr;
+					float* joint0Buffer = nullptr;
+					float* joint1Buffer = nullptr;
+					size_t vertexCount = 0;
+					size_t indexCount = 0;
+					vector<uint32_t> indices;
 
-						posBuffer = reinterpret_cast<float*>(
-							&model.buffers[bufferView.buffer].data[posAccessor.byteOffset + bufferView.byteOffset]);
-						vertexCount = posAccessor.count;
+					{
+						const auto& posAccessorIterator = primitive.attributes.find(POSITION);
+						bool hasPosAccessor = (posAccessorIterator != primitive.attributes.end());
+						assert(hasPosAccessor);
+						{
+							const auto& posAccessor = model.accessors[posAccessorIterator->second];
+							const auto& bufferView = model.bufferViews[posAccessor.bufferView];
+
+							posBuffer = reinterpret_cast<float*>(
+								&model.buffers[bufferView.buffer].data[posAccessor.byteOffset + bufferView.byteOffset]);
+							vertexCount = posAccessor.count;
+						}
+
+						const auto& normAccessorIterator = primitive.attributes.find(NORMAL);
+						bool hasNormAccessor = (normAccessorIterator != primitive.attributes.end());
+						if (hasNormAccessor)
+						{
+							const auto& accessor = model.accessors[normAccessorIterator->second];
+							const auto& bufferView = model.bufferViews[accessor.bufferView];
+
+							normBuffer = reinterpret_cast<float*>(
+								&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+						}
+
+						const auto& tex0AccessorIterator = primitive.attributes.find(TEXCOORD_0);
+						bool hastex0Accessor = (tex0AccessorIterator != primitive.attributes.end());
+						if (hastex0Accessor)
+						{
+							const auto& accessor = model.accessors[tex0AccessorIterator->second];
+							const auto& bufferView = model.bufferViews[accessor.bufferView];
+
+							tex0Buffer = reinterpret_cast<float*>(
+								&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+						}
+
+						const auto& tex1AccessorIterator = primitive.attributes.find(TEXCOORD_1);
+						bool hastex1Accessor = (tex1AccessorIterator != primitive.attributes.end());
+						if (hastex1Accessor)
+						{
+							const auto& accessor = model.accessors[tex1AccessorIterator->second];
+							const auto& bufferView = model.bufferViews[accessor.bufferView];
+
+							tex1Buffer = reinterpret_cast<float*>(
+								&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+						}
 					}
 
-					const auto& normAccessorIterator = primitive.attributes.find(NORMAL);
-					bool hasNormAccessor = (normAccessorIterator != primitive.attributes.end());
-					if (hasNormAccessor)
+					if (primitive.indices > -1)
 					{
-						const auto& accessor = model.accessors[normAccessorIterator->second];
+						const auto& accessor = model.accessors[primitive.indices];
 						const auto& bufferView = model.bufferViews[accessor.bufferView];
+						indexCount = accessor.count;
 
-						normBuffer = reinterpret_cast<float*>(
-							&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+						switch (accessor.componentType)
+						{
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
+							uint32_t* dices = reinterpret_cast<uint32_t*>(
+								&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+							indices = vector<uint32_t>(dices, dices + indexCount);
+
+							assert(indices.size() == indexCount);
+						}
+						break;
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+							uint16_t* dices = reinterpret_cast<uint16_t*>(
+								&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+							indices = vector<uint32_t>(dices, dices + indexCount);
+
+							assert(indices.size() == indexCount);
+							// throw runtime_error("USHORT index not supported");
+						}
+						break;
+						case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+							uint8_t* dices = reinterpret_cast<uint8_t*>(
+								&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+							indices = vector<uint32_t>(dices, dices + indexCount);
+
+							assert(indices.size() == indexCount);
+							// throw runtime_error("USHORT index not supported");
+						}
+						break;
+						default: {
+							assert(false && "This shouldn't be possible");
+						}
+						break;
+						}
 					}
+					Primitive newPrimitive{
+						static_cast<uint32_t>(indexBuffer.size()), static_cast<uint32_t>(vertexCount),
+						static_cast<uint32_t>(indexCount),
+						static_cast<uint32_t>(
+							(primitive.material >= 0 ? primitive.material : materialPack.diffuse.size() - 1)),
+						materialPack.pushConstantBlocks[primitive.material].alphaMode ==
+							blaze::Model::Material::AlphaMode::ALPHA_BLEND};
+					primitives.push_back(newPrimitive);
 
-					const auto& tex0AccessorIterator = primitive.attributes.find(TEXCOORD_0);
-					bool hastex0Accessor = (tex0AccessorIterator != primitive.attributes.end());
-					if (hastex0Accessor)
+					uint32_t startIndex = static_cast<uint32_t>(vertexBuffer.size());
+					for (auto& index : indices)
 					{
-						const auto& accessor = model.accessors[tex0AccessorIterator->second];
-						const auto& bufferView = model.bufferViews[accessor.bufferView];
-
-						tex0Buffer = reinterpret_cast<float*>(
-							&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+						indexBuffer.emplace_back(index + startIndex);
 					}
 
-					const auto& tex1AccessorIterator = primitive.attributes.find(TEXCOORD_1);
-					bool hastex1Accessor = (tex1AccessorIterator != primitive.attributes.end());
-					if (hastex1Accessor)
+					for (size_t i = 0; i < vertexCount; i++)
 					{
-						const auto& accessor = model.accessors[tex1AccessorIterator->second];
-						const auto& bufferView = model.bufferViews[accessor.bufferView];
-
-						tex1Buffer = reinterpret_cast<float*>(
-							&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
+						vertexBuffer.push_back({glm::make_vec3(&posBuffer[3 * i]),
+												glm::normalize(normBuffer ? glm::make_vec3(&normBuffer[3 * i])
+																		  : glm::vec3(0.0f, 0.0f, 1.0f)),
+												tex0Buffer ? glm::make_vec2(&tex0Buffer[2 * i]) : glm::vec2(0.0f),
+												tex1Buffer ? glm::make_vec3(&tex1Buffer[2 * i]) : glm::vec2(0.0f)});
 					}
-				}
-
-				if (primitive.indices > -1)
-				{
-					const auto& accessor = model.accessors[primitive.indices];
-					const auto& bufferView = model.bufferViews[accessor.bufferView];
-					indexCount = accessor.count;
-
-					switch (accessor.componentType)
-					{
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
-						uint32_t* dices = reinterpret_cast<uint32_t*>(
-							&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
-						indices = vector<uint32_t>(dices, dices + indexCount);
-
-						assert(indices.size() == indexCount);
-					}
-					break;
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
-						uint16_t* dices = reinterpret_cast<uint16_t*>(
-							&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
-						indices = vector<uint32_t>(dices, dices + indexCount);
-
-						assert(indices.size() == indexCount);
-						// throw runtime_error("USHORT index not supported");
-					}
-					break;
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
-						uint8_t* dices = reinterpret_cast<uint8_t*>(
-							&model.buffers[bufferView.buffer].data[accessor.byteOffset + bufferView.byteOffset]);
-						indices = vector<uint32_t>(dices, dices + indexCount);
-
-						assert(indices.size() == indexCount);
-						// throw runtime_error("USHORT index not supported");
-					}
-					break;
-					default: {
-						assert(false && "This shouldn't be possible");
-					}
-					break;
-					}
-				}
-				Primitive newPrimitive{
-					static_cast<uint32_t>(indexBuffer.size()), static_cast<uint32_t>(vertexCount),
-					static_cast<uint32_t>(indexCount),
-					static_cast<uint32_t>(
-						(primitive.material >= 0 ? primitive.material : materialPack.diffuse.size() - 1)),
-					materialPack.pushConstantBlocks[primitive.material].alphaMode ==
-						blaze::Model::Material::AlphaMode::ALPHA_BLEND};
-				primitives.push_back(newPrimitive);
-
-				uint32_t startIndex = static_cast<uint32_t>(vertexBuffer.size());
-				for (auto& index : indices)
-				{
-					indexBuffer.emplace_back(index + startIndex);
-				}
-
-				for (size_t i = 0; i < vertexCount; i++)
-				{
-					vertexBuffer.push_back(
-						{glm::make_vec3(&posBuffer[3 * i]),
-						 glm::normalize(normBuffer ? glm::make_vec3(&normBuffer[3 * i]) : glm::vec3(0.0f, 0.0f, 1.0f)),
-						 tex0Buffer ? glm::make_vec2(&tex0Buffer[2 * i]) : glm::vec2(0.0f),
-						 tex1Buffer ? glm::make_vec3(&tex1Buffer[2 * i]) : glm::vec2(0.0f)});
 				}
 			}
-		}
 
-		std::sort(primitives.begin() + primitive_range.first, primitives.begin() + primitive_range.second,
-				  [](const Primitive& a, const Primitive& b) { return a.isAlphaBlending < b.isAlphaBlending; });
+			std::sort(primitives.begin() + primitive_range.first, primitives.begin() + primitive_range.second,
+					  [](const Primitive& a, const Primitive& b) { return a.isAlphaBlending < b.isAlphaBlending; });
 
-		int numOpaque = std::lower_bound(primitives.begin() + primitive_range.first, primitives.begin() + primitive_range.second, true,
-						 [](const Primitive& a, const bool& b) { return a.isAlphaBlending < b; }) - (primitives.begin() + primitive_range.first);
+			int numOpaque = std::lower_bound(primitives.begin() + primitive_range.first,
+											 primitives.begin() + primitive_range.second, true,
+											 [](const Primitive& a, const bool& b) { return a.isAlphaBlending < b; }) -
+							(primitives.begin() + primitive_range.first);
 
-		glm::vec3 T(0.0f);
-		glm::quat R(1.0f, 0.0f, 0.0f, 0.0f);
-		glm::vec3 S(1.0f);
-		glm::mat4 M(1.0f);
-		if (node.translation.size() == 3)
-		{
-			T = glm::make_vec3(node.translation.data());
+			glm::vec3 T(0.0f);
+			glm::quat R(1.0f, 0.0f, 0.0f, 0.0f);
+			glm::vec3 S(1.0f);
+			glm::mat4 M(1.0f);
+			if (node.translation.size() == 3)
+			{
+				T = glm::make_vec3(node.translation.data());
+			}
+			if (node.rotation.size() == 4)
+			{
+				R = glm::make_quat(node.rotation.data());
+			}
+			if (node.scale.size() == 3)
+			{
+				S = glm::make_vec3(node.scale.data());
+			}
+			if (node.matrix.size() == 16)
+			{
+				M = glm::make_mat4(node.matrix.data());
+			}
+			nodes.emplace_back(glm::translate(glm::mat4(1.0f), T) * glm::mat4_cast(R) * glm::scale(glm::mat4(1.0f), S) *
+								   M,
+							   node.children, primitive_range, numOpaque);
 		}
-		if (node.rotation.size() == 4)
-		{
-			R = glm::make_quat(node.rotation.data());
-		}
-		if (node.scale.size() == 3)
-		{
-			S = glm::make_vec3(node.scale.data());
-		}
-		if (node.matrix.size() == 16)
-		{
-			M = glm::make_mat4(node.matrix.data());
-		}
-		nodes.emplace_back(glm::translate(glm::mat4(1.0f), T) * glm::mat4_cast(R) * glm::scale(glm::mat4(1.0f), S) * M,
-						   node.children, primitive_range, numOpaque);
 	}
 
 	materialPack.dset = context->get_pipelineFactory()->createSet(*shader->getSetWithUniform("diffuseMap"));

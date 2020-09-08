@@ -11,6 +11,11 @@
 #include <util/Environment.hpp>
 #include <util/files.hpp>
 
+#undef min
+#undef max
+
+#include <thirdparty/optick/optick.h>
+
 #define VALIDATION_LAYERS_ENABLED
 
 namespace blaze
@@ -97,6 +102,7 @@ void glfwErrorCallback(int error, const char* desc)
 
 void run()
 {
+	OPTICK_START_CAPTURE();
 	// Usings
 	using namespace std;
 
@@ -168,8 +174,7 @@ void run()
 			{
 				bool edited = false;
 				edited |= ImGui::DragFloat3("Position##POINT", &pos[0], 0.2f, -100.0f, 100.0f);
-				edited |=
-					ImGui::ColorEdit3("Color##POINT", &color[0], ImGuiColorEditFlags_Float); // 0.05f, 0.0f, 16.0f);
+				edited |= ImGui::ColorEdit3("Color##POINT", &color[0], ImGuiColorEditFlags_Float);
 				edited |= ImGui::DragFloat("Brightness##POINT", &brightness, 0.01f, 0.0f, 16.0f);
 				edited |= ImGui::DragFloat("Radius##POINT", &radius, 0.1f, 0.1f, 100.0f);
 				edited |= ImGui::Checkbox("Enable Shadow##POINT", &hasShadow);
@@ -316,8 +321,13 @@ void run()
 	double elapsed = 0.0;
 	double delay = 0.0f;
 
+	OPTICK_STOP_CAPTURE();
+
+	OPTICK_START_CAPTURE();
+
 	while (!glfwWindowShouldClose(window))
 	{
+		OPTICK_FRAME("MAIN");
 		prevTime = glfwGetTime();
 		glfwPollEvents();
 		elapsed += deltaTime;
@@ -536,6 +546,7 @@ void run()
 			deltaTime = glfwGetTime() - prevTime;
 		}
 	}
+	OPTICK_STOP_CAPTURE();
 	renderer->waitIdle();
 }
 } // namespace blaze
