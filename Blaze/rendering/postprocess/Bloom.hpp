@@ -25,6 +25,7 @@ struct Bloom
 	spirv::Framebuffer outputFB;
 
 	spirv::RenderPass renderpass;
+	spirv::RenderPass outputRenderpass;
 
 	spirv::Shader highpassShader;
 	spirv::Pipeline highpassPipeline;
@@ -39,7 +40,9 @@ struct Bloom
 	spirv::SetSingleton inputSet;
 
 	VkViewport halfViewport;
+	VkRect2D halfScissor;
 	VkViewport viewport;
+	VkRect2D scissor;
 
 	struct HighpassSettings
 	{

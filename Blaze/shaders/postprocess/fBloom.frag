@@ -27,5 +27,5 @@ void main() {
 		color += texture(I_COLOR, V_UV0 - offset).rgb * weight[i];
 	}
 
-	O_COLOR = vec4(color, 1.0f);
+	O_COLOR = max(vec4(color, 1.0f), vec4(0.0f, 0.0f, 0.0f, 1.0f));
 }

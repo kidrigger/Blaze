@@ -390,8 +390,6 @@ Context::Context(GLFWwindow* window, bool enableValidationLayers) noexcept
 		isComplete = false;
 	}
 
-	// OPTICK_GPU_INIT_VULKAN(&device.handle, &physicalDevice.handle, &graphicsQueue.handle, &queueFamilyIndices.graphicsIndex.value(), 1);
-
 	pipelineFactory = std::make_unique<spirv::PipelineFactory>(device.get());
 }
 

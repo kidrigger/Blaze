@@ -34,7 +34,7 @@ Bloom::Bloom(const Context* context, Texture2D* colorOutput)
 	attachmentFormat.usage = id2d.usage;
 	attachmentFormat.sampleCount = VK_SAMPLE_COUNT_1_BIT;
 	attachmentFormat.loadStoreConfig =
-		LoadStoreConfig(LoadStoreConfig::LoadAction::DONT_CARE, LoadStoreConfig::StoreAction::READ);
+		LoadStoreConfig(LoadStoreConfig::LoadAction::CLEAR, LoadStoreConfig::StoreAction::READ);
 		
 	VkAttachmentReference colorRef = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
@@ -55,7 +55,13 @@ Bloom::Bloom(const Context* context, Texture2D* colorOutput)
 																		{pingPongAttachment[i].get_imageView()});
 	}
 
-	outputFB = context->get_pipelineFactory()->createFramebuffer(renderpass, colorOutput->get_extent(),
+	attachmentFormat.loadStoreConfig =
+		LoadStoreConfig(LoadStoreConfig::LoadAction::READ, LoadStoreConfig::StoreAction::READ);
+
+	outputRenderpass = context->get_pipelineFactory()->createRenderPass({attachmentFormat}, {subpassDesc});
+	outputRenderpass.clearValues = {clear};
+
+	outputFB = context->get_pipelineFactory()->createFramebuffer(outputRenderpass, colorOutput->get_extent(),
 																 {colorOutput->get_imageView()});
 
 	std::vector<ShaderStageData> stages(2);
@@ -137,7 +143,7 @@ Bloom::Bloom(const Context* context, Texture2D* colorOutput)
 	bloomPipeline = context->get_pipelineFactory()->createGraphicsPipeline(bloomShader, renderpass, info);
 
 	colorblendAttachment.blendEnable = VK_TRUE;
-	combinePipeline = context->get_pipelineFactory()->createGraphicsPipeline(combineShader, renderpass, info);
+	combinePipeline = context->get_pipelineFactory()->createGraphicsPipeline(combineShader, outputRenderpass, info);
 
 	std::array<VkWriteDescriptorSet, 3> writes;
 	for (int i = 0; i < 2; i++)
@@ -173,12 +179,12 @@ Bloom::Bloom(const Context* context, Texture2D* colorOutput)
 
 	VkExtent2D extent = colorOutput->get_extent();
 
-	viewport = createViewport(extent);
+	std::tie(viewport, scissor) = createViewportScissor(extent);
 
 	extent.height /= 2;
 	extent.width /= 2;
 
-	halfViewport = createViewport(extent);
+	std::tie(halfViewport, halfScissor) = createViewportScissor(extent);
 }
 
 void Bloom::drawSettings()
@@ -274,59 +280,67 @@ void Bloom::recreate(const Context* context, Texture2D* colorOutput)
 
 void Bloom::process(VkCommandBuffer cmd, IndexedVertexBuffer<Vertex>& quad)
 {
-	OPTICK_EVENT();
-	renderpass.begin(cmd, pingPong[0]);
-	vkCmdSetViewport(cmd, 0, 1, &halfViewport);
-	vkCmdSetScissor(cmd, 0, 1, &pingPong[0].renderArea);
-
-	highpassPipeline.bind(cmd);
-	vkCmdPushConstants(cmd, highpassShader.pipelineLayout.get(), highpassShader.pushConstant.stage, 0,
-					   highpassShader.pushConstant.size, &highpassSettings);
-	vkCmdBindDescriptorSets(cmd, highpassPipeline.bindPoint, highpassShader.pipelineLayout.get(), inputSet.setIdx, 1,
-							&inputSet.get(), 0, nullptr);
-	quad.bind(cmd);
-	vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
-
-	renderpass.end(cmd);
-
-	int vertical = 0;
-
-	for (int i = 0; i < iterations; i++)
+	if (enabled)
 	{
-		vertical = 0;
-		renderpass.begin(cmd, pingPong[1]);
-		bloomPipeline.bind(cmd);
-		vkCmdBindDescriptorSets(cmd, bloomPipeline.bindPoint, bloomShader.pipelineLayout.get(),
-								attachSets[1].setIdx, 1, &attachSets[1].get(), 0, nullptr);
-		vkCmdPushConstants(cmd, bloomShader.pipelineLayout.get(), bloomShader.pushConstant.stage, 0,
-						   bloomShader.pushConstant.size, &vertical);
-		quad.bind(cmd);
-		vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
-		renderpass.end(cmd);
-
-		vertical = 1;
+		OPTICK_EVENT();
+		OPTICK_GPU_EVENT("Bloom Process");
 		renderpass.begin(cmd, pingPong[0]);
-		bloomPipeline.bind(cmd);
-		vkCmdBindDescriptorSets(cmd, bloomPipeline.bindPoint, bloomShader.pipelineLayout.get(), attachSets[0].setIdx, 1,
-								&attachSets[0].get(), 0, nullptr);
-		vkCmdPushConstants(cmd, bloomShader.pipelineLayout.get(), bloomShader.pushConstant.stage, 0,
-						   bloomShader.pushConstant.size, &vertical);
+		vkCmdSetViewport(cmd, 0, 1, &halfViewport);
+		vkCmdSetScissor(cmd, 0, 1, &halfScissor);
+
+		highpassPipeline.bind(cmd);
+		vkCmdPushConstants(cmd, highpassShader.pipelineLayout.get(), highpassShader.pushConstant.stage, 0,
+						   highpassShader.pushConstant.size, &highpassSettings);
+		vkCmdBindDescriptorSets(cmd, highpassPipeline.bindPoint, highpassShader.pipelineLayout.get(), inputSet.setIdx,
+								1, &inputSet.get(), 0, nullptr);
 		quad.bind(cmd);
 		vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
+
 		renderpass.end(cmd);
+
+		int vertical = 0;
+
+		for (int i = 0; i < iterations; i++)
+		{
+			vertical = 0;
+			renderpass.begin(cmd, pingPong[1]);
+			vkCmdSetViewport(cmd, 0, 1, &halfViewport);
+			vkCmdSetScissor(cmd, 0, 1, &halfScissor);
+			bloomPipeline.bind(cmd);
+			vkCmdBindDescriptorSets(cmd, bloomPipeline.bindPoint, bloomShader.pipelineLayout.get(),
+									attachSets[1].setIdx, 1, &attachSets[1].get(), 0, nullptr);
+			vkCmdPushConstants(cmd, bloomShader.pipelineLayout.get(), bloomShader.pushConstant.stage, 0,
+							   bloomShader.pushConstant.size, &vertical);
+			quad.bind(cmd);
+			vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
+			renderpass.end(cmd);
+
+			vertical = 1;
+			renderpass.begin(cmd, pingPong[0]);
+			vkCmdSetViewport(cmd, 0, 1, &halfViewport);
+			vkCmdSetScissor(cmd, 0, 1, &halfScissor);
+			bloomPipeline.bind(cmd);
+			vkCmdBindDescriptorSets(cmd, bloomPipeline.bindPoint, bloomShader.pipelineLayout.get(),
+									attachSets[0].setIdx, 1, &attachSets[0].get(), 0, nullptr);
+			vkCmdPushConstants(cmd, bloomShader.pipelineLayout.get(), bloomShader.pushConstant.stage, 0,
+							   bloomShader.pushConstant.size, &vertical);
+			quad.bind(cmd);
+			vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
+			renderpass.end(cmd);
+		}
+
+		outputRenderpass.begin(cmd, outputFB);
+		vkCmdSetViewport(cmd, 0, 1, &viewport);
+		vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+		combinePipeline.bind(cmd);
+		vkCmdBindDescriptorSets(cmd, combinePipeline.bindPoint, combineShader.pipelineLayout.get(),
+								attachSets[1].setIdx, 1, &attachSets[1].get(), 0, nullptr);
+		quad.bind(cmd);
+		vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
+
+		outputRenderpass.end(cmd);
 	}
-
-	renderpass.begin(cmd, outputFB);
-	vkCmdSetViewport(cmd, 0, 1, &viewport);
-	vkCmdSetScissor(cmd, 0, 1, &outputFB.renderArea);
-
-	combinePipeline.bind(cmd);
-	vkCmdBindDescriptorSets(cmd, combinePipeline.bindPoint, combineShader.pipelineLayout.get(), attachSets[0].setIdx, 1,
-							&attachSets[0].get(), 0, nullptr);
-	quad.bind(cmd);
-	vkCmdDrawIndexed(cmd, quad.get_indexCount(), 1, 0, 0, 0);
-
-	renderpass.end(cmd);
 }
 
 } // namespace blaze

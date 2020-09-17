@@ -53,8 +53,8 @@ private:
 			EMISSION = 0x7,
 			IBL = 0x8,
 		} viewRT{RENDER};
-		float modRoughness;
-		float modMetallic;
+		int useVertexNormals{0};
+		float modRoughness{-1.0f};
 
 		void draw();
 	} settings;
@@ -127,7 +127,6 @@ private:
 	spirv::Pipeline lightVisPipeline;
 
 	// Bloom
-	bool bloomEnable{true};
 	Bloom bloom;
 
 	// Post processing

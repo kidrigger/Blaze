@@ -466,15 +466,18 @@ void DfrRenderer::recordCommands(uint32_t frame)
 	}
 
 	// Transparency
-	forwardPipeline.bind(commandBuffers[frame]);
-	lightCaster->bind(commandBuffers[frame], forwardShader.pipelineLayout.get(), frame);
-	vkCmdBindDescriptorSets(commandBuffers[frame], forwardPipeline.bindPoint, forwardShader.pipelineLayout.get(),
-							cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
-	vkCmdBindDescriptorSets(commandBuffers[frame], forwardPipeline.bindPoint, forwardShader.pipelineLayout.get(),
-							environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
-	for (Drawable* drawable : drawables)
 	{
-		drawable->drawAlphaBlended(commandBuffers[frame], forwardShader.pipelineLayout.get());
+		OPTICK_EVENT("Transparency")
+		forwardPipeline.bind(commandBuffers[frame]);
+		lightCaster->bind(commandBuffers[frame], forwardShader.pipelineLayout.get(), frame);
+		vkCmdBindDescriptorSets(commandBuffers[frame], forwardPipeline.bindPoint, forwardShader.pipelineLayout.get(),
+								cameraSets.setIdx, 1, &cameraSets[frame], 0, nullptr);
+		vkCmdBindDescriptorSets(commandBuffers[frame], forwardPipeline.bindPoint, forwardShader.pipelineLayout.get(),
+								environmentSet.setIdx, 1, &environmentSet.get(), 0, nullptr);
+		for (Drawable* drawable : drawables)
+		{
+			drawable->drawAlphaBlended(commandBuffers[frame], forwardShader.pipelineLayout.get());
+		}
 	}
 
 	// Lights vis
@@ -501,10 +504,7 @@ void DfrRenderer::recordCommands(uint32_t frame)
 
 	// Post process
 
-	if (bloomEnable)
-	{
-		bloom.process(commandBuffers[frame], lightQuad);
-	}
+	bloom.process(commandBuffers[frame], lightQuad);
 	
 	postProcessRenderPass.begin(commandBuffers[frame], postProcessFramebuffers[frame]);
 
@@ -529,8 +529,32 @@ void DfrRenderer::drawSettings()
 
 		bloom.drawSettings();
 
-		ImGui::Checkbox("Enable IBL", (bool*)&settings.enableIBL);
-		ImGui::Checkbox("Enable Light Visualization", &visualizeLights);
+		{
+			ImGui::Checkbox("Enable IBL", (bool*)&settings.enableIBL);
+			ImGui::Checkbox("Enable Light Visualization", &visualizeLights);
+			ImGui::Checkbox("Use Vertex Normals", (bool*)&settings.useVertexNormals);
+			bool enableModRoughness = settings.modRoughness >= 0.0f;
+			if (ImGui::Checkbox("Modify Roughness", &enableModRoughness))
+			{
+				settings.modRoughness = enableModRoughness ? 0.5f : -1.0f;
+			}
+			if (!enableModRoughness)
+			{
+				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+			}
+			ImGui::SameLine();
+			float modRough = enableModRoughness ? settings.modRoughness : 0.0f;
+			if (ImGui::DragFloat("Value##ModRough", &modRough, 0.01f, 0.0f, 1.0f))
+			{
+				settings.modRoughness = std::clamp(modRough, 0.0f, 1.0f);
+			}
+			if (!enableModRoughness)
+			{
+				ImGui::PopItemFlag();
+				ImGui::PopStyleVar();
+			}
+		}
 
 		ssao->drawSettings();
 
@@ -977,7 +1001,7 @@ spirv::Pipeline DfrRenderer::createLightVisPipeline()
 
 	info.depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	info.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-	info.depthStencilCreateInfo.depthWriteEnable = VK_FALSE;
+	info.depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
 	info.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 	info.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
 	info.depthStencilCreateInfo.maxDepthBounds = 0.0f; // Don't care

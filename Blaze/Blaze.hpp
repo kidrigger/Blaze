@@ -1,6 +1,8 @@
 ﻿// Blaze.hpp : Include file for standard system include files,
 // or project specific include files.
 
+#define USE_OPTICK (0)
+#define OPTICK_ENABLE_GPU (0)
 #pragma once
 // #define VALIDATION_LAYERS_ENABLED
 #include <Version.hpp>

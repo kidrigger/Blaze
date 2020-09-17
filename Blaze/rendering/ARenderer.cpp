@@ -197,9 +197,11 @@ void ARenderer::rebuildCommandBuffer(uint32_t frame)
 		throw std::runtime_error("Begin Command Buffer failed with " + std::to_string(result));
 	}
 
-	recordCommands(frame);
+	{
+		recordCommands(frame);
 
-	gui->draw(commandBuffers[frame], frame);
+		gui->draw(commandBuffers[frame], frame);
+	}
 
 	result = vkEndCommandBuffer(commandBuffers[frame]);
 	if (result != VK_SUCCESS)

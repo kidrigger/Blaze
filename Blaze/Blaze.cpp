@@ -323,8 +323,6 @@ void run()
 
 	OPTICK_STOP_CAPTURE();
 
-	OPTICK_START_CAPTURE();
-
 	while (!glfwWindowShouldClose(window))
 	{
 		OPTICK_FRAME("MAIN");
@@ -546,7 +544,7 @@ void run()
 			deltaTime = glfwGetTime() - prevTime;
 		}
 	}
-	OPTICK_STOP_CAPTURE();
+	OPTICK_SHUTDOWN();
 	renderer->waitIdle();
 }
 } // namespace blaze

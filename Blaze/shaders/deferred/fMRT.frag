@@ -32,6 +32,8 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 layout(set = 0, binding = 1) uniform SettingsUBO {
 	int enableIBL;
 	int viewRT;
+	int useVertexNormals;
+	float falseRoughness;
 } settings;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuseMap[MAX_TEX_IN_MAT];
@@ -106,7 +108,8 @@ void main()
 	// Setup
 	O_POSITION = vec4(V_POSITION.xyz, linearDepth(gl_FragCoord.z));
 
-	O_NORMAL = vec4((pcb.normalTextureSet > -1 ? getNormal() : normalize(V_NORMAL.xyz)), 0.0f);
+	bool useNormal = pcb.normalTextureSet > -1 && settings.useVertexNormals == 0;
+	O_NORMAL = vec4(useNormal ? getNormal() : normalize(V_NORMAL.xyz), 0.0f);
 
 	float alpha;
 	if (pcb.baseColorTextureSet < 0) {
@@ -138,6 +141,12 @@ void main()
 		O_OMR.b			= metalRough.g * pcb.roughnessFactor;
 		O_OMR.r			= 1.0f;
 	}
+
+	if (settings.falseRoughness >= 0.0f) {
+		O_OMR.b = settings.falseRoughness;
+	}
+
+	O_OMR.a = 1.0f - O_OMR.g;
 
 	if (pcb.occlusionTextureSet >= 0) {
 		O_OMR.r = texture(occlusionMap[pcb.textureArrIdx], V_UV0).r;
