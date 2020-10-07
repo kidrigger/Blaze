@@ -138,7 +138,7 @@ vkw::Instance Context::createInstance(const std::vector<const char*>& requiredEx
 
 	if (result != VK_SUCCESS)
 	{
-		throw std::runtime_error("Failed to create VK instance.");
+		throw std::runtime_error("Failed to create VK instance with " + std::to_string(result));
 	}
 	else
 	{

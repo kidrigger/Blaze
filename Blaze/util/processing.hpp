@@ -167,7 +167,7 @@ public:
 			fbCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			fbCreateInfo.width = dim;
 			fbCreateInfo.height = dim;
-			fbCreateInfo.layers = 6;
+			fbCreateInfo.layers = 1;
 			fbCreateInfo.renderPass = irRenderPass.get();
 			fbCreateInfo.attachmentCount = 1;
 			fbCreateInfo.pAttachments = &irradianceMap.get_imageView();
